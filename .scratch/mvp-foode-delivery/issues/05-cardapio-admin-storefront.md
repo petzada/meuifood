@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — Bloquear produção com CI e migrations validadas.
 
-**Status:** needs-review
+**Status:** done
 
 - [x] Dono cria, edita, ordena e remove categorias sem apagar silenciosamente itens associados.
 - [x] Dono cria e edita item com nome, descrição, preço em centavos, foto, categoria e disponibilidade.
@@ -21,3 +21,4 @@
 - Remoção de categoria com itens retorna HTTP 409 (`category_has_items`) + FK `ON DELETE RESTRICT`. Pedidos ainda não existem (Ticket 08); modelo do Cardápio não usa cascade que reescreveria snapshots futuros.
 - Complementos/Adicionais ficam no Ticket 06 (blocked by 05); fora do checklist deste ticket.
 - 2026-07-28 — CI da PR #12 (`30399795564`) verde: `quality` pass, `migrate` pass, `integration` pass (inclui `menu-routes.test.ts` + verify resíduos).
+- 2026-07-28 — PR #12 mergeada em `94ec0ba9265b8b815a456458e7eb9d41ae2590cc` após validação Composer 2.5 `PASS` no HEAD `207c20c`; run final `30400238160` verde (`quality`, `migrate`, `integration`). Aceite humano registrado. Dívidas não bloqueadoras: confirmação `HEAD` pós-PUT e smoke R2 real quando houver credenciais; o teste de snapshots permanece no escopo do Ticket 08.
