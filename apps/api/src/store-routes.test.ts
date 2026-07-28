@@ -73,7 +73,7 @@ function syntheticTaxId() {
   return [...randomBytes(14)].map((byte) => String(byte % 10)).join("");
 }
 
-describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
+describe("isolamento de Loja pela API e RLS no Supabase de produção", { timeout: 15_000 }, () => {
   const runId = randomBytes(8).toString("hex");
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
