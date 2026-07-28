@@ -49,3 +49,6 @@ usa o runtime canônico.
 
 Após as correções, a revisão Standards foi repetida no diff completo e retornou
 `PASS`, sem regressões acionáveis.
+
+O workflow `30405455056` da PR #14 também passou nos jobs `quality`, `migrate`
+e `integration` no commit `054454e`.

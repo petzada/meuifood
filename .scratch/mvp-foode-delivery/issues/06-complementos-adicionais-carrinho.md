@@ -8,7 +8,7 @@
 
 - [x] Dono configura grupos de Complementos obrigatórios ou opcionais com opções ordenadas.
 - [x] Dono configura Adicionais com preços em centavos e disponibilidade.
-- [ ] Regras inválidas são rejeitadas sem persistência parcial e Operador não acessa a configuração.
+- [x] Regras inválidas são rejeitadas sem persistência parcial e Operador não acessa a configuração.
 - [x] O Consumidor não adiciona item enquanto faltar Complemento obrigatório.
 - [x] Quantidades e Adicionais atualizam a prévia do carrinho deterministicamente.
 - [x] O carrinho não mistura itens de Slugs ou Lojas diferentes.
@@ -32,4 +32,10 @@
 - Revisões persistidas em `verification/reports/06-standards.md` e
   `verification/reports/06-spec.md`; achados procedentes foram corrigidos antes
   deste estado `needs-review`.
+- 2026-07-28 — CI da PR #14 (`30405455056`) verde no commit `054454e`:
+  `quality` passou; `migrate` aplicou a migration pelo fluxo da Decisão 55;
+  `integration` passou com prova HTTP, RLS e RBAC no Supabase de produção,
+  incluindo atomicidade, Operador negado, isolamento cross-store e cleanup
+  verificado. Checklist completo com evidência, mantendo `Status: needs-review`
+  para aceite humano.
 

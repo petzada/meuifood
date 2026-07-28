@@ -2,7 +2,7 @@
 
 **Base:** `8878bd1`  
 **Branch:** `cursor/complementos-adicionais-carrinho-391f`  
-**Status:** aprovado para revisão após correções; prova remota pendente do CI
+**Status:** aprovado para revisão após correções e CI remoto verde
 
 ## Resultado por requisito
 
@@ -38,14 +38,18 @@
    ordenação determinística e a projeção pública depende de ordem estável. A
    implementação fica em módulo próprio e não antecipa outro ticket.
 
-## Evidência pendente
+## Evidência remota
 
 O teste `menu-customization-routes.test.ts` foi tentado localmente e parou antes
 de executar por ausência das credenciais do Supabase de produção. Pela Decisão
 55, migration e prova HTTP/RLS/RBAC devem rodar no workflow remoto após
 `quality`; não foi criado banco local nem aplicada migration fora do CI.
 
+O workflow `30405455056` da PR #14 concluiu com `quality`, `migrate` e
+`integration` verdes no commit `054454e`. O job de integração executou a prova
+HTTP/RLS/RBAC no Supabase de produção e verificou cleanup das fixtures.
+
 ## Revalidação
 
 Após as correções, a revisão de Spec foi repetida no diff completo e retornou
-`PASS`. A única evidência pendente é a prova remota factual do workflow.
+`PASS`. A prova remota factual também passou.
