@@ -123,16 +123,24 @@ _Avoid_: Extrato bancário, settlement genérico
 ### Apps e superfície
 
 **Storefront (`web`)**:
-App Next público: marketing (se couber) + `/loja/[slug]` (cardápio/checkout).
+App Next público: marketing (se couber) + `/loja/[slug]` (cardápio/checkout). Visual: primary Foode, containers outline.
 _Avoid_: Front, site da loja (ambíguo com site do comerciante)
 
 **Painel (`admin`)**:
-App Next do lojista: pedidos, cardápio, configs, equipe.
+App Next do lojista: pedidos, cardápio, configs, equipe, UI de plano. Mesma linguagem visual outline + primary Foode.
 _Avoid_: Dashboard genérico, backoffice
 
 **API (`api`)**:
 Serviço Fastify: domínio, webhooks, jobs leves; fonte de verdade de pedidos/pagamentos.
 _Avoid_: BFF (salvo exceção fina), serverless routes de produção no Next
+
+**Primary Foode**:
+Cor de marca `#F35050` extraída do logo oficial; CTAs e ênfase brand.
+_Avoid_: Rausch Airbnb, purple AI-default
+
+**Container outline**:
+Bloco de conteúdo com borda fina, sem fill, sem shadow, cantos arredondados.
+_Avoid_: Card com fill+sombra como default
 
 ### Fidelidade
 

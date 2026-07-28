@@ -1,19 +1,17 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** B → [36](36-tenant-store-id-canonico.md)  
-**Método:** `/grill-with-docs`  
-**Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** C → [37](37-brand-foode-ui-outline-taste.md)  
+**Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Brand:** [FOODE-BRAND.md](../FOODE-BRAND.md)
 
 ## Fechado nesta sessão
 
-A [31] · Comercial [32] · L · N [33] · O [34] · P [35] · **B [36](`store_id`)**
+A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · **C [37]** (marca Foode + outline + taste-skill)
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **C** | DESIGN.md Airbnb vs primary Foode | Contraponto |
-| D | Matriz dono vs operador | Lacuna |
+| **D** | Matriz dono vs operador | Lacuna |
 | E | Cancelamento + estorno piloto | Lacuna |
 | F | Marketing no `web` | Lacuna leve |
 | G | Loja fechada / horário | Lacuna |
@@ -25,24 +23,32 @@ A [31] · Comercial [32] · L · N [33] · O [34] · P [35] · **B [36](`store_i
 
 ---
 
-## Rodada atual — próxima pergunta: **C**
+## Rodada atual — próxima pergunta: **D**
 
-### C) DESIGN.md Airbnb — manter Rausch como primary Foode?
+### D) Matriz mínima dono vs operador no MVP?
 
-**Contexto:** [29](29-libs-ops-acrescimos-mvp.md) manda alinhar Tailwind/shadcn a [DESIGN.md](../DESIGN.md) (Airbnb: Rausch #ff385c, property-card, search-orb). Marca do produto é **Foode Delivery**.
+**Contexto:** [11](11-planos-por-faturamento-features-completas.md) — operação ≠ financeiro; checklist fino aberto. UI de plano ([35](35-ui-billing-plano-painel.md)) é sensível.
 
-**Contraponto:** Primary Rausch + linguagem de hospedagem falha o brand test de um SaaS de delivery local.
+**Recomendação:**
 
-**Recomendação:** Extrair de DESIGN.md só **primitives de superfície** (canvas, ink, hairline, radii, spacing, um shadow). Definir **`colors.primary` Foode** próprio (não Rausch) em `packages/shared` antes do shadcn. Não portar property-card / search-orb / Luxe / Plus. Airbnb fica como referência de densidade, não como marca.
+| Área | Dono | Operador |
+| --- | --- | --- |
+| Pedidos (ver/mover status) | Sim | Sim |
+| Cardápio (CRUD / disponibilidade) | Sim | **Não** |
+| Horários / taxas entrega / retirada | Sim | Não |
+| Relatórios / financeiro | Sim | Não |
+| Plano / billing UI | Sim | Não |
+| Equipe (convidar/remover) | Sim | Não |
+| Cupom/fidelidade config | Sim | Não |
 
-**Alternativa:** shipar Rausch “só no MVP” e trocar depois — barato agora, confuso com lojistas piloto.
+Operador sem editar cardápio no MVP reduz superfície de RBAC; abre depois se doer.
 
 ---
 
 ## Fila
 
-**D** operador só pedidos · **E** cancel → refund manual · **F** marketing no `web` · **G** fechado = checkout bloqueado · **H** frete bairro/fixa · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
+**E** cancel → refund_needed manual · **F** marketing no `web` · **G** fechado = checkout bloqueado · **H** frete bairro/fixa · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
 
 ## Próximo passo
 
-Founder responde **C**.
+Founder responde **D**.

@@ -16,7 +16,7 @@
 | UI de conta gateway por lojista | [24](24-arquitetura-pagamentos.md) |
 | **Débito e voucher online no checkout** | [34](34-meios-pagamento-checkout-mvp.md) · taxas futuras em [32](32-taxas-e-assinatura-fixa-unica.md) |
 | Redis, worker sempre-on, staging/preview | [25](25-hospedagem-ci-ops.md) · **Sentry free e Railway Cron entram** — [29](29-libs-ops-acrescimos-mvp.md) |
-| Catálogo Airbnb inteiro (property-card, search-orb, …) | [26](26-estrutura-monorepo.md) · tokens/primitives **sim** via DESIGN.md + shadcn — [29](29-libs-ops-acrescimos-mvp.md) |
+| Catálogo Airbnb inteiro (property-card, search-orb, …) / Rausch como marca | [37](37-brand-foode-ui-outline-taste.md) · tokens Foode em [FOODE-BRAND.md](../FOODE-BRAND.md) |
 | KDS, NF-e, estoque completo, impressão térmica | [11](11-planos-por-faturamento-features-completas.md) |
 | PCI próprio / multi-gateway (MP, Cielo, …) | [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md) |
 | Meter/hard block/overage de teto GMV R$ 15k | [33](33-teto-gmv-comercial-fora-do-produto.md) |
@@ -30,4 +30,4 @@
 
 ## Pós-MVP já registrados (não esquecer)
 
-- Workspaces · WebSocket/SSE na Fastify · BaaS / `merchant_own_account` · PWA opcional · marca Foode própria se DESIGN.md Airbnb for substituído depois · **cobrança automática da assinatura** (PIX recorrente Woovi e/ou cartão Asaas) — [35](35-ui-billing-plano-painel.md).
+- Workspaces · WebSocket/SSE na Fastify · BaaS / `merchant_own_account` · PWA opcional · **cobrança automática da assinatura** (PIX recorrente Woovi e/ou cartão Asaas) — [35](35-ui-billing-plano-painel.md).

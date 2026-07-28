@@ -32,6 +32,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 34 | [meios checkout MVP](34-meios-pagamento-checkout-mvp.md) | PIX + crédito + na entrega; débito/voucher depois |
 | 35 | [UI billing plano](35-ui-billing-plano-painel.md) | Painel: plano mensal/anual; MVP flag+read-only; cobrança auto pós-MVP |
 | 36 | [tenant `store_id`](36-tenant-store-id-canonico.md) | FK canônica em todo domínio |
+| 37 | [brand Foode + UI outline](37-brand-foode-ui-outline-taste.md) | Primary logo · taste-skill · containers sem fill/shadow |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -56,7 +57,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 - Checklist fino de permissões dono vs operador.  
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: design tokens / primary Foode).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: RBAC dono/operador).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 

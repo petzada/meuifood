@@ -18,13 +18,14 @@
 
 - Zod · `@supabase/ssr` · verify JWT (`jose`/JWKS) na Fastify · `@supabase/supabase-js` Storage · helper Prisma `$transaction` + `set_config` (RLS efetivo)
 
-## Design (supersede parcial de [26](26-estrutura-monorepo.md))
+## Design (supersede parcial — ver [37](37-brand-foode-ui-outline-taste.md))
 
-- **Fonte visual do MVP:** tokens e princípios de [DESIGN.md](../DESIGN.md) (canvas, ink, primary/Rausch, radii, um shadow tier, tipografia modest weights) aplicados **onde o domínio Foode permitir**.
-- **Não copiar** componentes de hospedagem Airbnb sem mapeamento (property-card, search-orb Homes/Experiences, Luxe/Plus).
-- Mapear para Foode: botões, inputs, sheets/dialogs, listas, cards de **item de cardápio** / pedido — primitives shadcn + tokens CSS compartilhados.
-- Estrutura: `packages/ui` (ou equivalente shadcn monorepo) + tokens em `packages/shared` / theme — ver [26](26-estrutura-monorepo.md) atualizado.
-- Fonte: Cereal/Circular do DESIGN.md se licenciável; senão stack system documentada no DESIGN (evitar default Inter só por hábito, salvo substitute explícito do doc).
+- **Fonte de marca do MVP:** logo Foode → tokens em [FOODE-BRAND.md](../FOODE-BRAND.md) (`primary` `#F35050`, accent `#FFB800`).  
+- **Fonte de densidade/spacing:** princípios de [DESIGN.md](../DESIGN.md) (canvas/ink, radii modestos, hierarquia tipográfica leve) — **sem** Rausch / property-card / search-orb.  
+- UI: containers **outline** (borda fina, sem fill, sem shadow) — [37](37-brand-foode-ui-outline-taste.md).  
+- Telas: skill **`design-taste-frontend`** (Leonxlnx/taste-skill) na construção.  
+- Estrutura: `packages/ui` + tokens em `packages/shared` — ver [26](26-estrutura-monorepo.md).  
+- Fonte UI: Nunito (ou equivalente arredondado); wordmark = asset do logo.
 
 ## Cron (ops)
 
