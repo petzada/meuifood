@@ -58,3 +58,9 @@ implementado.
   atualizadas.
 - A repetição local carregando a credencial ignorada passou 22/22 testes da API
   e todos os workspaces. A consulta independente encontrou resíduo RBAC/RLS zero.
+
+## Verificação externa
+
+O relatório Claude/Sonnet `03-auth-rbac-dono-operador.md` concluiu `conforme`, com
+zero divergências Bloqueador, Alto ou Médio. Nenhuma correção funcional adicional
+foi necessária após seu processamento.

@@ -4,16 +4,16 @@
 
 **Blocked by:** 02 — Instalar Loja, `store_id` e RLS efetiva.
 
-**Status:** needs-review
+**Status:** done
 
-- [ ] Dono e Operador usam convite, e-mail e senha no Supabase Auth.
-- [ ] A API valida JWT/JWKS e rejeita token ausente, inválido, expirado ou sem membership.
-- [ ] `store_id` e papel são derivados da membership persistida, nunca de header, query ou body arbitrário.
-- [ ] Dono pode listar membros, convidar Operador e remover seu acesso sem apagar o histórico operacional.
-- [ ] Operador acessa somente Pedidos e mudanças de status; configurações, Cardápio, Plano, equipe, relatórios e informações financeiras são negados pela API.
-- [ ] Remover um Operador invalida seu acesso nas requests seguintes, mesmo que a sessão já tenha sido emitida.
-- [ ] Testes HTTP verificam respostas e ausência de efeito persistido para RBAC negado e tentativa cross-Loja.
-- [ ] Esconder navegação no Painel é apenas UX e não substitui autorização no servidor.
+- [x] Dono e Operador usam convite, e-mail e senha no Supabase Auth.
+- [x] A API valida JWT/JWKS e rejeita token ausente, inválido, expirado ou sem membership.
+- [x] `store_id` e papel são derivados da membership persistida, nunca de header, query ou body arbitrário.
+- [x] Dono pode listar membros, convidar Operador e remover seu acesso sem apagar o histórico operacional.
+- [x] Operador acessa somente Pedidos e mudanças de status; configurações, Cardápio, Plano, equipe, relatórios e informações financeiras são negados pela API.
+- [x] Remover um Operador invalida seu acesso nas requests seguintes, mesmo que a sessão já tenha sido emitida.
+- [x] Testes HTTP verificam respostas e ausência de efeito persistido para RBAC negado e tentativa cross-Loja.
+- [x] Esconder navegação no Painel é apenas UX e não substitui autorização no servidor.
 
 ## Comments
 
@@ -52,3 +52,9 @@
 - 2026-07-28 — Reviews internos, checks locais e CI estão verdes. O ticket entrou
   na fila externa como `needs-review`, conforme o handshake de conclusão em duas
   fases; `done` permanece reservado ao processamento do relatório externo.
+- 2026-07-28 — Relatório externo `03-auth-rbac-dono-operador.md` lido
+  integralmente: veredito `conforme`, sem Bloqueador, Alto ou Médio. A única Nota,
+  sobre `staff` no nome histórico da migration `20260728150000`, não exige ação:
+  a migration já foi aplicada em produção e renomeá-la quebraria sua identidade;
+  contratos, rotas, código e testes ativos já usam o vocabulário canônico. CI do
+  handshake `30376179986` verde nos três jobs. Segunda fase concluída como `done`.

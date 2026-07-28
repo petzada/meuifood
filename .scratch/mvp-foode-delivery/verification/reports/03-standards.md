@@ -61,3 +61,12 @@ Todos os achados procedentes foram corrigidos. Não houve achado adiado.
   ajuste de timeout da prova RLS.
 - Resíduo independente: zero Lojas sintéticas `fixture-rbac-*` e
   `fixture-rls-*`.
+
+## Verificação externa
+
+O relatório Claude/Sonnet `03-auth-rbac-dono-operador.md`, verificado no código
+funcional do HEAD `96410b9`, concluiu `conforme`, sem Bloqueador, Alto ou Médio.
+A única Nota repete o nome histórico `staff_identity_lookup`; ela foi classificada
+como não acionável porque a migration já está aplicada e o contrato ativo usa o
+vocabulário canônico. O commit posterior `8b7f080` alterou somente o handshake do
+ticket para `needs-review` e passou a CI `30376179986` integralmente.
