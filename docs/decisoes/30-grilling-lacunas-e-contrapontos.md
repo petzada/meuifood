@@ -31,7 +31,7 @@ Fechar lacunas e contrapontos pós-tese ([16](16-tese-produto-fechada.md) / [28]
 
 | # | Tema | Nota |
 | --- | --- | --- |
-| **M** | Homologação BaaS Asaas | Execução comercial — não bloqueia piloto `pilot_platform` |
+| **M** | Homologação BaaS Asaas | **Fechado** no grilling [46](46-grilling-homologacao-baas-mei-ltda.md) · [47](47-tomadora-baas-ltda-apos-piloto.md)–[54](54-implicacoes-minimas-modo-baas.md) |
 
 ## Próximo passo do produto
 

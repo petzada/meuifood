@@ -136,6 +136,10 @@ _Avoid_: Go/no-go automático, “4 semanas = validado” como regra
 Único comerciante do piloto (`pilot_platform`); próximos só após homologação BaaS, com ativação manual.
 _Avoid_: “Primeiro cliente” ambíguo, beta multi-loja
 
+**Onboarding de subconta**:
+Fluxo no `admin` (pós-BaaS) para criar/acompanhar subconta Asaas do comerciante (`apiKey`, `walletId`, docs); ativação manual pela Foode.
+_Avoid_: Self-serve aberto pré-homologação, script-only como único caminho
+
 **Ledger de repasse**:
 Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.
 _Avoid_: Extrato bancário, settlement genérico
