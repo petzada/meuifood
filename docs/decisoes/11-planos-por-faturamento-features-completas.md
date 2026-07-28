@@ -1,0 +1,61 @@
+# Decisão: planos por faturamento + escopo funcional completo
+
+**Data:** jul/2026 · **Status:** decidido (estrutura) · **Sessão:** grilling #11  
+**Supersede:** diferenciação de features entre Entry/Mid/High em [06](06-gateways-taxas-e-tiers.md) — **revogada**.
+
+## Mudança de trajeto
+
+De: 3 tiers com **features diferentes** e preços fixos R$ 129 / 179 / 249.  
+Para: **3 preços conforme faturamento** do comerciante; **mesmo produto completo** em todos os planos.
+
+## O que todos os planos incluem (dia 0 / MVP)
+
+- Cardápio online  
+- Pedidos online  
+- Painel de status de pedidos  
+- Delivery + retirada opcional (lojista liga/desliga)  
+- PIX + pagamento na entrega + **cartão online**  
+- Conta do consumidor + **cupons** para quem cria conta (**opt-in do comerciante**)  
+- Fidelidade simples configurável (ex.: **10 pedidos = 1 item**)  
+- Relatórios básicos de delivery/pedidos (**visão financeira só para dono**)  
+- **Equipe:** dono + operador(es) com permissões (ver seção abaixo)  
+- **Workspaces** multi-unidade (mesmo cadastro)  
+
+## Fora do MVP
+
+- Extras avançados não listados (KDS dedicado, NF-e, estoque completo, bot WhatsApp, etc.).
+
+## Equipe (multi-usuário) — reorganização
+
+**Incluir no MVP:** mais de um login por comerciante, com **papéis e permissões**.
+
+Motivo: o dono não quer que o **operador de delivery** (funcionário) veja **faturamento**, mensalidade ou relatórios financeiros sensíveis.
+
+| Papel (MVP) | Acesso típico |
+| --- | --- |
+| **Dono / admin** | Tudo: config, cardápio, pedidos, pagamentos, relatórios, planos, workspaces |
+| **Operador** | Pedidos/status do dia a dia; **sem** faturamento, taxas, mensalidade, relatórios financeiros |
+
+Detalhe fino de checklist de permissões pode ser fechado na stack; a regra de produto é: **operação ≠ visão financeira**.
+
+## Multi-lojas = workspaces
+
+- **1 cadastro** de comerciante pode ter **várias unidades (workspaces)**.  
+- Dados **separados por workspace** (cardápio, pedidos, configs, relatórios operacionais).  
+- Fluxo de **pagamentos** a mesma lógica de gateway; GMV/visão financeira **por workspace** e consolidado só para **dono**.  
+- Operador: em geral preso a **um** workspace (ou aos que o dono liberar), sem ver consolidado financeiro.
+
+## Cartão / Asaas (atualização de rota)
+
+| Momento | Modelo |
+| --- | --- |
+| **Só 1º cliente (piloto)** | Asaas no **MEI do founder** + repasse manual D+32 |
+| **Lançamento / prospecção dos demais** | **BaaS homologado** — seguir com subcontas/split Asaas como caminho padrão |
+
+Homologação BaaS deixa de ser “fase 2 vaga” e vira **pré-requisito antes de escalar além do amigo-piloto**.
+
+## Precificação
+
+Ver [12-faixas-mensalidade-por-gmv.md](12-faixas-mensalidade-por-gmv.md).
+
+Taxas PIX/cartão **iguais** para todos (já definidas em [06](06-gateways-taxas-e-tiers.md)).
