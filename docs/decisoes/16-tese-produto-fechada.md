@@ -29,6 +29,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 31 | [GMV operacional](31-definicao-operacional-gmv.md) | Só online; exclui na entrega e cancelados |
 | 32 | [taxas + assinatura](32-taxas-e-assinatura-fixa-unica.md) | Pacote comercial vigente |
 | 33 | [teto GMV comercial](33-teto-gmv-comercial-fora-do-produto.md) | Sem meter/block no produto |
+| 34 | [meios checkout MVP](34-meios-pagamento-checkout-mvp.md) | PIX + crédito + na entrega; débito/voucher depois |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -53,7 +54,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 - Checklist fino de permissões dono vs operador.  
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: meios no checkout MVP).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: assinatura anual / ops).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 
