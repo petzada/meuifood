@@ -27,6 +27,7 @@ Entendimento compartilhado sobre:
 | 1 | [47](47-tomadora-baas-ltda-apos-piloto.md) — MEI só piloto; Tomadora = LTDA após piloto validado; LTDA antes do contato de homologação |
 | 2 | [48](48-gatilho-piloto-validado-ltda.md) — Gatilho = julgamento founder (ponta a ponta); sem métrica mínima escrita |
 | 3 | [49](49-novos-clientes-so-apos-baas.md) — Só 1 comerciante-modelo até BaaS; próximos esperam + ativação manual |
+| 4 | [50](50-migracao-piloto-para-baas.md) — Piloto migra para subconta `baas`; novos já nascem em `baas` |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -42,4 +43,4 @@ Entendimento compartilhado sobre:
 
 ## Próxima pergunta
 
-**#4** — Destino do comerciante-modelo quando o BaaS sob a LTDA for liberado.
+**#5** — Contato com gerente Asaas durante o piloto MEI (antes da LTDA).
