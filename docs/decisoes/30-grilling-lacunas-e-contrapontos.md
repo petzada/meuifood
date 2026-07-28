@@ -1,18 +1,17 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** E → [39](39-cancelamento-estorno-automatico.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** F → [40](40-marketing-no-apps-web.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · D [38] · **E [39]** (estorno automático)
+A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · D [38] · E [39] · **F [40]**
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **F** | Marketing no `web` | Lacuna leve |
-| G | Loja fechada / horário | Lacuna |
+| **G** | Loja fechada / horário | Lacuna |
 | H | Frete: bairro (não km) | Lacuna / contraponto |
 | I | Guest → conta | Lacuna |
 | J | Sem staging | Contraponto |
@@ -21,20 +20,20 @@ A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · D 
 
 ---
 
-## Rodada atual — próxima pergunta: **F**
+## Rodada atual — próxima pergunta: **G**
 
-### F) Site institucional / marketing vive onde?
+### G) Pedido com loja fechada / fora do horário?
 
-**Contexto:** [17](17-monorepo-e-infra-preferencias.md) deixou aberto se marketing fica no `web` ou separado.
+**Contexto:** Cardápio tem horário de funcionamento ([13](13-cardapio-mvp.md)); comportamento do checkout fora do horário não estava fechado.
 
-**Recomendação:** Rotas de marketing no mesmo **`apps/web`** (`/`, `/precos`, etc.); produto em `/loja/[slug]`. Sem 4º serviço Railway.
+**Recomendação:** Cardápio **visível** (SEO/share WhatsApp); checkout **bloqueado** com mensagem clara (“abre às HH:MM”). Dono pode forçar **pausado** independente do horário (toggle emergência).
 
 ---
 
 ## Fila
 
-**G** cardápio visível / checkout bloqueado se fechado · **H** frete bairro ou taxa fixa (km depois) · **I** guest→conta pós-pedido · **J** sem staging completo · **K** fidelidade cupom/desconto simples.
+**H** frete bairro ou taxa fixa (km depois) · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
 
 ## Próximo passo
 
-Founder responde **F**.
+Founder responde **G**.

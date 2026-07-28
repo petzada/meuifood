@@ -18,7 +18,7 @@
 
 ### DNS (padrão)
 
-- `foodedelivery.com.br` → `web` (storefront + marketing se couber)
+- `foodedelivery.com.br` → `web` (storefront **+ landing** — [40](40-marketing-no-apps-web.md))
 - `admin.foodedelivery.com.br` → `admin`
 - `api.foodedelivery.com.br` → `api` (webhooks Woovi/Asaas públicos aqui)
 

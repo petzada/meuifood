@@ -18,5 +18,5 @@ Tese de produto e stack via pesquisa de mercado + grilling (jul/2026).
 
 - **Tese de produto:** concluída ([16](decisoes/16-tese-produto-fechada.md)); números comerciais vigentes em [31](decisoes/31-definicao-operacional-gmv.md) / [32](decisoes/32-taxas-e-assinatura-fixa-unica.md).
 - **Tese de stack + libs/ops:** concluída ([28](decisoes/28-tese-stack-mvp.md), [29](decisoes/29-libs-ops-acrescimos-mvp.md)).
-- **Grilling lacunas/contrapontos:** em andamento ([30](decisoes/30-grilling-lacunas-e-contrapontos.md)) — E fechado ([39](decisoes/39-cancelamento-estorno-automatico.md)); próxima = marketing no `web` (F).
+- **Grilling lacunas/contrapontos:** em andamento ([30](decisoes/30-grilling-lacunas-e-contrapontos.md)) — F fechado ([40](decisoes/40-marketing-no-apps-web.md)); próxima = loja fechada/horário (G).
 - **Implementação:** ainda não iniciada.

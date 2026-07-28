@@ -40,7 +40,7 @@ Isso **desloca** o default da síntese (Vercel + Postgres genérico) para **Rail
 ## Explicitamente adiado
 
 - Detalhe fino de pastas (`apps/web`, `packages/*`) — **fechado** em [26](26-estrutura-monorepo.md).
-- Confirmar se marketing site institucional vive no mesmo app web ou página estática à parte — não bloqueia.
+- Confirmar se marketing site institucional vive no mesmo app web ou página estática à parte — **fechado** em [40](40-marketing-no-apps-web.md) (mesmo `apps/web`).
 - Fechamento fino de CI/secrets — **fechado** em [25](25-hospedagem-ci-ops.md).
 - Extrair worker como 4º serviço Railway — só com dor real (timeout, fila, carga).
 ## Rejeitado
