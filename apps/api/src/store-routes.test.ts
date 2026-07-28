@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
@@ -73,20 +73,20 @@ function syntheticTaxId() {
   return [...randomBytes(14)].map((byte) => String(byte % 10)).join("");
 }
 
-describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
+describe("isolamento de Loja pela API e RLS no Supabase de produção", { timeout: 15_000 }, () => {
   const runId = randomBytes(8).toString("hex");
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
   let businessDatabase: BusinessDatabase;
+  const storeAUserId = randomUUID();
+  const storeBUserId = randomUUID();
   let storeAId: string;
   let storeBId: string;
 
   beforeAll(async () => {
     const databaseUrl = await productionDatabaseUrl();
     administrativeDatabase = createAdministrativeDatabase(databaseUrl);
-    businessDatabase = createBusinessDatabase(databaseUrl, {
-      assumeBusinessRole: true,
-    });
+    businessDatabase = createBusinessDatabase(databaseUrl);
 
     const storeA = await administrativeDatabase.store.create({
       data: {
@@ -108,6 +108,12 @@ describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
     createdStoreIds.push(storeB.id);
     storeAId = storeA.id;
     storeBId = storeB.id;
+    await administrativeDatabase.storeMember.createMany({
+      data: [
+        { role: "owner", storeId: storeAId, userId: storeAUserId },
+        { role: "owner", storeId: storeBId, userId: storeBUserId },
+      ],
+    });
   }, 60_000);
 
   afterAll(async () => {
@@ -131,14 +137,10 @@ describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
     return buildApp({
       businessDatabase,
       logger: false,
-      resolveStoreContext: async (request) => {
-        if (request.headers.authorization === "Bearer fixture-a") {
-          return { storeId: storeAId };
-        }
-        if (request.headers.authorization === "Bearer fixture-b") {
-          return { storeId: storeBId };
-        }
-        return undefined;
+      verifyAccessToken: async (token) => {
+        if (token === "fixture-a") return { userId: storeAUserId };
+        if (token === "fixture-b") return { userId: storeBUserId };
+        throw new Error("invalid_fixture_token");
       },
     });
   }
