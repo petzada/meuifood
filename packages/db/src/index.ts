@@ -1,6 +1,9 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "./generated/prisma/client.js";
+import {
+  PrismaClient,
+  type Prisma,
+} from "./generated/prisma/client.js";
 
 export type StoreContext = {
   storeId: string;
@@ -27,6 +30,13 @@ type BusinessDatabaseOptions = {
   assumeBusinessRole?: boolean;
 };
 
+const storeViewSelect = {
+  billingMode: true,
+  id: true,
+  name: true,
+  slug: true,
+} satisfies Prisma.StoreSelect;
+
 function prismaClient(databaseUrl: string) {
   const adapter = new PrismaPg({ connectionString: databaseUrl });
   return new PrismaClient({ adapter });
@@ -34,6 +44,27 @@ function prismaClient(databaseUrl: string) {
 
 export function createAdministrativeDatabase(databaseUrl: string) {
   return prismaClient(databaseUrl);
+}
+
+async function inStoreContext<Result>(
+  prisma: PrismaClient,
+  context: StoreContext,
+  assumeBusinessRole: boolean,
+  operation: (transaction: Prisma.TransactionClient) => Promise<Result>,
+) {
+  return await prisma.$transaction(
+    async (transaction) => {
+      if (assumeBusinessRole) {
+        await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
+      }
+      await transaction.$executeRaw`
+        SELECT set_config('app.current_store_id', ${context.storeId}, true)
+      `;
+
+      return await operation(transaction);
+    },
+    { maxWait: 15_000, timeout: 15_000 },
+  );
 }
 
 export function createBusinessDatabase(
@@ -47,38 +78,23 @@ export function createBusinessDatabase(
       await prisma.$disconnect();
     },
     async findStore(context, storeId) {
-      return await prisma.$transaction(
-        async (transaction) => {
-          if (options.assumeBusinessRole) {
-            await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
-          }
-          await transaction.$executeRaw`
-            SELECT set_config('app.current_store_id', ${context.storeId}, true)
-          `;
-
-          return await transaction.store.findUnique({
+      return await inStoreContext(
+        prisma,
+        context,
+        options.assumeBusinessRole ?? false,
+        async (transaction) =>
+          await transaction.store.findUnique({
             where: { id: storeId },
-            select: {
-              billingMode: true,
-              id: true,
-              name: true,
-              slug: true,
-            },
-          });
-        },
-        { maxWait: 15_000, timeout: 15_000 },
+            select: storeViewSelect,
+          }),
       );
     },
     async updateStoreName(context, storeId, name) {
-      return await prisma.$transaction(
+      return await inStoreContext(
+        prisma,
+        context,
+        options.assumeBusinessRole ?? false,
         async (transaction) => {
-          if (options.assumeBusinessRole) {
-            await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
-          }
-          await transaction.$executeRaw`
-            SELECT set_config('app.current_store_id', ${context.storeId}, true)
-          `;
-
           const result = await transaction.store.updateMany({
             where: { id: storeId },
             data: { name },
@@ -87,15 +103,9 @@ export function createBusinessDatabase(
 
           return await transaction.store.findUnique({
             where: { id: storeId },
-            select: {
-              billingMode: true,
-              id: true,
-              name: true,
-              slug: true,
-            },
+            select: storeViewSelect,
           });
         },
-        { maxWait: 15_000, timeout: 15_000 },
       );
     },
   };

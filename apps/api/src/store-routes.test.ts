@@ -62,24 +62,25 @@ describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
     });
 
     const storeA = await administrativeDatabase.store.create({
-        data: {
-          billingMode: "baas",
-          name: `Fixture RLS A ${runId}`,
-          slug: `fixture-rls-a-${runId}`,
-          taxId: syntheticTaxId(),
-        },
-      });
+      data: {
+        billingMode: "baas",
+        name: `Fixture RLS A ${runId}`,
+        slug: `fixture-rls-a-${runId}`,
+        taxId: syntheticTaxId(),
+      },
+    });
+    createdStoreIds.push(storeA.id);
     const storeB = await administrativeDatabase.store.create({
-        data: {
-          billingMode: "merchant_own_account",
-          name: `Fixture RLS B ${runId}`,
-          slug: `fixture-rls-b-${runId}`,
-          taxId: syntheticTaxId(),
-        },
-      });
+      data: {
+        billingMode: "merchant_own_account",
+        name: `Fixture RLS B ${runId}`,
+        slug: `fixture-rls-b-${runId}`,
+        taxId: syntheticTaxId(),
+      },
+    });
+    createdStoreIds.push(storeB.id);
     storeAId = storeA.id;
     storeBId = storeB.id;
-    createdStoreIds.push(storeA.id, storeB.id);
   }, 60_000);
 
   afterAll(async () => {
