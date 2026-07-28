@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 — Gerenciar e publicar o Cardápio da Loja.
 
-**Status:** needs-review
+**Status:** done
 
 - [x] Dono configura grupos de Complementos obrigatórios ou opcionais com opções ordenadas.
 - [x] Dono configura Adicionais com preços em centavos e disponibilidade.
@@ -38,4 +38,9 @@
   incluindo atomicidade, Operador negado, isolamento cross-store e cleanup
   verificado. Checklist completo com evidência, mantendo `Status: needs-review`
   para aceite humano.
+- 2026-07-28 — PR #14 mergeada em
+  `f2f6438d0b2a59d2ab05c6d33dbb1b40b8699eba` após Composer 2.5 `PASS` no
+  HEAD `9d85bce`; run final `30405827304` verde (`quality`, `migrate`,
+  `integration`). Aceite humano registrado; Ticket 07 deve integrar este merge
+  antes de publicar sua migration.
 
