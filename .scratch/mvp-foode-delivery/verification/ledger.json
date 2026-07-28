@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-28T16:45:16.293Z",
+  "meta": {
+    "busySkips": 1
+  },
+  "tickets": {
+    "01": {
+      "slug": "bootstrap-monorepo-identidade-foode",
+      "verdict": "pass",
+      "openFindings": 0,
+      "blockers": 0,
+      "report": ".scratch/mvp-foode-delivery/verification/reports/01-bootstrap-monorepo-identidade-foode.md",
+      "footprint": [
+        "apps/api/src/app.ts",
+        "apps/api/src/logger.ts",
+        "apps/api/src/observability.ts",
+        "apps/api/src/app.test.ts",
+        "apps/web/src/app/page.tsx",
+        "apps/web/src/app/layout.tsx",
+        "apps/web/src/app/globals.css",
+        "apps/web/src/app/page.test.tsx",
+        "apps/web/next.config.ts",
+        "apps/admin/src/app/page.tsx",
+        "apps/admin/src/app/layout.tsx",
+        "packages/ui/src/index.tsx",
+        "packages/ui/src/styles.css",
+        "packages/ui/src/index.test.tsx",
+        "packages/shared/src/index.ts",
+        "packages/shared/src/brand.css",
+        "pnpm-workspace.yaml",
+        "package.json",
+        ".github/workflows/ci.yml",
+        "tsconfig.base.json",
+        "eslint.config.mjs"
+      ],
+      "footprintFiles": 21,
+      "verificationKey": "731558b29d978c8bf610875c814dd66253cd4350df95907ec6f9d42f94d382ed",
+      "parts": {
+        "ticket": "e56024273f1f9db3f8a73b1759ccd91ad065949ccac8bb547627e2306d83d76e",
+        "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
+        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
+        "scoped": "ca1af2eb5b083adaccddbc33108d796437342442be1ca256dca8e20f03f9598c"
+      },
+      "headSha": "783d01a9721bf0e8ad5e4d234e431d7d18ed8122",
+      "lastVerifiedAt": "2026-07-28T16:13:45.929Z",
+      "runs": 5,
+      "note": "rodada 4: sem regressao apos ticket 03"
+    },
+    "02": {
+      "slug": "loja-store-id-rls",
+      "verdict": "pass",
+      "openFindings": 0,
+      "blockers": 0,
+      "report": ".scratch/mvp-foode-delivery/verification/reports/02-loja-store-id-rls.md",
+      "footprint": [
+        "packages/db/prisma/schema.prisma",
+        "packages/db/prisma/migrations",
+        "packages/db/src/index.ts",
+        "packages/db/src/seed.ts",
+        "packages/db/prisma/seed.ts",
+        "packages/db/scripts/sync-supabase-migrations.mjs",
+        "apps/api/src/server.ts",
+        "apps/api/src/store-routes.test.ts",
+        ".github/workflows/ci.yml"
+      ],
+      "footprintFiles": 13,
+      "verificationKey": "b0d3a3964149e211b030a1ac911e4fc0d68c64bc22c6095f08ff443793c0e3cb",
+      "parts": {
+        "ticket": "cf99bd387b1e4f8fd7cd662c933e39175b352ffeac56f92882bf1dad061ef38a",
+        "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
+        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
+        "scoped": "11a0752ca83f1d5ffdae09b45464d29928ef0e2be63814c92826680c5f0374fb"
+      },
+      "headSha": "783d01a9721bf0e8ad5e4d234e431d7d18ed8122",
+      "lastVerifiedAt": "2026-07-28T16:13:46.264Z",
+      "runs": 3,
+      "note": "rodada 3: isolamento fortalecido; 3 notas anteriores resolvidas"
+    },
+    "03": {
+      "slug": "auth-rbac-dono-operador",
+      "verdict": "pass",
+      "openFindings": 0,
+      "blockers": 0,
+      "report": ".scratch/mvp-foode-delivery/verification/reports/03-auth-rbac-dono-operador.md",
+      "footprint": [
+        "apps/api/src/auth.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/server.ts",
+        "apps/api/src/member-invitations.ts",
+        "apps/api/src/owner-provisioning.ts",
+        "apps/api/src/provision-owner.ts",
+        "apps/api/src/auth-rbac.test.ts",
+        "apps/api/src/store-routes.test.ts",
+        "packages/db/src/index.ts",
+        "packages/db/prisma/migrations",
+        "packages/shared/src/index.ts",
+        "apps/admin/src/app/page.tsx",
+        "apps/admin/src/app/team",
+        "apps/admin/src/lib/supabase",
+        ".github/workflows/ci.yml"
+      ],
+      "footprintFiles": 21,
+      "verificationKey": "c963d673b85ee25f30437095b578a1cf1361e919d1666b43c9f03f781e293423",
+      "parts": {
+        "ticket": "4c82ace33802e3b69e6b4f1f4bd355ebd396c908e430b65d6e11d574a168048f",
+        "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
+        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
+        "scoped": "c30cb43ddc7f077fa342e3873236ab71edc93f118f62492dc890f07a8b203ad6"
+      },
+      "headSha": "96410b95a68004f22346a6b1d2c4b48344454fe0",
+      "lastVerifiedAt": "2026-07-28T15:58:46.979Z",
+      "runs": 1,
+      "note": "CI 30373345419 e 30374025911 conferidas via gh run view; excecao de CI contida; 1 nota de glossario em nome de migration"
+    }
+  }
+}
