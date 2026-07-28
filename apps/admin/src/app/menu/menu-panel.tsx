@@ -11,6 +11,11 @@ import {
   updateItem,
   uploadItemImage,
 } from "./actions";
+import {
+  ItemCustomizationPanel,
+  type Additional,
+  type ComplementGroup,
+} from "./item-customization-panel";
 
 export type MenuCategory = {
   id: string;
@@ -29,11 +34,19 @@ export type MenuItem = {
 };
 
 export type MenuFeedback =
+  | "adicional-atualizado"
+  | "adicional-criado"
+  | "adicional-removido"
   | "categoria-atualizada"
   | "categoria-com-itens"
   | "categoria-criada"
   | "categoria-erro"
   | "categoria-removida"
+  | "complemento-atualizado"
+  | "complemento-criado"
+  | "complemento-removido"
+  | "customizacao-erro"
+  | "customizacao-ordenada"
   | "foto-atualizada"
   | "foto-erro"
   | "item-atualizado"
@@ -44,11 +57,19 @@ export type MenuFeedback =
   | "ordem-erro";
 
 const feedbackMessages: Record<MenuFeedback, string> = {
+  "adicional-atualizado": "Adicional atualizado.",
+  "adicional-criado": "Adicional criado.",
+  "adicional-removido": "Adicional removido.",
   "categoria-atualizada": "Categoria atualizada.",
   "categoria-com-itens": "Remova ou mova os itens antes de apagar a categoria.",
   "categoria-criada": "Categoria criada.",
   "categoria-erro": "Não foi possível salvar a categoria.",
   "categoria-removida": "Categoria removida.",
+  "complemento-atualizado": "Grupo de Complemento atualizado.",
+  "complemento-criado": "Grupo de Complemento criado.",
+  "complemento-removido": "Grupo de Complemento removido.",
+  "customizacao-erro": "Não foi possível salvar Complementos ou Adicionais.",
+  "customizacao-ordenada": "Ordem das customizações atualizada.",
   "foto-atualizada": "Foto do item atualizada.",
   "foto-erro": "Não foi possível enviar a foto.",
   "item-atualizado": "Item atualizado.",
@@ -71,11 +92,15 @@ function priceInputValue(priceCents: number) {
 }
 
 export function MenuPanel({
+  additionals,
   categories,
+  complementGroups,
   feedback,
   items,
 }: {
+  additionals: Additional[];
   categories: MenuCategory[];
+  complementGroups: ComplementGroup[];
   feedback?: MenuFeedback | undefined;
   items: MenuItem[];
 }) {
@@ -96,7 +121,11 @@ export function MenuPanel({
 
       {feedback ? (
         <p
-          role={feedback.endsWith("erro") || feedback === "categoria-com-itens" ? "alert" : "status"}
+          role={
+            feedback.endsWith("erro") || feedback === "categoria-com-itens"
+              ? "alert"
+              : "status"
+          }
           className="mt-5 rounded-xl border border-[var(--color-hairline)] px-4 py-3 text-sm font-bold text-[var(--color-body)]"
         >
           {feedbackMessages[feedback]}
@@ -233,6 +262,12 @@ export function MenuPanel({
                           <input type="hidden" name="itemId" value={item.id} />
                           <SubmitButton variant="secondary">Remover item</SubmitButton>
                         </form>
+                        <ItemCustomizationPanel
+                          additionals={additionals}
+                          complementGroups={complementGroups}
+                          itemId={item.id}
+                          itemName={item.name}
+                        />
                       </div>
                     ))}
                     {categoryItems.length === 0 ? (

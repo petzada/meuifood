@@ -24,6 +24,26 @@ describe("storefront /loja/[slug]", () => {
                 name: "Lanches",
                 items: [
                   {
+                    additionals: [
+                      {
+                        id: "77777777-7777-4777-8777-777777777777",
+                        name: "Bacon",
+                        priceCents: 350,
+                      },
+                    ],
+                    complementGroups: [
+                      {
+                        id: "22222222-2222-4222-8222-222222222222",
+                        name: "Ponto da carne",
+                        options: [
+                          {
+                            id: "33333333-3333-4333-8333-333333333333",
+                            name: "Ao ponto",
+                          },
+                        ],
+                        required: true,
+                      },
+                    ],
                     id: "item-1",
                     name: "X-Burger",
                     description: "Pão e carne",
@@ -49,6 +69,11 @@ describe("storefront /loja/[slug]", () => {
     expect(html).toContain("Lanches");
     expect(html).toContain("X-Burger");
     expect(html).toContain("Pão e carne");
+    expect(html).toContain("Ponto da carne");
+    expect(html).toContain("obrigatório");
+    expect(html).toContain("Bacon");
+    expect(html).toContain("Carrinho");
+    expect(html).toContain("preços serão recalculados pelo servidor");
     expect(html).toContain("R$");
     expect(html).not.toContain("billingMode");
     expect(html).not.toContain("pilot_platform");

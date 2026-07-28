@@ -22,6 +22,7 @@ import {
   initializeObservability,
   registerErrorObservability,
 } from "./observability.js";
+import { registerMenuCustomizationRoutes } from "./menu-customization-routes.js";
 
 type BuildAppOptions = {
   businessDatabase?: BusinessDatabase;
@@ -321,7 +322,9 @@ export function buildApp(options: BuildAppOptions = {}) {
 
       const catalog = await businessDatabase.listMenuCatalog(context);
       return reply.code(200).send({
+        additionals: catalog.additionals,
         categories: catalog.categories,
+        complementGroups: catalog.complementGroups,
         items: catalog.items.map((item) =>
           serializeMenuItem(item, menuImagePublicBaseUrl),
         ),
@@ -592,6 +595,11 @@ export function buildApp(options: BuildAppOptions = {}) {
         });
       },
     );
+
+    registerMenuCustomizationRoutes(app, {
+      businessDatabase,
+      requireMembership,
+    });
   }
 
   registerErrorObservability(app);

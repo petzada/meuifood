@@ -32,16 +32,19 @@ enum MembershipRole {
 }
 
 model Store {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  taxId       String         @unique @map("tax_id")
-  name        String
-  slug        String         @unique
-  billingMode BillingMode    @map("billing_mode")
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  members     StoreMember[]
-  categories  MenuCategory[]
-  items       MenuItem[]
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taxId              String                 @unique @map("tax_id")
+  name               String
+  slug               String                 @unique
+  billingMode        BillingMode            @map("billing_mode")
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  members            StoreMember[]
+  categories         MenuCategory[]
+  items              MenuItem[]
+  complementGroups   MenuComplementGroup[]
+  complementOptions  MenuComplementOption[]
+  additionals        MenuAdditional[]
 
   @@map("stores")
 }
@@ -75,19 +78,72 @@ model MenuCategory {
 }
 
 model MenuItem {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId        String       @map("store_id") @db.Uuid
-  categoryId     String       @map("category_id") @db.Uuid
-  name           String
-  description    String       @default("")
-  priceCents     Int          @map("price_cents")
-  imageObjectKey String?      @map("image_object_key")
-  available      Boolean      @default(true)
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  category       MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId          String                 @map("store_id") @db.Uuid
+  categoryId       String                 @map("category_id") @db.Uuid
+  name             String
+  description      String                 @default("")
+  priceCents       Int                    @map("price_cents")
+  imageObjectKey   String?                @map("image_object_key")
+  available        Boolean                @default(true)
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store            Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category         MenuCategory           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  complementGroups MenuComplementGroup[]
+  additionals      MenuAdditional[]
 
+  @@unique([storeId, id])
   @@index([storeId, categoryId])
   @@map("menu_items")
+}
+
+model MenuComplementGroup {
+  id        String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String                 @map("store_id") @db.Uuid
+  itemId    String                 @map("item_id") @db.Uuid
+  name      String
+  required  Boolean                @default(false)
+  sortOrder Int                    @map("sort_order")
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store     Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  item      MenuItem               @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  options   MenuComplementOption[]
+
+  @@unique([storeId, id])
+  @@index([storeId, itemId, sortOrder])
+  @@map("menu_complement_groups")
+}
+
+model MenuComplementOption {
+  id        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String              @map("store_id") @db.Uuid
+  groupId   String              @map("group_id") @db.Uuid
+  name      String
+  sortOrder Int                 @map("sort_order")
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store     Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  group     MenuComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, groupId, sortOrder])
+  @@map("menu_complement_options")
+}
+
+model MenuAdditional {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId    String   @map("store_id") @db.Uuid
+  itemId     String   @map("item_id") @db.Uuid
+  name       String
+  priceCents Int      @map("price_cents")
+  available  Boolean  @default(true)
+  sortOrder  Int      @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  item       MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, itemId, sortOrder])
+  @@map("menu_additionals")
 }
