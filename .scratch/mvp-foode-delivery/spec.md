@@ -170,7 +170,7 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 
 - Testes verificam comportamento externo, contratos HTTP, autorização, estado persistido e efeitos financeiros; não fixam organização interna, quantidade de queries, nomes de funções ou classes CSS.
 - Como não existe implementação anterior, estas seams inauguram o padrão do repositório. Não há prior art de testes a imitar.
-- **Seam 1 — API HTTP com Postgres/RLS reais:** exercitar Fastify pela interface HTTP com migrations, constraints, transactions e policies aplicadas em Postgres efêmero. Cobrir resolução da Loja, Cardápio, checkout, recálculo server-side, Pausa, Delivery, Pedido Guest/autenticado, estados, cancelamento, RLS e RBAC.
+- **Seam 1 — API HTTP com Postgres/RLS reais:** exercitar Fastify pela interface HTTP com migrations aplicadas via Supabase CLI, constraints, transactions e policies no Supabase de produção. Fixtures de teste devem ter identificadores sintéticos únicos, cleanup exato e verificado e nunca usar banco local, simulador ou fallback. Cobrir resolução da Loja, Cardápio, checkout, recálculo server-side, Pausa, Delivery, Pedido Guest/autenticado, estados, cancelamento, RLS e RBAC.
 - A prova de RLS usa role de negócio não privilegiada e ao menos duas Lojas sintéticas. Mock de Prisma, banco em memória sem policies ou `service_role` padrão não provam isolamento.
 - A prova de RBAC verifica respostas e ausência de efeito persistido para ações negadas ao Operador. Esconder navegação no Painel não é prova de autorização.
 - JWTs podem usar chave/JWKS controlados em teste; Woovi e Asaas podem usar adapters fakes no limite HTTP/SDK; relógio e Sentry podem ser controlados.

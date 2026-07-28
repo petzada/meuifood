@@ -9,12 +9,23 @@
     }
   },
   "scripts": {
-    "lint": "eslint src --max-warnings=0",
-    "typecheck": "tsc --noEmit",
+    "generate": "prisma generate --config prisma.config.ts",
+    "db:seed": "pnpm generate && prisma db seed --config prisma.config.ts",
+    "lint": "prisma validate --config prisma.config.ts && eslint src --max-warnings=0",
+    "typecheck": "pnpm generate && tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "pnpm generate && tsc -p tsconfig.build.json"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.1",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "pg": "^8.22.0"
   }
 }

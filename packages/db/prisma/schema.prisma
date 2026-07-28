@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BillingMode {
+  pilot_platform
+  baas
+  merchant_own_account
+
+  @@map("billing_mode")
+}
+
+enum MembershipRole {
+  owner
+  operator
+
+  @@map("membership_role")
+}
+
+model Store {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taxId       String         @unique @map("tax_id")
+  name        String
+  slug        String         @unique
+  billingMode BillingMode    @map("billing_mode")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  members     StoreMember[]
+
+  @@map("stores")
+}
+
+model StoreMember {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String         @map("store_id") @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  role      MembershipRole
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store     Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([userId])
+  @@map("store_members")
+}

@@ -15,3 +15,6 @@
 - [ ] Testes contra Postgres real usam duas Lojas sintéticas e provam que uma não lê nem altera linhas da outra.
 - [ ] Mock de Prisma, banco sem policies ou `service_role` padrão não satisfazem a prova de isolamento.
 
+## Comments
+
+- 2026-07-28 — Decisão operacional mais recente: migrations usam Supabase CLI e os testes HTTP/RLS rodam exclusivamente no Supabase de produção. Não usar Postgres local, Docker, banco efêmero, simulador ou fallback. Fixtures sintéticas devem ter identificadores únicos e cleanup exato verificado.

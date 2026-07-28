@@ -7,6 +7,9 @@
   },
   "scripts": {
     "build:packages": "pnpm --filter @foode/shared build && pnpm --filter @foode/db build && pnpm --filter @foode/ui build",
+    "db:generate": "pnpm --filter @foode/db generate",
+    "db:migrate:deploy": "pnpm supabase db push --linked",
+    "db:seed": "pnpm --filter @foode/db db:seed",
     "dev": "pnpm run build:packages && pnpm --parallel --filter './apps/*' dev",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm run build:packages && pnpm -r --if-present typecheck",
@@ -16,6 +19,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "eslint": "^9.39.2",
+    "supabase": "2.110.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0"
   }
