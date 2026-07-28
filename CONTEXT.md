@@ -81,8 +81,8 @@ Soma do total pago pelo consumidor em pedidos **Concluídos** no mês (itens + a
 _Avoid_: Receita da plataforma, faturamento do CNPJ fora do canal, GMV de marketplace, GMV com maquininha na entrega
 
 **Mensalidade**:
-Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF) até R$ 15.000 de GMV; acima disso, negociação comercial. Mesmas features para quem assina.
-_Avoid_: Plano por feature, três faixas 129/179/229, comissão, take-rate de vitrine
+Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF), com âncora comercial de até R$ 15.000 de GMV. Preço e teto fecham **fora** da plataforma, antes do acesso. Mesmas features para quem assina. Sem meter de plano nem hard block no app.
+_Avoid_: Plano por feature, três faixas 129/179/229, comissão, take-rate de vitrine, barra GMV vs teto no painel
 
 **Taxa de pagamento**:
 MDR cobrado do comerciante no PIX/crédito/débito/voucher online (markup de gateway), distinto de mensalidade e de comissão de marketplace.

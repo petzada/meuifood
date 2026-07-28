@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** A + pacote [32](32-taxas-e-assinatura-fixa-unica.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** N → [33](33-teto-gmv-comercial-fora-do-produto.md)  
 **Método:** `/grill-with-docs`  
 **Produto:** [16](16-tese-produto-fechada.md) · **Stack:** [28](28-tese-stack-mvp.md) · **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
@@ -10,23 +10,23 @@ Fechar lacunas e contrapor decisões soft antes do bootstrap. Não reabrir ânco
 
 ## Âncoras (atualizadas)
 
-SaaS canal próprio · ICP PME · complementar marketplace · **assinatura R$ 179** (teto R$ 15k GMV online) · **taxas [32](32-taxas-e-assinatura-fixa-unica.md)** · Woovi + Asaas · piloto MEI · web `/loja/[slug]` · guest + conta · dono/operador · 1 CNPJ = 1 loja · status enxutos · delivery + retirada · cardápio com complementos · WhatsApp só `wa.me` · monorepo pnpm · Next web/admin · Fastify api · Supabase/Prisma/RLS · poll 10s · Railway + GH Actions · Tailwind/shadcn/Vitest/Sentry/Cron · **GMV = só online** ([31](31-definicao-operacional-gmv.md)).
+SaaS canal próprio · ICP PME · complementar marketplace · **assinatura R$ 179** (teto R$ 15k = **comercial fora do app** — [33](33-teto-gmv-comercial-fora-do-produto.md)) · **taxas [32](32-taxas-e-assinatura-fixa-unica.md)** · Woovi + Asaas · piloto MEI · web `/loja/[slug]` · guest + conta · dono/operador · 1 CNPJ = 1 loja · status enxutos · delivery + retirada · cardápio com complementos · WhatsApp só `wa.me` · monorepo pnpm · Next web/admin · Fastify api · Supabase/Prisma/RLS · poll 10s · Railway + GH Actions · Tailwind/shadcn/Vitest/Sentry/Cron · **GMV = só online** ([31](31-definicao-operacional-gmv.md)).
 
 ## Fechado nesta sessão
 
 | # | Tema | Decisão |
 | --- | --- | --- |
-| **A** | GMV operacional | [31](31-definicao-operacional-gmv.md) — online only; exclui na entrega e cancelados |
-| **Comercial** | Taxas + assinatura | [32](32-taxas-e-assinatura-fixa-unica.md) — supersede 06/12 |
-| **L** | Elo / bandeiras crédito | Política: qualquer bandeira na mesma tabela crédito ([32](32-taxas-e-assinatura-fixa-unica.md)); custo Asaas = validação comercial |
+| **A** | GMV operacional | [31](31-definicao-operacional-gmv.md) |
+| **Comercial** | Taxas + assinatura | [32](32-taxas-e-assinatura-fixa-unica.md) |
+| **L** | Elo / bandeiras crédito | Mesma tabela crédito ([32](32-taxas-e-assinatura-fixa-unica.md)) |
+| **N** | Teto R$ 15k | [33](33-teto-gmv-comercial-fora-do-produto.md) — sem meter/block; negociação fora |
 
 ## Mapa restante
 
 | # | Tema | Tipo | Dependência |
 | --- | --- | --- | --- |
-| **N** | Acima de R$ 15k GMV — comportamento de produto | Lacuna (nova) | [32](32-taxas-e-assinatura-fixa-unica.md) |
-| **O** | Débito + voucher no checkout MVP (dia 1)? | Lacuna (nova) | [32](32-taxas-e-assinatura-fixa-unica.md) |
-| **P** | Cobrança da assinatura anual (como recebe os R$ 1.718,40) | Lacuna leve | [32](32-taxas-e-assinatura-fixa-unica.md) |
+| **O** | Quais meios no checkout MVP (dia 1)? | Lacuna | [32](32-taxas-e-assinatura-fixa-unica.md) |
+| **P** | Cobrança da assinatura anual | Lacuna leve | [32](32-taxas-e-assinatura-fixa-unica.md) / [33](33-teto-gmv-comercial-fora-do-produto.md) |
 | B | `store_id` canônico | Lacuna | — |
 | C | DESIGN.md Airbnb vs primary Foode | Contraponto | — |
 | D | Matriz dono vs operador | Lacuna | — |
@@ -41,34 +41,33 @@ SaaS canal próprio · ICP PME · complementar marketplace · **assinatura R$ 17
 
 ---
 
-## Rodada atual — próxima pergunta: **N**
+## Rodada atual — próxima pergunta: **O**
 
-### N) O que o produto faz quando a loja passa de R$ 15.000 de GMV no mês?
+### O) Quais meios de pagamento entram no checkout do MVP (dia 1 / piloto)?
 
-**Contexto:** [32](32-taxas-e-assinatura-fixa-unica.md) diz “negociar com comercial/desenvolvedor” — isso é processo humano, não regra de software. Sem decisão, o bootstrap não sabe se bloqueia checkout, só alerta, ou ignora o teto no código.
+**Contexto:** [32](32-taxas-e-assinatura-fixa-unica.md) define taxas para PIX, crédito, débito e voucher (+ na entrega fora do take). Implementar os quatro online no dia 1 aumenta superfície Asaas (débito/voucher) no piloto MEI.
 
-**Recomendação:** No MVP, teto é **soft + ops**:
+**Recomendação:**
 
-1. Painel do dono mostra GMV do mês vs R$ 15.000 (barra/alerta aos 80% e 100%).  
-2. **Não** bloqueia novos pedidos online automaticamente.  
-3. Acima de 100%: flag interna + founder contacta (WhatsApp/e-mail) para negociar add-on ou plano custom.  
-4. Hard block / cobrança automática de overage = **pós-MVP**.
+| Meio | MVP piloto (1º cliente) | Modelo / taxas |
+| --- | --- | --- |
+| PIX (Woovi) | **Sim** | Já na tabela |
+| Crédito (Asaas) | **Sim** | Já na tabela |
+| Pagamento na entrega | **Sim** | Sem MDR Foode |
+| Débito (Asaas) | Flag por loja — **off** até validar no Asaas do piloto | Taxa já registrada |
+| Voucher (Asaas) | Flag por loja — **off** até demanda real | Taxa já registrada |
 
-**Por quê:** GTM consultivo de ~10 lojas; hard cap no checkout pune o lojista no pior momento (mês bom) e exige billing de overage que [27](27-fora-mvp-tecnico.md) já tirou do MVP.
+Assim a tabela comercial e o schema de `payment_method` já conhecem os quatro; o amigo-piloto não depende de débito/voucher no go-live.
 
-**Alternativas:** (a) hard block checkout ao passar R$ 15k; (b) overage automático R$/GMV — ambos mais produto do que o piloto precisa.
+**Alternativa:** shipar os quatro online no dia 1 — mais QA de webhook/bandeira antes do 1º pedido real.
 
 ---
 
-## Itens ainda na fila (resumo das recomendações)
-
-### O) Débito e voucher no MVP?
-
-**Recomendação:** **Sim no modelo de dados e taxas**; no checkout do **piloto (1º cliente)** liberar PIX + crédito + na entrega; débito/voucher com flag `payment_methods` por loja (off até validar Asaas no ambiente). Evita scope creep do dia 1 sem jogar fora a tabela comercial.
+## Itens ainda na fila (resumo)
 
 ### P) Assinatura anual
 
-**Recomendação:** MVP = cobrança **manual/ops** (PIX/boleto Foode); flag `billing_cycle: monthly | annual` na loja + data de renovação. Self-serve de cartão para assinatura = depois.
+**Recomendação:** cobrança **manual/ops** (fora do self-serve), alinhado a [33](33-teto-gmv-comercial-fora-do-produto.md). Sem portal de “assinar anual” no MVP.
 
 ### B) `store_id`
 
@@ -76,7 +75,7 @@ Tenant = Loja; coluna **`store_id`**; dono/operador em `store_members`.
 
 ### C) Design
 
-Tokens de superfície do DESIGN.md; **`colors.primary` Foode** próprio (não Rausch); sem property-card/search-orb.
+Tokens de superfície do DESIGN.md; **`colors.primary` Foode** próprio (não Rausch).
 
 ### D) RBAC mínimo
 
@@ -88,7 +87,7 @@ Ledger `refund_needed` → estorno manual no gateway; sem UI de estorno.
 
 ### F–K
 
-Ver propostas da rodada 1 original (inalteradas).
+Marketing no `web` · loja fechada = cardápio visível / checkout bloqueado · frete por bairro ou taxa fixa (km depois) · guest→conta no passo pós-pedido · sem staging completo · fidelidade = cupom/desconto simples.
 
 ---
 
@@ -103,4 +102,4 @@ Ver propostas da rodada 1 original (inalteradas).
 
 ## Próximo passo
 
-Founder responde **N** (teto R$ 15k). Em seguida **O** (débito/voucher no checkout) — ambos filhos de [32](32-taxas-e-assinatura-fixa-unica.md).
+Founder responde **O** (meios no checkout MVP).

@@ -23,8 +23,8 @@ Lacuna Elo no contrato Asaas ([04](04-modelo-receita-saas-tiers-pagamento.md) / 
 | Item | Valor |
 | --- | --- |
 | Mensal | **R$ 179,00** fixo recorrente |
-| Teto incluso | Até **R$ 15.000,00** de GMV na plataforma / mês ([31](31-definicao-operacional-gmv.md)) |
-| Acima do teto | **Negociar** com comercial / desenvolvedor (comportamento de produto — ver grilling) |
+| Teto incluso | Até **R$ 15.000,00** de GMV na plataforma / mês ([31](31-definicao-operacional-gmv.md)) — **âncora comercial**, não enforcement no app ([33](33-teto-gmv-comercial-fora-do-produto.md)) |
+| Acima do teto | Negociação **manual / fora** da plataforma; sem hard block nem overage ([33](33-teto-gmv-comercial-fora-do-produto.md)) |
 | Anual | **20% OFF** → **R$ 1.718,40** / ano (economia R$ 429,60 vs 12×179) |
 
 **Revogado:** três faixas R$ 129 / 179 / 229 por cortes R$ 3,5k / 9,5k ([12](12-faixas-mensalidade-por-gmv.md)).
@@ -36,7 +36,7 @@ Lacuna Elo no contrato Asaas ([04](04-modelo-receita-saas-tiers-pagamento.md) / 
 - Checkout online precisa modelar **quatro** meios: PIX, crédito, débito, voucher (+ na entrega fora do GMV/MDR).  
 - Providers: Woovi = PIX; Asaas = crédito, débito, voucher.  
 - Copy comercial e ledger piloto usam D+1 / D+33 / D+4 / D+16 conforme a tabela.  
-- Billing: mensal R$ 179 ou anual antecipado R$ 1.718,40 — detalhe de cobrança da assinatura ainda pode ser ops manual no MVP ([27](27-fora-mvp-tecnico.md)).
+- Billing: mensal R$ 179 ou anual antecipado R$ 1.718,40 — **cobrança e teto GMV fora do app** ([33](33-teto-gmv-comercial-fora-do-produto.md)); self-serve de plano não é MVP.
 
 ## 4) Explicitamente fora (inalterado)
 

@@ -28,6 +28,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 15 | [URL/marca](15-url-slug-e-marca-provisional.md) | `/loja/[slug]` · Foode Delivery |
 | 31 | [GMV operacional](31-definicao-operacional-gmv.md) | Só online; exclui na entrega e cancelados |
 | 32 | [taxas + assinatura](32-taxas-e-assinatura-fixa-unica.md) | Pacote comercial vigente |
+| 33 | [teto GMV comercial](33-teto-gmv-comercial-fora-do-produto.md) | Sem meter/block no produto |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -35,7 +36,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 | Item | Valor |
 | --- | --- |
-| Assinatura mensal | **R$ 179,00** (até R$ 15.000 GMV online; acima = negociar) |
+| Assinatura mensal | **R$ 179,00** (âncora até R$ 15.000 GMV online; acima = negociar **fora** do app — [33](33-teto-gmv-comercial-fora-do-produto.md)) |
 | Assinatura anual | **R$ 1.718,40** (20% OFF) |
 | PIX | **1,19%** D+1 (Woovi) |
 | Crédito à vista | **3,29% + R$ 0,79** D+33 (Asaas, qualquer bandeira) |
@@ -50,10 +51,9 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 ## Fora deste ciclo / grilling aberto
 
-- Comportamento de produto acima de R$ 15k GMV.  
 - Checklist fino de permissões dono vs operador.  
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: meios no checkout MVP).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 

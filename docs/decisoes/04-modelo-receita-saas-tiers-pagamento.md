@@ -23,6 +23,6 @@ Histórico: [06](06-gateways-taxas-e-tiers.md).
 
 ## Em aberto
 
-- Comportamento de produto acima de R$ 15k GMV (grilling).  
 - Homologação BaaS (execução).  
-- Checklist fino de permissões dono vs operador (grilling D).
+- Checklist fino de permissões dono vs operador (grilling D).  
+- Meios no checkout MVP (grilling O).
