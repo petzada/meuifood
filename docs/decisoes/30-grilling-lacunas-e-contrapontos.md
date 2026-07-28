@@ -1,26 +1,18 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** P → [35](35-ui-billing-plano-painel.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** B → [36](36-tenant-store-id-canonico.md)  
 **Método:** `/grill-with-docs`  
-**Produto:** [16](16-tese-produto-fechada.md) · **Stack:** [28](28-tese-stack-mvp.md) · **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
+**Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-| # | Tema | Decisão |
-| --- | --- | --- |
-| A | GMV operacional | [31](31-definicao-operacional-gmv.md) |
-| Comercial | Taxas + assinatura | [32](32-taxas-e-assinatura-fixa-unica.md) |
-| L | Bandeiras crédito | [32](32-taxas-e-assinatura-fixa-unica.md) |
-| N | Teto R$ 15k | [33](33-teto-gmv-comercial-fora-do-produto.md) |
-| O | Meios checkout MVP | [34](34-meios-pagamento-checkout-mvp.md) |
-| P | UI billing / plano | [35](35-ui-billing-plano-painel.md) |
+A [31] · Comercial [32] · L · N [33] · O [34] · P [35] · **B [36](`store_id`)**
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **B** | `store_id` canônico | Lacuna |
-| C | DESIGN.md Airbnb vs primary Foode | Contraponto |
+| **C** | DESIGN.md Airbnb vs primary Foode | Contraponto |
 | D | Matriz dono vs operador | Lacuna |
 | E | Cancelamento + estorno piloto | Lacuna |
 | F | Marketing no `web` | Lacuna leve |
@@ -33,22 +25,24 @@
 
 ---
 
-## Rodada atual — próxima pergunta: **B**
+## Rodada atual — próxima pergunta: **C**
 
-### B) Nome canônico do tenant no schema: `store_id`?
+### C) DESIGN.md Airbnb — manter Rausch como primary Foode?
 
-**Contexto:** [20](20-tenant-mvp-sem-workspaces.md) / [21](21-banco-orm-multitenant.md) ainda citam `store_id` **ou** `merchant_id`. Plano ([35](35-ui-billing-plano-painel.md)) e RLS precisam de um ID estável.
+**Contexto:** [29](29-libs-ops-acrescimos-mvp.md) manda alinhar Tailwind/shadcn a [DESIGN.md](../DESIGN.md) (Airbnb: Rausch #ff385c, property-card, search-orb). Marca do produto é **Foode Delivery**.
 
-**Recomendação:** Tenant = **Loja**; coluna **`store_id`** em todas as tabelas de negócio (pedidos, cardápio, `store_members`, `plan_*`). Comerciante/Dono = membership (`role`), não entidade tenant separada no MVP.
+**Contraponto:** Primary Rausch + linguagem de hospedagem falha o brand test de um SaaS de delivery local.
 
-**Por quê:** 1:1 comerciante↔loja no MVP; `merchant_id` confunde com IDs de gateway Asaas/Woovi.
+**Recomendação:** Extrair de DESIGN.md só **primitives de superfície** (canvas, ink, hairline, radii, spacing, um shadow). Definir **`colors.primary` Foode** próprio (não Rausch) em `packages/shared` antes do shadcn. Não portar property-card / search-orb / Luxe / Plus. Airbnb fica como referência de densidade, não como marca.
+
+**Alternativa:** shipar Rausch “só no MVP” e trocar depois — barato agora, confuso com lojistas piloto.
 
 ---
 
-## Fila (resumo)
+## Fila
 
-**C** primary Foode (não Rausch) · **D** operador só pedidos · **E** cancel → refund_needed manual · **F** marketing no `web` · **G** cardápio visível / checkout bloqueado se fechado · **H** frete bairro ou taxa fixa · **I** guest→conta pós-pedido · **J** sem staging completo · **K** fidelidade cupom simples.
+**D** operador só pedidos · **E** cancel → refund manual · **F** marketing no `web` · **G** fechado = checkout bloqueado · **H** frete bairro/fixa · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
 
 ## Próximo passo
 
-Founder responde **B**.
+Founder responde **C**.

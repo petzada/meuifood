@@ -17,5 +17,5 @@ Tese de produto e stack via pesquisa de mercado + grilling (jul/2026).
 
 - **Tese de produto:** concluída ([16](decisoes/16-tese-produto-fechada.md)); números comerciais vigentes em [31](decisoes/31-definicao-operacional-gmv.md) / [32](decisoes/32-taxas-e-assinatura-fixa-unica.md).
 - **Tese de stack + libs/ops:** concluída ([28](decisoes/28-tese-stack-mvp.md), [29](decisoes/29-libs-ops-acrescimos-mvp.md)).
-- **Grilling lacunas/contrapontos:** em andamento ([30](decisoes/30-grilling-lacunas-e-contrapontos.md)) — P fechado ([35](decisoes/35-ui-billing-plano-painel.md)); próxima = `store_id` (B).
+- **Grilling lacunas/contrapontos:** em andamento ([30](decisoes/30-grilling-lacunas-e-contrapontos.md)) — B fechado ([36](decisoes/36-tenant-store-id-canonico.md)); próxima = design primary Foode (C).
 - **Implementação:** ainda não iniciada.

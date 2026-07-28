@@ -10,7 +10,7 @@
 | --- | --- |
 | Banco | **Postgres no Supabase** (âncora [17](17-monorepo-e-infra-preferencias.md)) |
 | Modelo multi-tenant | **Shared schema** + coluna **`store_id`** nas tabelas de negócio |
-| Tenant MVP | 1 loja = 1 comerciante ([20](20-tenant-mvp-sem-workspaces.md)) — **sem** `workspace_id` |
+| Tenant MVP | 1 loja = 1 comerciante ([20](20-tenant-mvp-sem-workspaces.md)) — FK canônica **`store_id`** ([36](36-tenant-store-id-canonico.md)); **sem** `workspace_id` / `merchant_id` |
 | ORM | **Prisma** |
 | Isolamento cross-tenant | **RLS efetivo (modo 2)** — ver abaixo |
 | Schema-per-tenant | **Rejeitado** no MVP |
