@@ -1,0 +1,29 @@
+{
+  "name": "@foode/admin",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "next build",
+    "start": "next start -p 3001"
+  },
+  "dependencies": {
+    "@fontsource-variable/nunito": "^5.2.8",
+    "@foode/shared": "workspace:*",
+    "@foode/ui": "workspace:*",
+    "@sentry/nextjs": "^10.68.0",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.3",
+    "vitest": "^4.1.10"
+  }
+}
