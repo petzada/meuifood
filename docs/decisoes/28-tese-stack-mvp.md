@@ -50,4 +50,4 @@ Railway Cron                  → reconciliação (exit)
 
 Entendimento compartilhado **confirmado**. Gate libs/ops **fechado** ([29](29-libs-ops-acrescimos-mvp.md), pesquisa [14](../pesquisa/14-viabilidade-stack-e-libs-mvp.md)).
 
-Antes do bootstrap: fechar lacunas/contrapontos em [30](30-grilling-lacunas-e-contrapontos.md) (GMV operacional, RBAC fino, cancelamento/estorno, tokens Foode vs Airbnb, frete, guest→conta). Glossário: [`CONTEXT.md`](../../CONTEXT.md). ADRs load-bearing: [`docs/adr/`](../adr/).
+Antes do bootstrap: fronteira de lacunas **fechada** ([30](30-grilling-lacunas-e-contrapontos.md), [31](31-definicao-operacional-gmv.md)–[45](45-cupom-conta-e-fidelidade-pos-mvp.md)). Glossário: [`CONTEXT.md`](../../CONTEXT.md). Brand: [FOODE-BRAND.md](../FOODE-BRAND.md). ADRs: [`docs/adr/`](../adr/).

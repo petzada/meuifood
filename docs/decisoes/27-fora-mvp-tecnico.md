@@ -19,14 +19,17 @@
 | Catálogo Airbnb inteiro (property-card, search-orb, …) / Rausch como marca | [37](37-brand-foode-ui-outline-taste.md) · tokens Foode em [FOODE-BRAND.md](../FOODE-BRAND.md) |
 | KDS, NF-e, estoque completo, impressão térmica | [11](11-planos-por-faturamento-features-completas.md) |
 | PCI próprio / multi-gateway (MP, Cielo, …) | [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md) |
+| Fidelidade por N pedidos / item grátis (motor de compras) | [45](45-cupom-conta-e-fidelidade-pos-mvp.md) |
 | Km / raio / geocoding na taxa de entrega | [42](42-taxa-delivery-bairro-ou-fixa.md) |
 
 ## Ops de produto no MVP (manual / enxuto — não é “feature plataforma” ainda)
 
-- Checklist fino de permissões dono vs operador — **fechado** [38](38-rbac-dono-operador-mvp.md).  
+- Fidelidade / cupom ao criar conta — **fechado** [45](45-cupom-conta-e-fidelidade-pos-mvp.md).  
+- Motor “N pedidos = item” — pós-MVP ([45](45-cupom-conta-e-fidelidade-pos-mvp.md)).  
 - Homologação BaaS — **paralelo comercial**, não bloqueia código do piloto `pilot_platform`.  
 - Teto GMV — comercial fora; sem enforcement — [33](33-teto-gmv-comercial-fora-do-produto.md).  
-- Cobrança da **assinatura** Foode: pagamento **por fora** + **flag** de plano no painel (UI de billing existe, read-only no pagamento) — [35](35-ui-billing-plano-painel.md).
+- Cobrança da **assinatura** Foode: pagamento **por fora** + **flag** de plano no painel (UI de billing existe, read-only no pagamento) — [35](35-ui-billing-plano-painel.md).  
+- Checklist fino de permissões dono vs operador — **fechado** [38](38-rbac-dono-operador-mvp.md).
 
 ## Pós-MVP já registrados (não esquecer)
 

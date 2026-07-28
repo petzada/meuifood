@@ -145,8 +145,12 @@ _Avoid_: Card com fill+sombra como default
 ### Fidelidade
 
 **Cupom de boas-vindas**:
-Incentivo opt-in do comerciante ao criar conta após pedido guest — MVP de fidelidade, não motor de pontos.
-_Avoid_: Gamificação, cashback, RPG de pontos
+Desconto em R$ ou % configurável pelo dono, oferecido ao criar conta se o programa estiver ligado (opt-in).
+_Avoid_: Item grátis estruturado, gamificação, cashback, RPG de pontos
+
+**Fidelidade por pedidos**:
+Programa pós-MVP: N pedidos concluídos → item grátis ou cupom (gerido pelo dono).
+_Avoid_: Usar no MVP como se já fosse requisito de build
 
 **Cancelamento (pedido)**:
 Ação no painel que marca o pedido como cancelado; se houver PIX/crédito pago, dispara estorno automático no gateway.

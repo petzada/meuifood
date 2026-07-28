@@ -15,10 +15,10 @@ Para: **3 preços conforme faturamento** do comerciante; **mesmo produto complet
 - Painel de status de pedidos  
 - Delivery + retirada opcional (lojista liga/desliga)  
 - PIX + pagamento na entrega + **cartão online**  
-- Conta do consumidor + **cupons** para quem cria conta (**opt-in do comerciante**)  
-- Fidelidade simples configurável (ex.: **10 pedidos = 1 item**)  
+- Conta do consumidor + **cupom ao criar conta** (**opt-in do dono**; desconto R$ ou % configurável) — [45](45-cupom-conta-e-fidelidade-pos-mvp.md)  
+- Fidelidade por N pedidos / item grátis — **pós-MVP** ([45](45-cupom-conta-e-fidelidade-pos-mvp.md))  
 - Relatórios básicos de delivery/pedidos (**visão financeira só para dono**)  
-- **Equipe:** dono + operador(es) com permissões (ver seção abaixo)  
+- **Equipe:** dono + operador(es) — [38](38-rbac-dono-operador-mvp.md)  
 
 ## Fora do MVP
 

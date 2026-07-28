@@ -40,6 +40,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 42 | [taxa delivery](42-taxa-delivery-bairro-ou-fixa.md) | Bairro ou fixa; km pós-MVP |
 | 43 | [guest → conta](43-guest-conta-vinculo-pedido.md) | E-mail no create account; vínculo order_id |
 | 44 | [prod-only + CI migrations](44-producao-only-sandbox-migrations-ci.md) | Sem staging; sandbox PSP; sem is_demo |
+| 45 | [cupom conta / fidelidade](45-cupom-conta-e-fidelidade-pos-mvp.md) | MVP: R$/% opt-in; N pedidos = pós-MVP |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -62,8 +63,8 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 ## Fora deste ciclo / grilling aberto
 
-- Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: fidelidade MVP).
+- Homologação BaaS (execução comercial — fora do grilling de código).  
+- Fronteira de lacunas produto/stack desta sessão: **fechada** ([30](30-grilling-lacunas-e-contrapontos.md) · [31](31-definicao-operacional-gmv.md)–[45](45-cupom-conta-e-fidelidade-pos-mvp.md)).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 
