@@ -130,13 +130,13 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 - Marketing institucional compartilha o Storefront; não existe quarto app de landing.
 - Railway hospeda os três apps. GitHub Actions executa lint, typecheck, testes e validação de migrations antes de produção. Não existe staging ou preview no MVP.
 - Railway Cron executa reconciliação short-lived reutilizando a responsabilidade da API; não existe worker sempre-on nem quarto app.
-- Supabase fornece Postgres, Auth, RLS, Storage e backup do plano contratado. Prisma é o ORM e owner do schema e das migrations.
+- Supabase fornece Postgres, Auth, RLS e backup do plano contratado. Imagens do Cardápio usam Cloudflare R2 (não Supabase Storage). Prisma é o ORM e owner do schema e das migrations.
 - Loja é o tenant. `store_id` é a FK canônica em todas as tabelas de negócio. Não existem Workspace, `workspace_id` ou `merchant_id` como tenant.
 - RLS impede acesso entre Lojas. A API estabelece contexto confiável por request com uma role sujeita às policies. Role privilegiada é restrita a migrations, tarefas administrativas e bypass consciente.
 - RBAC na API separa Dono e Operador. Ocultar controles no Painel não substitui autorização no servidor.
 - Dono e Operador usam Supabase Auth com e-mail e senha e entram por convite. Consumidor usa magic link; Guest não usa Auth.
 - O Storefront resolve a Loja pelo Slug, obtém o Cardápio público e nunca aceita `store_id` arbitrário do navegador como fonte de tenant.
-- O Cardápio contém categorias, itens, imagens, disponibilidade, Complementos e Adicionais. Imagens usam Supabase Storage com autorização compatível com `store_id` e RBAC.
+- O Cardápio contém categorias, itens, imagens, disponibilidade, Complementos e Adicionais. Imagens usam Cloudflare R2 com autorização compatível com `store_id` e RBAC (PUT pré-assinado na API; leitura pública via base URL/CDN).
 - Loja fora do horário e Pausa são estados distintos. Ambos mantêm o Cardápio visível e bloqueiam a criação de Pedido; não existe agendamento.
 - Fulfillment é Delivery ou Retirada opcional. Cada Loja escolhe taxa por bairro ou Taxa fixa, nunca os dois modos simultaneamente. Distância/km não entra.
 - O servidor recalcula preços, escolhas e taxa de Delivery; totais enviados pelo navegador não são fonte de verdade.
