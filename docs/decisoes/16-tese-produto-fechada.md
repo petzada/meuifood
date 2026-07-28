@@ -37,6 +37,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 39 | [cancel + estorno auto](39-cancelamento-estorno-automatico.md) | Woovi/Asaas API; na entrega só status |
 | 40 | [marketing no `web`](40-marketing-no-apps-web.md) | Landing no mesmo Next; sem 4º serviço |
 | 41 | [loja fechada / pause](41-loja-fechada-pause-checkout.md) | Cardápio visível; checkout bloqueado; toggle emergência |
+| 42 | [taxa delivery](42-taxa-delivery-bairro-ou-fixa.md) | Bairro ou fixa; km pós-MVP |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -60,7 +61,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 ## Fora deste ciclo / grilling aberto
 
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: frete / taxa delivery).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: guest → conta).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 

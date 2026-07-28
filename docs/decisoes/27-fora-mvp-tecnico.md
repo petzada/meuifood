@@ -19,7 +19,7 @@
 | Catálogo Airbnb inteiro (property-card, search-orb, …) / Rausch como marca | [37](37-brand-foode-ui-outline-taste.md) · tokens Foode em [FOODE-BRAND.md](../FOODE-BRAND.md) |
 | KDS, NF-e, estoque completo, impressão térmica | [11](11-planos-por-faturamento-features-completas.md) |
 | PCI próprio / multi-gateway (MP, Cielo, …) | [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md) |
-| Meter/hard block/overage de teto GMV R$ 15k | [33](33-teto-gmv-comercial-fora-do-produto.md) |
+| Km / raio / geocoding na taxa de entrega | [42](42-taxa-delivery-bairro-ou-fixa.md) |
 
 ## Ops de produto no MVP (manual / enxuto — não é “feature plataforma” ainda)
 

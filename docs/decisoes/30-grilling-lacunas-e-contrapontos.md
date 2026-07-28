@@ -1,40 +1,37 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** G → [41](41-loja-fechada-pause-checkout.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** H → [42](42-taxa-delivery-bairro-ou-fixa.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-… · E [39] · F [40] · **G [41]**
+… · G [41] · **H [42]** (frete bairro/fixa; km pós-MVP)
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **H** | Frete: bairro (não km) | Lacuna / contraponto |
-| I | Guest → conta | Lacuna |
+| **I** | Guest → conta | Lacuna |
 | J | Sem staging | Contraponto |
 | K | Fidelidade MVP | Lacuna |
 | M | Homologação BaaS | Comercial |
 
 ---
 
-## Rodada atual — próxima pergunta: **H**
+## Rodada atual — próxima pergunta: **I**
 
-### H) Taxa de delivery no MVP: bairro e/ou km?
+### I) Guest → criar conta: como vincular?
 
-**Contexto:** [08](08-fulfillment-delivery-e-retirada.md) diz “por bairro e/ou por km”. Km puxa geocoding no dia 1.
+**Contexto:** [10](10-checkout-guest-e-conta.md) — guest sem e-mail; conta = magic link ([22](22-auth-lojista-e-consumidor.md)).
 
-**Recomendação MVP:** loja escolhe **um** modo — **por bairro** (lista + preço) **ou** **taxa fixa**. **Km / raio:** pós-MVP. Endereço fora das zonas → não permite delivery.
-
-**Contraponto:** “bairro e/ou km” no dia 1 é overbuild para GTM local de ~10 lojas.
+**Recomendação:** Guest **sem** e-mail obrigatório (nome, telefone, endereço se delivery). Ao “criar conta” pós-pedido: pede e-mail + confirma telefone do pedido; magic link; vincula **aquele** `order_id` (e opcionalmente outros com mesmo telefone na mesma `store_id`). Sem merge cross-loja automático.
 
 ---
 
 ## Fila
 
-**I** guest→conta · **J** sem staging · **K** fidelidade simples.
+**J** sem staging completo (sandbox gateways + loja demo) · **K** fidelidade = cupom/desconto simples opt-in.
 
 ## Próximo passo
 
-Founder responde **H**.
+Founder responde **I**.

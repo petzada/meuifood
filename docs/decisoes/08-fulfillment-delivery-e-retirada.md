@@ -6,7 +6,7 @@
 
 | Modalidade | MVP | Notas |
 | --- | --- | --- |
-| **Delivery** | Sim | Taxa configurável pela loja (**por bairro e/ou por km**) |
+| **Delivery** | Sim | Taxa: dono escolhe **por bairro** ou **taxa fixa** — [42](42-taxa-delivery-bairro-ou-fixa.md); **km/raio = pós-MVP** |
 | **Retirada no balcão** | Sim, **opcional** | Comerciante **ativa ou desativa**; não é obrigatório para todas as lojas |
 | **Consumo no local** (mesa/QR) | Não | **Fase 2 / pós-MVP** |
 
