@@ -27,8 +27,8 @@ Troca de modo = config da loja + secrets — **não** reescrever fluxo de checko
 
 ## Fora / depois
 
-- Homologação BaaS (execução comercial/compliance).
-- UI de onboarding de credenciais do lojista (modo `merchant_own_account`).
+- Homologação BaaS: caminho comercial fechado em [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md) (LTDA Tomadora; UI onboarding subconta no `admin`).  
+- UI de onboarding de credenciais do lojista no modo `merchant_own_account` (não é plano comercial vigente — [52](52-espera-sem-limite-ate-baas.md)).  
 - Estorno **parcial** / estorno sem cancelar pedido.
 
 ## Estorno (atualizado)
