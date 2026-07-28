@@ -13,6 +13,10 @@ import {
   type MenuFeedback,
   type MenuItem,
 } from "./menu/menu-panel";
+import type {
+  Additional,
+  ComplementGroup,
+} from "./menu/item-customization-panel";
 import { inviteOperator, removeOperator } from "./team/actions";
 import { SubmitButton } from "./team/submit-button";
 
@@ -229,10 +233,17 @@ export default async function AdminHome({
     });
     if (!menuResponse.ok) throw new Error("menu_request_failed");
     const menuPayload = (await menuResponse.json()) as {
+      additionals?: Additional[];
       categories?: MenuCategory[];
+      complementGroups?: ComplementGroup[];
       items?: MenuItem[];
     };
-    if (!Array.isArray(menuPayload.categories) || !Array.isArray(menuPayload.items)) {
+    if (
+      !Array.isArray(menuPayload.categories) ||
+      !Array.isArray(menuPayload.items) ||
+      !Array.isArray(menuPayload.complementGroups) ||
+      !Array.isArray(menuPayload.additionals)
+    ) {
       throw new Error("menu_response_invalid");
     }
     const menuFeedback = Object.hasOwn(menuFeedbackMessages, cardapio ?? "")
@@ -240,7 +251,9 @@ export default async function AdminHome({
       : undefined;
     menu = (
       <MenuPanel
+        additionals={menuPayload.additionals}
         categories={menuPayload.categories}
+        complementGroups={menuPayload.complementGroups}
         feedback={menuFeedback}
         items={menuPayload.items}
       />

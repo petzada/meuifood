@@ -5,6 +5,30 @@ import {
   type Prisma,
 } from "./generated/prisma/client.js";
 import type { MembershipRole } from "./generated/prisma/enums.js";
+import {
+  createAdditional as createAdditionalRecord,
+  createComplementGroupWithOptions,
+  deleteAdditional as deleteAdditionalRecord,
+  deleteComplementGroup as deleteComplementGroupRecord,
+  listItemCustomizations,
+  reorderAdditionals as reorderAdditionalsRecords,
+  reorderComplementGroups as reorderComplementGroupRecords,
+  replaceComplementGroupOptions,
+  updateAdditional as updateAdditionalRecord,
+  type AdditionalView,
+  type ComplementGroupView,
+  type PublicAdditionalView,
+  type PublicComplementGroupView,
+} from "./menu-customization.js";
+
+export type {
+  AdditionalView,
+  ComplementGroupView,
+  ComplementOptionView,
+  PublicAdditionalView,
+  PublicComplementGroupView,
+  PublicComplementOptionView,
+} from "./menu-customization.js";
 
 export type StoreContext = {
   storeId: string;
@@ -46,11 +70,15 @@ export type MenuItemView = {
 };
 
 export type MenuCatalogView = {
+  additionals: AdditionalView[];
   categories: MenuCategoryView[];
+  complementGroups: ComplementGroupView[];
   items: MenuItemView[];
 };
 
 export type PublicMenuItemView = {
+  additionals: PublicAdditionalView[];
+  complementGroups: PublicComplementGroupView[];
   description: string;
   id: string;
   imageUrl: string | null;
@@ -78,6 +106,24 @@ export type BusinessDatabase = {
     context: StoreContext,
     input: { name: string },
   ): Promise<MenuCategoryView>;
+  createAdditional(
+    context: StoreContext,
+    input: {
+      available?: boolean;
+      itemId: string;
+      name: string;
+      priceCents: number;
+    },
+  ): Promise<AdditionalView | null>;
+  createComplementGroup(
+    context: StoreContext,
+    input: {
+      itemId: string;
+      name: string;
+      options: Array<{ name: string }>;
+      required: boolean;
+    },
+  ): Promise<ComplementGroupView | null>;
   createMenuItem(
     context: StoreContext,
     input: {
@@ -89,6 +135,8 @@ export type BusinessDatabase = {
       priceCents: number;
     },
   ): Promise<MenuItemView | null>;
+  deleteAdditional(context: StoreContext, additionalId: string): Promise<boolean>;
+  deleteComplementGroup(context: StoreContext, groupId: string): Promise<boolean>;
   deleteMenuCategory(
     context: StoreContext,
     categoryId: string,
@@ -106,11 +154,39 @@ export type BusinessDatabase = {
   listMenuCatalog(context: StoreContext): Promise<MenuCatalogView>;
   listTeamMembers(context: MembershipContext): Promise<TeamMemberView[]>;
   removeOperator(context: MembershipContext, membershipId: string): Promise<boolean>;
+  reorderAdditionals(
+    context: StoreContext,
+    itemId: string,
+    orderedAdditionalIds: string[],
+  ): Promise<AdditionalView[] | null>;
+  reorderComplementGroups(
+    context: StoreContext,
+    itemId: string,
+    orderedGroupIds: string[],
+  ): Promise<ComplementGroupView[] | null>;
   reorderMenuCategories(
     context: StoreContext,
     orderedCategoryIds: string[],
   ): Promise<MenuCategoryView[] | null>;
+  replaceComplementGroup(
+    context: StoreContext,
+    groupId: string,
+    input: {
+      name?: string;
+      options: Array<{ name: string }>;
+      required?: boolean;
+    },
+  ): Promise<ComplementGroupView | null>;
   resolveMembershipContext(userId: string): Promise<MembershipContext | null>;
+  updateAdditional(
+    context: StoreContext,
+    additionalId: string,
+    input: {
+      available?: boolean;
+      name?: string;
+      priceCents?: number;
+    },
+  ): Promise<AdditionalView | null>;
   updateMenuCategory(
     context: StoreContext,
     categoryId: string,
@@ -225,6 +301,20 @@ export function createTransactionalBusinessDatabase(
       }
     },
     async close() {},
+    async createAdditional(context, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await createAdditionalRecord(storeTransaction, context.storeId, input),
+      );
+    },
+    async createComplementGroup(context, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await createComplementGroupWithOptions(
+          storeTransaction,
+          context.storeId,
+          input,
+        ),
+      );
+    },
     async createMenuCategory(context, input) {
       return await inStoreContext(transaction, context, async (storeTransaction) => {
         const aggregate = await storeTransaction.menuCategory.aggregate({
@@ -262,6 +352,24 @@ export function createTransactionalBusinessDatabase(
           select: menuItemSelect,
         });
       });
+    },
+    async deleteAdditional(context, additionalId) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await deleteAdditionalRecord(
+          storeTransaction,
+          context.storeId,
+          additionalId,
+        ),
+      );
+    },
+    async deleteComplementGroup(context, groupId) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await deleteComplementGroupRecord(
+          storeTransaction,
+          context.storeId,
+          groupId,
+        ),
+      );
     },
     async deleteMenuCategory(context, categoryId) {
       return await inStoreContext(transaction, context, async (storeTransaction) => {
@@ -341,6 +449,24 @@ export function createTransactionalBusinessDatabase(
         },
       });
 
+      const itemIds = categories.flatMap((category) =>
+        category.items.map((item) => item.id),
+      );
+      const customizations = await listItemCustomizations(transaction, itemIds);
+      const groupsByItem = new Map<string, typeof customizations.complementGroups>();
+      for (const group of customizations.complementGroups) {
+        const list = groupsByItem.get(group.itemId) ?? [];
+        list.push(group);
+        groupsByItem.set(group.itemId, list);
+      }
+      const additionalsByItem = new Map<string, typeof customizations.additionals>();
+      for (const additional of customizations.additionals) {
+        if (!additional.available) continue;
+        const list = additionalsByItem.get(additional.itemId) ?? [];
+        list.push(additional);
+        additionalsByItem.set(additional.itemId, list);
+      }
+
       return {
         name: store.name,
         slug: store.slug,
@@ -350,6 +476,22 @@ export function createTransactionalBusinessDatabase(
             id: category.id,
             name: category.name,
             items: category.items.map((item) => ({
+              additionals: (additionalsByItem.get(item.id) ?? []).map(
+                (additional) => ({
+                  id: additional.id,
+                  name: additional.name,
+                  priceCents: additional.priceCents,
+                }),
+              ),
+              complementGroups: (groupsByItem.get(item.id) ?? []).map((group) => ({
+                id: group.id,
+                name: group.name,
+                required: group.required,
+                options: group.options.map((option) => ({
+                  id: option.id,
+                  name: option.name,
+                })),
+              })),
               description: item.description,
               id: item.id,
               imageUrl: item.imageObjectKey
@@ -384,7 +526,16 @@ export function createTransactionalBusinessDatabase(
             select: menuItemSelect,
           }),
         ]);
-        return { categories, items };
+        const customizations = await listItemCustomizations(
+          storeTransaction,
+          items.map((item) => item.id),
+        );
+        return {
+          additionals: customizations.additionals,
+          categories,
+          complementGroups: customizations.complementGroups,
+          items,
+        };
       });
     },
     async listTeamMembers(context) {
@@ -412,6 +563,26 @@ export function createTransactionalBusinessDatabase(
           });
           return result.count === 1;
         },
+      );
+    },
+    async reorderAdditionals(context, itemId, orderedAdditionalIds) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await reorderAdditionalsRecords(
+          storeTransaction,
+          context.storeId,
+          itemId,
+          orderedAdditionalIds,
+        ),
+      );
+    },
+    async reorderComplementGroups(context, itemId, orderedGroupIds) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await reorderComplementGroupRecords(
+          storeTransaction,
+          context.storeId,
+          itemId,
+          orderedGroupIds,
+        ),
       );
     },
     async reorderMenuCategories(context, orderedCategoryIds) {
@@ -445,6 +616,16 @@ export function createTransactionalBusinessDatabase(
         });
       });
     },
+    async replaceComplementGroup(context, groupId, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await replaceComplementGroupOptions(
+          storeTransaction,
+          context.storeId,
+          groupId,
+          input,
+        ),
+      );
+    },
     async resolveMembershipContext(userId) {
       return await inStoreContext(
         transaction,
@@ -468,6 +649,16 @@ export function createTransactionalBusinessDatabase(
               }
             : null;
         },
+      );
+    },
+    async updateAdditional(context, additionalId, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        await updateAdditionalRecord(
+          storeTransaction,
+          context.storeId,
+          additionalId,
+          input,
+        ),
       );
     },
     async updateMenuCategory(context, categoryId, input) {
@@ -565,6 +756,16 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
     async close() {
       await prisma.$disconnect();
     },
+    async createAdditional(context, input) {
+      return await withDatabase((database) =>
+        database.createAdditional(context, input),
+      );
+    },
+    async createComplementGroup(context, input) {
+      return await withDatabase((database) =>
+        database.createComplementGroup(context, input),
+      );
+    },
     async createMenuCategory(context, input) {
       return await withDatabase((database) =>
         database.createMenuCategory(context, input),
@@ -573,6 +774,16 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
     async createMenuItem(context, input) {
       return await withDatabase((database) =>
         database.createMenuItem(context, input),
+      );
+    },
+    async deleteAdditional(context, additionalId) {
+      return await withDatabase((database) =>
+        database.deleteAdditional(context, additionalId),
+      );
+    },
+    async deleteComplementGroup(context, groupId) {
+      return await withDatabase((database) =>
+        database.deleteComplementGroup(context, groupId),
       );
     },
     async deleteMenuCategory(context, categoryId) {
@@ -615,14 +826,34 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.removeOperator(context, membershipId),
       );
     },
+    async reorderAdditionals(context, itemId, orderedAdditionalIds) {
+      return await withDatabase((database) =>
+        database.reorderAdditionals(context, itemId, orderedAdditionalIds),
+      );
+    },
+    async reorderComplementGroups(context, itemId, orderedGroupIds) {
+      return await withDatabase((database) =>
+        database.reorderComplementGroups(context, itemId, orderedGroupIds),
+      );
+    },
     async reorderMenuCategories(context, orderedCategoryIds) {
       return await withDatabase((database) =>
         database.reorderMenuCategories(context, orderedCategoryIds),
       );
     },
+    async replaceComplementGroup(context, groupId, input) {
+      return await withDatabase((database) =>
+        database.replaceComplementGroup(context, groupId, input),
+      );
+    },
     async resolveMembershipContext(userId) {
       return await withDatabase((database) =>
         database.resolveMembershipContext(userId),
+      );
+    },
+    async updateAdditional(context, additionalId, input) {
+      return await withDatabase((database) =>
+        database.updateAdditional(context, additionalId, input),
       );
     },
     async updateMenuCategory(context, categoryId, input) {

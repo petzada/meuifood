@@ -1,19 +1,10 @@
 import { OutlineContainer } from "@foode/ui";
 import { notFound } from "next/navigation";
 
-type PublicMenuItem = {
-  description: string;
-  id: string;
-  imageUrl: string | null;
-  name: string;
-  priceCents: number;
-};
-
-type PublicMenuCategory = {
-  id: string;
-  items: PublicMenuItem[];
-  name: string;
-};
+import {
+  StorefrontCatalog,
+  type PublicMenuCategory,
+} from "./storefront-cart";
 
 type PublicStorefront = {
   categories: PublicMenuCategory[];
@@ -25,13 +16,6 @@ function apiUrl() {
   const value = process.env.API_URL?.trim();
   if (!value) throw new Error("API_URL_is_required");
   return value;
-}
-
-function formatPrice(priceCents: number) {
-  return (priceCents / 100).toLocaleString("pt-BR", {
-    currency: "BRL",
-    style: "currency",
-  });
 }
 
 async function loadStorefront(slug: string): Promise<PublicStorefront | null> {
@@ -83,50 +67,10 @@ export default async function StorefrontPage({
             </p>
           </OutlineContainer>
         ) : (
-          <div className="grid gap-8">
-            {storefront.categories.map((category) => (
-              <section key={category.id} aria-labelledby={`category-${category.id}`}>
-                <h2
-                  id={`category-${category.id}`}
-                  className="text-xl font-bold tracking-[-0.02em] text-[var(--color-ink)]"
-                >
-                  {category.name}
-                </h2>
-                <div className="mt-4 grid gap-4">
-                  {category.items.map((item) => (
-                    <OutlineContainer
-                      key={item.id}
-                      as="article"
-                      className="overflow-hidden p-0"
-                    >
-                      {item.imageUrl ? (
-                        <img
-                          alt=""
-                          className="aspect-[16/10] w-full object-cover"
-                          src={item.imageUrl}
-                        />
-                      ) : null}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-lg font-bold text-[var(--color-ink)]">
-                            {item.name}
-                          </h3>
-                          <p className="shrink-0 font-bold text-[var(--color-primary-active)]">
-                            {formatPrice(item.priceCents)}
-                          </p>
-                        </div>
-                        {item.description ? (
-                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-body)]">
-                            {item.description}
-                          </p>
-                        ) : null}
-                      </div>
-                    </OutlineContainer>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <StorefrontCatalog
+            categories={storefront.categories}
+            storeSlug={storefront.slug}
+          />
         )}
       </div>
     </main>
