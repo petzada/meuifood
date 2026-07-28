@@ -10,7 +10,9 @@
   },
   "scripts": {
     "generate": "prisma generate --config prisma.config.ts",
+    "migrations:validate": "node scripts/validate-migrations.mjs",
     "migrations:sync-supabase": "node scripts/sync-supabase-migrations.mjs",
+    "production:verify": "node scripts/verify-production-state.mjs",
     "db:seed": "pnpm generate && prisma db seed --config prisma.config.ts",
     "lint": "prisma validate --config prisma.config.ts && eslint src --max-warnings=0",
     "typecheck": "pnpm generate && tsc --noEmit",

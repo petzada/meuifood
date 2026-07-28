@@ -11,7 +11,7 @@
 | Gateways | **Sandbox / test mode** Woovi e Asaas para desenvolver e validar cobrança/estorno |
 | Loja `is_demo` | **Não** — evita complexidade extra; risco aceito com CI + sandbox |
 | Deploy | PR → **GitHub Actions** verde → deploy produção ([25](25-hospedagem-ci-ops.md)) |
-| Migrations Prisma | **Validar no GH Actions** (ex.: `prisma migrate diff` / deploy dry-check / test apply em DB de CI se viável) antes de aplicar em prod — objetivo: falhar no CI, não no banco de produção |
+| Migrations Prisma | ~~Validar no GH Actions (ex.: `prisma migrate diff` / deploy dry-check / test apply em DB de CI se viável) antes de aplicar em prod~~ — **superseded por [55](55-migrations-supabase-producao-ci.md)**: aplicação automática no Supabase de produção após CI verde, com migrations não-destrutivas e sem banco de CI |
 
 ## Motivo
 

@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "provision:owner": "tsx src/provision-owner.ts",
-    "lint": "eslint src --max-warnings=0",
+    "migrations:preflight": "tsx scripts/preflight-production-migrations.ts",
+    "lint": "eslint src scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test:quality": "vitest run src/app.test.ts",
+    "test:quality": "vitest run src/app.test.ts scripts/migration-preflight-policy.test.mjs",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js"

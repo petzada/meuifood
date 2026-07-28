@@ -25,12 +25,13 @@ Copie os arquivos `.env.example` apenas quando precisar configurar observabilida
 
 ## Banco e isolamento por Loja
 
-O Prisma é o owner único do schema e das migrations. Use `DATABASE_URL` somente
-para migrations, seed e operações administrativas conscientes:
+O Prisma é o owner único do schema e das migrations. Valide migrations
+canônicas antes de submetê-las e use `DATABASE_URL` somente para seed e
+operações administrativas conscientes:
 
 ```bash
 pnpm db:generate
-pnpm db:migrate:deploy
+pnpm db:migrations:validate
 pnpm db:seed
 ```
 
@@ -90,11 +91,28 @@ Na Actions, os passos remotos recebem somente os secrets necessários e falham
 explicitamente se algum estiver ausente; a suíte nunca faz skip, usa mock ou
 recorre a banco local. Quando uma migration altera RLS/RBAC, o workflow executa
 um DAG fail-closed: `quality` (sem secrets) precisa ficar verde antes de
-`migrate`; `migrate` faz dry-run e aplica pela Supabase CLI no projeto Foode
-Delivery; somente depois `integration` executa toda a prova HTTP/RLS/RBAC em
-produção. Esse fluxo usa `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
+`migrate`; `migrate` aplica as migrations pendentes dentro de uma única
+transação no Supabase, prova HTTP/RLS/RBAC pela mesma sessão e força rollback.
+Somente depois desse preflight verde ele faz dry-run e aplica pela Supabase CLI
+no projeto Foode Delivery. Por fim, `integration` repete toda a prova
+HTTP/RLS/RBAC sobre o schema persistido em produção. Esse fluxo usa
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
 `SUPABASE_POOLER_URL` e `BUSINESS_DATABASE_URL` nos passos mínimos indicados no
 workflow.
+
+A validação local usa uma allowlist estrutural e rejeita migrations vazias,
+timestamps duplicados, remoções fora de `DROP INDEX`, `DELETE`, `TRUNCATE`,
+bypass de RLS, SQL dinâmico e controle transacional antes de qualquer secret ser
+disponibilizado. Ao final da integração, uma conexão administrativa
+independente da suíte compara o histórico remoto com as migrations Prisma e
+exige zero resíduos das fixtures `fixture-preflight-*`, `fixture-rls-*` e
+`fixture-rbac-*`, mesmo quando os testes falham.
+
+Nos três serviços Railway (`web`, `admin` e `api`), o autodeploy da branch
+`master` deve manter **Wait for CI** habilitado. Assim, o deploy permanece em
+espera até o workflow de `push` terminar e é descartado quando qualquer job
+falha. Nenhum serviço usa pre-deploy command para migration; essa
+responsabilidade pertence exclusivamente ao job `migrate` do GitHub Actions.
 
 ## Verificação
 

@@ -8,7 +8,9 @@
   "scripts": {
     "build:packages": "pnpm --filter @foode/shared build && pnpm --filter @foode/db build && pnpm --filter @foode/ui build",
     "db:generate": "pnpm --filter @foode/db generate",
-    "db:migrate:deploy": "pnpm --filter @foode/db migrations:sync-supabase && pnpm supabase db push --linked",
+    "db:migrations:validate": "pnpm --filter @foode/db migrations:validate",
+    "db:migrate:deploy": "pnpm db:migrations:validate && pnpm --filter @foode/db migrations:sync-supabase && pnpm supabase db push --linked",
+    "db:production:verify": "pnpm --filter @foode/db production:verify",
     "db:seed": "pnpm --filter @foode/db db:seed",
     "dev": "pnpm run build:packages && pnpm --parallel --filter './apps/*' dev",
     "lint": "pnpm -r --if-present lint",
