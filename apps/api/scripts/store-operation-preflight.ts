@@ -34,6 +34,31 @@ export async function proveStoreOperationPreflight({
     url: "/operation/pause",
   });
   assertStatus("Operador não altera a Pausa", operatorWrite, 403);
+  const operatorHoursWrite = await app.inject({
+    headers: { authorization: "Bearer operator-a" },
+    method: "PUT",
+    payload: {
+      periods: [{ weekday: 1, opensAt: "08:00", closesAt: "09:00" }],
+    },
+    url: "/operation/hours",
+  });
+  assertStatus("Operador não altera horários", operatorHoursWrite, 403);
+  const afterOperatorAttempts = await app.inject({
+    headers: { authorization: "Bearer owner-a" },
+    method: "GET",
+    url: "/operation",
+  });
+  assertStatus(
+    "negações do Operador preservam a configuração",
+    afterOperatorAttempts,
+    200,
+  );
+  if (
+    afterOperatorAttempts.json().operation.paused !== false ||
+    afterOperatorAttempts.json().operation.periods.length !== 0
+  ) {
+    throw new Error("Tentativa do Operador alterou a configuração.");
+  }
 
   const expectedPeriods = [
     { weekday: 1, opensAt: "11:00", closesAt: "14:00" },

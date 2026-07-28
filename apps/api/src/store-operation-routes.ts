@@ -7,10 +7,7 @@ import { z } from "zod";
 
 import type { BusinessDatabase, MembershipContext } from "@foode/db";
 
-import {
-  type OperatingPeriod,
-  validateOperatingPeriods,
-} from "./store-operation.js";
+import { validateOperatingPeriods } from "./store-operation.js";
 
 type RequireMembership = (
   request: FastifyRequest,
@@ -57,7 +54,7 @@ export function registerStoreOperationRoutes(
     const body = scheduleSchema.safeParse(request.body);
     if (
       !body.success ||
-      !validateOperatingPeriods(body.data.periods as OperatingPeriod[]).ok
+      !validateOperatingPeriods(body.data.periods).ok
     ) {
       return reply.code(400).send({ error: "invalid_operating_periods" });
     }
