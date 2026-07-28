@@ -37,6 +37,7 @@ model Store {
   name               String
   slug               String                 @unique
   billingMode        BillingMode            @map("billing_mode")
+  paused             Boolean                @default(false)
   createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   members            StoreMember[]
@@ -45,8 +46,24 @@ model Store {
   complementGroups   MenuComplementGroup[]
   complementOptions  MenuComplementOption[]
   additionals        MenuAdditional[]
+  operatingPeriods   StoreOperatingPeriod[]
 
   @@map("stores")
+}
+
+model StoreOperatingPeriod {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String   @map("store_id") @db.Uuid
+  weekday   Int      @db.SmallInt
+  opensAt   String   @map("opens_at") @db.Char(5)
+  closesAt  String   @map("closes_at") @db.Char(5)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, weekday, opensAt, closesAt])
+  @@index([storeId, weekday, opensAt])
+  @@map("store_operating_periods")
 }
 
 model StoreMember {

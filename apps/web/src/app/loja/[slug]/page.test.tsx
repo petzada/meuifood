@@ -18,6 +18,12 @@ describe("storefront /loja/[slug]", () => {
           storefront: {
             name: "Cantina do Bairro",
             slug: "cantina-do-bairro",
+            operation: {
+              checkout: { allowed: true, blockReason: null },
+              nextOpeningAt: null,
+              state: "open",
+              timezone: "America/Sao_Paulo",
+            },
             categories: [
               {
                 id: "cat-1",
@@ -74,9 +80,74 @@ describe("storefront /loja/[slug]", () => {
     expect(html).toContain("Bacon");
     expect(html).toContain("Carrinho");
     expect(html).toContain("preços serão recalculados pelo servidor");
+    expect(html).toContain("Loja aberta");
     expect(html).toContain("R$");
     expect(html).not.toContain("billingMode");
     expect(html).not.toContain("pilot_platform");
+
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    {
+      expected: "Loja em Pausa",
+      operation: {
+        checkout: { allowed: false, blockReason: "paused" },
+        nextOpeningAt: null,
+        state: "paused",
+        timezone: "America/Sao_Paulo",
+      },
+    },
+    {
+      expected: "Abre",
+      operation: {
+        checkout: { allowed: false, blockReason: "outside_hours" },
+        nextOpeningAt: "2026-07-29T21:30:00Z",
+        state: "outside_hours",
+        timezone: "America/Sao_Paulo",
+      },
+    },
+  ])("mantém o Cardápio visível quando $expected", async ({ expected, operation }) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          storefront: {
+            categories: [
+              {
+                id: "cat-1",
+                items: [
+                  {
+                    description: "",
+                    id: "item-1",
+                    imageUrl: null,
+                    name: "X-Burger",
+                    priceCents: 2590,
+                  },
+                ],
+                name: "Lanches",
+              },
+            ],
+            name: "Cantina do Bairro",
+            operation,
+            slug: "cantina-do-bairro",
+          },
+        }),
+      })),
+    );
+    process.env.API_URL = "http://api.test";
+
+    const { default: StorefrontPage } = await import("./page.js");
+    const element = await StorefrontPage({
+      params: Promise.resolve({ slug: "cantina-do-bairro" }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(expected);
+    expect(html).toContain("X-Burger");
+    expect(html).not.toContain("Agendar");
 
     vi.unstubAllGlobals();
   });

@@ -17,6 +17,12 @@ import type {
   Additional,
   ComplementGroup,
 } from "./menu/item-customization-panel";
+import {
+  OperationPanel,
+  operationFeedbackMessages,
+  type OperationFeedback,
+  type StoreOperationConfig,
+} from "./operation/operation-panel";
 import { inviteOperator, removeOperator } from "./team/actions";
 import { SubmitButton } from "./team/submit-button";
 
@@ -42,10 +48,12 @@ const feedbackMessages: Record<TeamFeedback, string> = {
 
 export function PanelShell({
   menu,
+  operation,
   role,
   team,
 }: {
   menu?: ReactNode;
+  operation?: ReactNode;
   role: MembershipRole;
   team?: ReactNode;
 }) {
@@ -69,6 +77,7 @@ export function PanelShell({
           {role === "owner" ? (
             <div className="mt-2 grid gap-1 text-sm font-bold text-[var(--color-body)]">
               <a className="min-h-11 rounded-full px-5 py-3" href="#cardapio">Cardápio</a>
+              <a className="min-h-11 rounded-full px-5 py-3" href="#funcionamento">Funcionamento</a>
               <a className="min-h-11 rounded-full px-5 py-3" href="#equipe">Equipe</a>
               <a className="min-h-11 rounded-full px-5 py-3" href="#configuracoes">Configurações</a>
             </div>
@@ -96,6 +105,7 @@ export function PanelShell({
           </OutlineContainer>
         </section>
         {menu}
+        {operation}
         {team}
       </div>
     </main>
@@ -197,7 +207,11 @@ function apiUrl() {
 export default async function AdminHome({
   searchParams,
 }: {
-  searchParams: Promise<{ cardapio?: string; equipe?: string }>;
+  searchParams: Promise<{
+    cardapio?: string;
+    equipe?: string;
+    funcionamento?: string;
+  }>;
 }) {
   const supabase = await createClient();
   const { error: claimsError } = await supabase.auth.getClaims();
@@ -224,9 +238,10 @@ export default async function AdminHome({
   }
 
   let menu: ReactNode = undefined;
+  let operation: ReactNode = undefined;
   let team: ReactNode = undefined;
   if (role.data === "owner") {
-    const { cardapio, equipe } = await searchParams;
+    const { cardapio, equipe, funcionamento } = await searchParams;
     const menuResponse = await fetch(new URL("/menu", apiUrl()), {
       cache: "no-store",
       headers,
@@ -259,6 +274,35 @@ export default async function AdminHome({
       />
     );
 
+    const operationResponse = await fetch(new URL("/operation", apiUrl()), {
+      cache: "no-store",
+      headers,
+    });
+    if (!operationResponse.ok) {
+      throw new Error("operation_request_failed");
+    }
+    const operationPayload = (await operationResponse.json()) as {
+      operation?: StoreOperationConfig;
+    };
+    if (
+      typeof operationPayload.operation?.paused !== "boolean" ||
+      !Array.isArray(operationPayload.operation.periods)
+    ) {
+      throw new Error("operation_response_invalid");
+    }
+    const operationFeedback = Object.hasOwn(
+      operationFeedbackMessages,
+      funcionamento ?? "",
+    )
+      ? (funcionamento as OperationFeedback)
+      : undefined;
+    operation = (
+      <OperationPanel
+        feedback={operationFeedback}
+        operation={operationPayload.operation}
+      />
+    );
+
     const membersResponse = await fetch(new URL("/team/members", apiUrl()), {
       cache: "no-store",
       headers,
@@ -276,5 +320,12 @@ export default async function AdminHome({
     team = <TeamPanel feedback={feedback} members={membersPayload.members} />;
   }
 
-  return <PanelShell menu={menu} role={role.data} team={team} />;
+  return (
+    <PanelShell
+      menu={menu}
+      operation={operation}
+      role={role.data}
+      team={team}
+    />
+  );
 }

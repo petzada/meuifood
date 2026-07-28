@@ -98,6 +98,17 @@ export type PublicStorefrontView = {
   slug: string;
 };
 
+export type OperatingPeriodView = {
+  closesAt: string;
+  opensAt: string;
+  weekday: number;
+};
+
+export type StoreOperationConfigView = {
+  paused: boolean;
+  periods: OperatingPeriodView[];
+};
+
 export type BusinessDatabase = {
   addOperator(context: MembershipContext, userId: string): Promise<TeamMemberView>;
   assertRestrictedRuntime(): Promise<void>;
@@ -147,6 +158,10 @@ export type BusinessDatabase = {
     slug: string,
     publicImageUrl: (objectKey: string) => string | null,
   ): Promise<PublicStorefrontView | null>;
+  findPublicStoreOperationBySlug(
+    slug: string,
+  ): Promise<StoreOperationConfigView | null>;
+  getStoreOperation(context: StoreContext): Promise<StoreOperationConfigView>;
   getMenuItem(
     context: StoreContext,
     itemId: string,
@@ -178,6 +193,14 @@ export type BusinessDatabase = {
     },
   ): Promise<ComplementGroupView | null>;
   resolveMembershipContext(userId: string): Promise<MembershipContext | null>;
+  replaceOperatingPeriods(
+    context: StoreContext,
+    periods: OperatingPeriodView[],
+  ): Promise<OperatingPeriodView[]>;
+  setStorePaused(
+    context: StoreContext,
+    paused: boolean,
+  ): Promise<StoreOperationConfigView>;
   updateAdditional(
     context: StoreContext,
     additionalId: string,
@@ -233,6 +256,12 @@ const menuItemSelect = {
   name: true,
   priceCents: true,
 } satisfies Prisma.MenuItemSelect;
+
+const operatingPeriodSelect = {
+  closesAt: true,
+  opensAt: true,
+  weekday: true,
+} satisfies Prisma.StoreOperatingPeriodSelect;
 
 function prismaClient(databaseUrl: string) {
   const connectionUrl = new URL(databaseUrl);
@@ -503,6 +532,30 @@ export function createTransactionalBusinessDatabase(
           })),
       };
     },
+    async findPublicStoreOperationBySlug(slug) {
+      await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
+      await transaction.$executeRaw`
+        SELECT set_config('app.public_slug', ${slug}, true)
+      `;
+      await transaction.$executeRaw`
+        SELECT set_config('app.current_store_id', '', true)
+      `;
+
+      const store = await transaction.store.findFirst({
+        where: { slug },
+        select: { id: true, paused: true },
+      });
+      if (!store) return null;
+
+      await transaction.$executeRaw`
+        SELECT set_config('app.current_store_id', ${store.id}, true)
+      `;
+      const periods = await transaction.storeOperatingPeriod.findMany({
+        orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
+        select: operatingPeriodSelect,
+      });
+      return { paused: store.paused, periods };
+    },
     async getMenuItem(context, itemId) {
       return await inStoreContext(
         transaction,
@@ -513,6 +566,21 @@ export function createTransactionalBusinessDatabase(
             select: menuItemSelect,
           }),
       );
+    },
+    async getStoreOperation(context) {
+      return await inStoreContext(transaction, context, async (storeTransaction) => {
+        const [store, periods] = await Promise.all([
+          storeTransaction.store.findUniqueOrThrow({
+            where: { id: context.storeId },
+            select: { paused: true },
+          }),
+          storeTransaction.storeOperatingPeriod.findMany({
+            orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
+            select: operatingPeriodSelect,
+          }),
+        ]);
+        return { paused: store.paused, periods };
+      });
     },
     async listMenuCatalog(context) {
       return await inStoreContext(transaction, context, async (storeTransaction) => {
@@ -650,6 +718,38 @@ export function createTransactionalBusinessDatabase(
             : null;
         },
       );
+    },
+    async replaceOperatingPeriods(context, periods) {
+      return await inStoreContext(transaction, context, async (storeTransaction) => {
+        await storeTransaction.storeOperatingPeriod.deleteMany({
+          where: { storeId: context.storeId },
+        });
+        if (periods.length > 0) {
+          await storeTransaction.storeOperatingPeriod.createMany({
+            data: periods.map((period) => ({
+              ...period,
+              storeId: context.storeId,
+            })),
+          });
+        }
+        return await storeTransaction.storeOperatingPeriod.findMany({
+          orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
+          select: operatingPeriodSelect,
+        });
+      });
+    },
+    async setStorePaused(context, paused) {
+      return await inStoreContext(transaction, context, async (storeTransaction) => {
+        await storeTransaction.store.update({
+          where: { id: context.storeId },
+          data: { paused },
+        });
+        const periods = await storeTransaction.storeOperatingPeriod.findMany({
+          orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
+          select: operatingPeriodSelect,
+        });
+        return { paused, periods };
+      });
     },
     async updateAdditional(context, additionalId, input) {
       return await inStoreContext(transaction, context, async (storeTransaction) =>
@@ -806,9 +906,19 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.findPublicStorefrontBySlug(slug, publicImageUrl),
       );
     },
+    async findPublicStoreOperationBySlug(slug) {
+      return await withDatabase((database) =>
+        database.findPublicStoreOperationBySlug(slug),
+      );
+    },
     async getMenuItem(context, itemId) {
       return await withDatabase((database) =>
         database.getMenuItem(context, itemId),
+      );
+    },
+    async getStoreOperation(context) {
+      return await withDatabase((database) =>
+        database.getStoreOperation(context),
       );
     },
     async listMenuCatalog(context) {
@@ -849,6 +959,16 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
     async resolveMembershipContext(userId) {
       return await withDatabase((database) =>
         database.resolveMembershipContext(userId),
+      );
+    },
+    async replaceOperatingPeriods(context, periods) {
+      return await withDatabase((database) =>
+        database.replaceOperatingPeriods(context, periods),
+      );
+    },
+    async setStorePaused(context, paused) {
+      return await withDatabase((database) =>
+        database.setStorePaused(context, paused),
       );
     },
     async updateAdditional(context, additionalId, input) {

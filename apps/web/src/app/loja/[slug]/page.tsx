@@ -5,10 +5,15 @@ import {
   StorefrontCatalog,
   type PublicMenuCategory,
 } from "./storefront-cart";
+import {
+  type PublicStoreOperation,
+  StoreOperationStatus,
+} from "./store-operation-status";
 
 type PublicStorefront = {
   categories: PublicMenuCategory[];
   name: string;
+  operation: PublicStoreOperation;
   slug: string;
 };
 
@@ -26,7 +31,11 @@ async function loadStorefront(slug: string): Promise<PublicStorefront | null> {
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("storefront_request_failed");
   const payload = (await response.json()) as { storefront?: PublicStorefront };
-  if (!payload.storefront?.slug || !Array.isArray(payload.storefront.categories)) {
+  if (
+    !payload.storefront?.slug ||
+    !Array.isArray(payload.storefront.categories) ||
+    !payload.storefront.operation?.state
+  ) {
     throw new Error("storefront_response_invalid");
   }
   return payload.storefront;
@@ -53,12 +62,13 @@ export default async function StorefrontPage({
             {storefront.name}
           </h1>
           <p className="mt-2 max-w-[48ch] text-[var(--color-body)]">
-            Cardápio da Loja. Escolha os itens disponíveis para pedir depois.
+            Consulte o Cardápio e escolha entre os itens disponíveis.
           </p>
         </div>
       </header>
 
       <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
+        <StoreOperationStatus operation={storefront.operation} />
         {storefront.categories.length === 0 ? (
           <OutlineContainer className="p-6">
             <h2 className="text-xl font-bold text-[var(--color-ink)]">Cardápio em preparação</h2>
