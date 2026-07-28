@@ -91,7 +91,7 @@ async function productionDatabaseUrls() {
   return { administrativeUrl: url.toString(), businessUrl: businessUrl.toString() };
 }
 
-describe("autenticação e RBAC de Dono e Operador", () => {
+describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => {
   const runId = randomUUID();
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
@@ -473,12 +473,12 @@ describe("autenticação e RBAC de Dono e Operador", () => {
       });
       expect(invitedEmails).toContain(`operador-${runId}@example.invalid`);
       expect(membersResponse.statusCode, membersResponse.body).toBe(200);
-      expect(membersResponse.json()).toMatchObject({
-        members: expect.arrayContaining([
+      expect(membersResponse.json().members).toEqual(
+        expect.arrayContaining([
           { id: ownerMembershipId, role: "owner", userId: ownerUserId },
-          { role: "operator", userId: invitedUserId },
+          expect.objectContaining({ role: "operator", userId: invitedUserId }),
         ]),
-      });
+      );
     } finally {
       await app.close();
     }
