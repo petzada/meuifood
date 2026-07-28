@@ -45,3 +45,16 @@ domínio canônico.
 Todos os achados procedentes foram corrigidos. A exceção mínima de CI permanece
 limitada ao DAG autorizado neste ticket; nenhum outro requisito do Ticket 04 foi
 implementado.
+
+## Evidência posterior às correções
+
+- O dry-run da CI `30373345419` listou somente
+  `20260728170000_membership_cardinality.sql`; o push aplicou somente essa
+  migration.
+- A integração da mesma execução passou 22/22 testes da API, incluindo a
+  identidade com duas memberships, isolamento cross-Loja, convite, remoção e
+  invalidação do token já emitido.
+- A CI final `30374025911` passou novamente os três jobs; migrations já estavam
+  atualizadas.
+- A repetição local carregando a credencial ignorada passou 22/22 testes da API
+  e todos os workspaces. A consulta independente encontrou resíduo RBAC/RLS zero.

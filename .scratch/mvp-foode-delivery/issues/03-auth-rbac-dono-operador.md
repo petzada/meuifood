@@ -31,3 +31,21 @@
   A segunda URL deve usar uma senha forte exclusiva da role `foode_business`,
   nunca `SUPABASE_DB_PASSWORD`, e também deve ser configurada no serviço API da
   Railway. Nenhum valor é gerado, exibido ou gravado pelo agente/repositório.
+- 2026-07-28 — Implementação concluída no PR #5: JWT/JWKS, membership por request,
+  RBAC Dono/Operador, convite e remoção de Operadores, onboarding operacional do
+  primeiro Dono e gestão funcional de Equipe no Painel. A resolução falha fechado
+  quando uma identidade possui mais de uma membership, sem cristalizar uma
+  cardinalidade global não decidida no domínio.
+- 2026-07-28 — Revisões internas independentes registradas em
+  `verification/reports/03-standards.md` e `03-spec.md`. Os oito achados foram
+  classificados como procedentes e corrigidos: vocabulário, boundary de RBAC,
+  seam legado, tipo de papel, índice redundante/cardinalidade, onboarding do Dono
+  e UI de Equipe.
+- 2026-07-28 — Evidência: `pnpm lint`, `pnpm typecheck`, `pnpm test:quality`,
+  `pnpm test` e `pnpm build` verdes; API 22/22. A CI `30373345419` aplicou somente
+  `20260728170000_membership_cardinality.sql` após dry-run e passou os jobs
+  `quality`, `migrate` e `integration`. A CI final `30374025911` repetiu os três
+  jobs com sucesso. Consulta independente confirmou resíduos RBAC=0 e RLS=0.
+- 2026-07-28 — O status e os critérios permanecem abertos exclusivamente para o
+  gate de verificação Claude/Sonnet. Não marcar `done` antes de o relatório externo
+  do Ticket 03 ser produzido, lido e processado integralmente.

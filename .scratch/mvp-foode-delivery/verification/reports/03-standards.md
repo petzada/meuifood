@@ -43,10 +43,21 @@ do enum canônico do schema. Não restam uniões `"owner" | "operator"` duplicad
 **Classificação:** procedente, absorvido pela correção de cardinalidade da revisão
 de especificação.
 
-A unicidade global não é autorizada pelo domínio e será removida pela migration
+A unicidade global não é autorizada pelo domínio e foi removida pela migration
 `20260728170000_membership_cardinality`. O índice não único existente permanece
 para a busca por identidade, sem duplicar índices equivalentes.
 
 ## Conclusão
 
 Todos os achados procedentes foram corrigidos. Não houve achado adiado.
+
+## Evidência posterior às correções
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test:quality`, `pnpm test` e `pnpm build`:
+  verdes localmente; a suíte API completa passou 22/22.
+- CI `30373345419`: `quality`, `migrate` e `integration` verdes; 22/22 testes da
+  API no Supabase de produção.
+- CI final `30374025911`: `quality`, `migrate` e `integration` verdes depois do
+  ajuste de timeout da prova RLS.
+- Resíduo independente: zero Lojas sintéticas `fixture-rbac-*` e
+  `fixture-rls-*`.
