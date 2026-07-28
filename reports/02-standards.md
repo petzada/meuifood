@@ -40,3 +40,22 @@
 
 Validação final: lint, typecheck, testes (incluindo isolamento HTTP/RLS no
 Supabase de produção), build e dry-run remoto passaram.
+
+## Verificação externa e notas
+
+O veredito externo do Ciclo 5 foi **conforme**: 8/8 requisitos, nenhum
+bloqueador/alto/médio e três notas, classificadas assim:
+
+1. **Adiada para o Ticket 03.** A API ainda não possui runtime autenticado; o
+   teste do Ticket 02 usa `assumeBusinessRole: true`. O Ticket 03, owner de
+   JWT/JWKS, membership e ativação das rotas, também fica owner de tornar essa
+   assunção obrigatória ou validar a credencial no startup.
+2. **Adiada para o Ticket 03.** O login não privilegiado de
+   `BUSINESS_DATABASE_URL` deve existir e ser validado antes do wiring real. A
+   migration deste ticket cria a role sem login e permite apenas o rebaixamento
+   administrativo consciente usado na prova.
+3. **Procedural, corrigida.** Actions injeta `SUPABASE_DB_PASSWORD` e
+   `SUPABASE_POOLER_URL` exclusivamente no passo `pnpm test`. O harness falha
+   explicitamente sem a configuração completa e jamais usa skip/mock/fallback
+   local. A execução real local em produção passou e deixou zero fixtures; o
+   check da PR #4 repete a prova com os secrets configurados manualmente.

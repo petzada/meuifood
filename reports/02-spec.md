@@ -33,3 +33,24 @@
 Validação final: `pnpm lint`, `pnpm typecheck`, `pnpm test` e `pnpm build`
 passaram; o dry-run da Supabase CLI informou o banco remoto atualizado, sem
 migrations pendentes.
+
+## Verificação externa e notas
+
+O Ciclo 5 registrou o Ticket 02 como **conforme**, com 8/8 requisitos, zero
+bloqueadores, zero achados altos/médios e três notas:
+
+1. **Adiada, owner Ticket 03:** `assumeBusinessRole` permanece opt-in. Neste
+   ticket a prova passa `true` explicitamente e o entrypoint não ativa rotas de
+   negócio. Ao ligar JWT/JWKS e membership, o Ticket 03 deve tornar a assunção
+   da role obrigatória ou rejeitar startup com credencial que possa bypassar
+   RLS.
+2. **Adiada, owner Ticket 03:** o login real de `BUSINESS_DATABASE_URL` ainda
+   não é provisionado. A role `foode_business` e o rebaixamento administrativo
+   satisfazem a prova atual; provisionar e validar o login não privilegiado é
+   pré-condição explícita para o wiring de runtime do Ticket 03.
+3. **Procedural, corrigida no Ticket 02:** o harness aceita apenas as duas
+   credenciais de produção por ambiente no CI ou os arquivos locais ignorados
+   já ligados à produção. Configuração ausente/parcial falha; não existe skip,
+   mock ou banco local. A suíte real passou localmente contra Foode Delivery e
+   confirmou cleanup independente com zero resíduos; o check da PR #4 fornece
+   a prova automática equivalente com os Repository Actions secrets.

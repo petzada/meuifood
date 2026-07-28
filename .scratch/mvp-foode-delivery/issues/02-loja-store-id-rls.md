@@ -26,3 +26,14 @@
   fixtures. Os relatórios `reports/02-spec.md` e `reports/02-standards.md` foram
   processados; a ligação do resolvedor autenticado ao entrypoint permanece no
   Ticket 03, que é owner de JWT/JWKS e membership.
+- 2026-07-28 — O workflow injeta `SUPABASE_DB_PASSWORD` e
+  `SUPABASE_POOLER_URL` somente no passo de testes. Os valores são configurados
+  manualmente como GitHub Actions secrets; ausência ou configuração parcial
+  falha explicitamente, sem skip, mock ou fallback local.
+- 2026-07-28 — Verificação externa do Ciclo 5: **conforme**, 8/8 requisitos,
+  zero bloqueadores/altos/médios e três notas processadas. A execução real foi
+  repetida em Foode Delivery com cleanup independente igual a zero. As notas de
+  `assumeBusinessRole` opt-in e do login `BUSINESS_DATABASE_URL` foram adiadas
+  com owner explícito no Ticket 03, pois são pré-condições do wiring
+  JWT/JWKS/membership; a nota de execução foi resolvida pelo harness/Actions do
+  Ticket 02, sem skip, mock ou fallback local.

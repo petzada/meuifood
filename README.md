@@ -54,6 +54,11 @@ O seed é idempotente e mantém o único Comerciante-modelo no modo
 no Supabase de produção linkado pela CLI. Fixtures sintéticas usam identificadores
 únicos e cleanup exato; não existe fallback para banco local.
 
+Na Actions, o passo de testes recebe somente os secrets
+`SUPABASE_DB_PASSWORD` e `SUPABASE_POOLER_URL`, configurados manualmente no
+repositório. Sem ambos, a suíte remota falha explicitamente; ela nunca faz skip,
+usa mock ou recorre a banco local.
+
 ## Verificação
 
 ```bash

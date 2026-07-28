@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -28,15 +29,41 @@ function requiredSecret(source: string, name: string) {
 }
 
 async function productionDatabaseUrl() {
-  const [environmentFile, poolerFile] = await Promise.all([
-    readFile(new URL("../../../.env", import.meta.url), "utf8"),
-    readFile(
-      new URL("../../../supabase/.temp/pooler-url", import.meta.url),
-      "utf8",
-    ),
-  ]);
-  const url = new URL(poolerFile.trim());
-  url.password = requiredSecret(environmentFile, "SUPABASE_DB_PASSWORD");
+  const environmentPassword = process.env.SUPABASE_DB_PASSWORD?.trim();
+  const environmentPooler = process.env.SUPABASE_POOLER_URL?.trim();
+  if (Boolean(environmentPassword) !== Boolean(environmentPooler)) {
+    throw new Error(
+      "SUPABASE_DB_PASSWORD e SUPABASE_POOLER_URL devem ser configuradas juntas.",
+    );
+  }
+
+  let password = environmentPassword;
+  let pooler = environmentPooler;
+  if (!password || !pooler) {
+    const repositoryEnvironmentFile = new URL("../../../.env", import.meta.url);
+    const linkedPoolerFile = new URL(
+      "../../../supabase/.temp/pooler-url",
+      import.meta.url,
+    );
+    if (
+      !existsSync(repositoryEnvironmentFile) ||
+      !existsSync(linkedPoolerFile)
+    ) {
+      throw new Error(
+        "Configure SUPABASE_DB_PASSWORD e SUPABASE_POOLER_URL ou disponibilize .env e o link local ignorado da Supabase CLI.",
+      );
+    }
+
+    const [environmentFile, poolerFile] = await Promise.all([
+      readFile(repositoryEnvironmentFile, "utf8"),
+      readFile(linkedPoolerFile, "utf8"),
+    ]);
+    password = requiredSecret(environmentFile, "SUPABASE_DB_PASSWORD");
+    pooler = poolerFile.trim();
+  }
+
+  const url = new URL(pooler);
+  url.password = password;
   url.searchParams.set("sslmode", "require");
   url.searchParams.set("uselibpqcompat", "true");
   return url.toString();
