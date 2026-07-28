@@ -144,6 +144,14 @@ _Avoid_: Card com fill+sombra como default
 
 ### Fidelidade
 
+**Cupom de boas-vindas**:
+Incentivo opt-in do comerciante ao criar conta após pedido guest — MVP de fidelidade, não motor de pontos.
+_Avoid_: Gamificação, cashback, RPG de pontos
+
 **Cancelamento (pedido)**:
 Ação no painel que marca o pedido como cancelado; se houver PIX/crédito pago, dispara estorno automático no gateway.
 _Avoid_: Void genérico, delete
+
+**Estorno**:
+Devolução automática via API Woovi (PIX) ou Asaas (crédito) após cancelamento de pedido já pago.
+_Avoid_: Reembolso manual no dashboard do gateway como caminho feliz
