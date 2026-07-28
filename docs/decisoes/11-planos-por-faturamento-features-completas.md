@@ -19,10 +19,10 @@ Para: **3 preços conforme faturamento** do comerciante; **mesmo produto complet
 - Fidelidade simples configurável (ex.: **10 pedidos = 1 item**)  
 - Relatórios básicos de delivery/pedidos (**visão financeira só para dono**)  
 - **Equipe:** dono + operador(es) com permissões (ver seção abaixo)  
-- **Workspaces** multi-unidade (mesmo cadastro)  
 
 ## Fora do MVP
 
+- **Workspaces / multi-unidade** — **adiado**; ver [20](20-tenant-mvp-sem-workspaces.md) (1 comerciante = 1 CNPJ = 1 loja no MVP).
 - Extras avançados não listados (KDS dedicado, NF-e, estoque completo, bot WhatsApp, etc.).
 
 ## Equipe (multi-usuário) — reorganização
@@ -33,17 +33,14 @@ Motivo: o dono não quer que o **operador de delivery** (funcionário) veja **fa
 
 | Papel (MVP) | Acesso típico |
 | --- | --- |
-| **Dono / admin** | Tudo: config, cardápio, pedidos, pagamentos, relatórios, planos, workspaces |
+| **Dono / admin** | Tudo: config, cardápio, pedidos, pagamentos, relatórios, planos |
 | **Operador** | Pedidos/status do dia a dia; **sem** faturamento, taxas, mensalidade, relatórios financeiros |
 
 Detalhe fino de checklist de permissões pode ser fechado na stack; a regra de produto é: **operação ≠ visão financeira**.
 
-## Multi-lojas = workspaces
+## Multi-lojas / workspaces
 
-- **1 cadastro** de comerciante pode ter **várias unidades (workspaces)**.  
-- Dados **separados por workspace** (cardápio, pedidos, configs, relatórios operacionais).  
-- Fluxo de **pagamentos** a mesma lógica de gateway; GMV/visão financeira **por workspace** e consolidado só para **dono**.  
-- Operador: em geral preso a **um** workspace (ou aos que o dono liberar), sem ver consolidado financeiro.
+**Revogado no MVP** — ver [20](20-tenant-mvp-sem-workspaces.md). No MVP: **1 comerciante = 1 unidade**. Multi-unidade = pós-MVP.
 
 ## Cartão / Asaas (atualização de rota)
 

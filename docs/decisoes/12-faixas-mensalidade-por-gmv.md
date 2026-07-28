@@ -4,7 +4,7 @@
 
 ## Decisão
 
-Mensalidade conforme **faturamento (GMV) na plataforma** (soma dos workspaces do cadastro, regra operacional a aplicar no mês de referência — tipicamente mês anterior).
+Mensalidade conforme **faturamento (GMV) na plataforma** da loja (no MVP = 1 comerciante / 1 unidade — [20](20-tenant-mvp-sem-workspaces.md); regra operacional no mês de referência — tipicamente mês anterior).
 
 | GMV mensal na plataforma | Mensalidade |
 | --- | --- |

@@ -20,11 +20,13 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 08 | [fulfillment](08-fulfillment-delivery-e-retirada.md) | Delivery + retirada opcional |
 | 09 | [ciclo pedido](09-ciclo-pedido-status.md) | Status enxutos; iFood pós-MVP |
 | 10 | [checkout/conta](10-checkout-guest-e-conta.md) | Guest + conta + fidelidade opt-in |
-| 11 | [features + equipe](11-planos-por-faturamento-features-completas.md) | Tudo em todos os planos; dono/operador; workspaces |
+| 11 | [features + equipe](11-planos-por-faturamento-features-completas.md) | Tudo em todos os planos; dono/operador · workspaces **revogados no MVP** → [20](20-tenant-mvp-sem-workspaces.md) |
 | 12 | [faixas GMV](12-faixas-mensalidade-por-gmv.md) | R$ 129 / 179 / 229 |
 | 13 | [cardápio](13-cardapio-mvp.md) | Essencial + complementos/adicionais |
 | 14 | [descoberta](14-descoberta-link-e-diretorio-parceiros.md) | Link/QR MVP; diretório parceiros depois |
 | 15 | [URL/marca](15-url-slug-e-marca-provisional.md) | `/loja/[slug]` · Foode Delivery |
+
+Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
 ## Números comerciais (vigentes)
 
@@ -41,14 +43,14 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 - **1º cliente:** Asaas no MEI do founder + repasse manual D+32.  
 - **Novos clientes:** só após **BaaS** (ou fallback conta Asaas por lojista).
 
-## Fora deste ciclo (próximo: stack / implementação)
+## Fora deste ciclo (ainda abertos / execução)
 
-- Provider de auth (magic link).  
-- Checklist fino de permissões.  
+- Checklist fino de permissões dono vs operador.  
 - Prorata/billing automático das faixas GMV.  
 - Homologação BaaS (execução).  
 - Confirmar tabela Elo no contrato Asaas.
 
+Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 ## Pesquisa de mercado
 
 Em `../pesquisa/` — benchmarks; propostas antigas (ex. PIX 1,19% / tiers por feature) foram **superseded** pelas decisões acima.

@@ -1,6 +1,6 @@
 # Contexto do founder / índice da tese
 
-**Data:** jul/2026 · **Status:** tese de produto **concluída** · **Fechamento:** [16 — tese fechada](16-tese-produto-fechada.md)
+**Data:** jul/2026 · **Status:** tese de produto **concluída** · ciclo stack → [28](28-tese-stack-mvp.md) · **Fechamento produto:** [16 — tese fechada](16-tese-produto-fechada.md)
 
 ## Problema observado
 
