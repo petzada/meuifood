@@ -1,9 +1,13 @@
 import { BrandMark, OutlineContainer } from "@foode/ui";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
 import logo from "../../../../public/images/logo.png";
+import { createClient } from "../lib/supabase/server";
 
-export default function AdminHome() {
+type StaffRole = "owner" | "operator";
+
+export function PanelShell({ role }: { role: StaffRole }) {
   return (
     <main className="min-h-[100dvh] md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b border-[var(--color-hairline)] px-4 py-4 md:border-b-0 md:border-r md:px-6 md:py-7">
@@ -21,6 +25,13 @@ export default function AdminHome() {
           >
             Pedidos
           </a>
+          {role === "owner" ? (
+            <div className="mt-2 grid gap-1 text-sm font-bold text-[var(--color-body)]">
+              <a className="min-h-11 rounded-full px-5 py-3" href="#cardapio">Cardápio</a>
+              <a className="min-h-11 rounded-full px-5 py-3" href="#equipe">Equipe</a>
+              <a className="min-h-11 rounded-full px-5 py-3" href="#configuracoes">Configurações</a>
+            </div>
+          ) : null}
         </nav>
       </aside>
 
@@ -49,4 +60,39 @@ export default function AdminHome() {
       </section>
     </main>
   );
+}
+
+function apiUrl() {
+  const value = process.env.API_URL?.trim();
+  if (!value) throw new Error("API_URL_is_required");
+  return value;
+}
+
+export default async function AdminHome() {
+  const supabase = await createClient();
+  const [{ error: claimsError }, { data }] = await Promise.all([
+    supabase.auth.getClaims(),
+    supabase.auth.getSession(),
+  ]);
+  if (claimsError || !data.session) redirect("/entrar");
+
+  const response = await fetch(new URL("/staff/context", apiUrl()), {
+    cache: "no-store",
+    headers: { authorization: `Bearer ${data.session.access_token}` },
+  });
+  if (response.status === 401 || response.status === 403) {
+    redirect("/entrar?erro=acesso");
+  }
+  if (!response.ok) throw new Error("staff_context_request_failed");
+
+  const payload = (await response.json()) as {
+    context?: { role?: string; storeId?: string };
+  };
+  if (
+    !payload.context?.storeId ||
+    (payload.context.role !== "owner" && payload.context.role !== "operator")
+  ) {
+    throw new Error("staff_context_response_invalid");
+  }
+  return <PanelShell role={payload.context.role} />;
 }

@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  checks:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +21,50 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test:quality
+      - run: pnpm build
+
+  migrate:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Aplicar migrations no Foode Delivery
         env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          pnpm --filter @foode/db migrations:sync-supabase
+          pnpm supabase link --project-ref emdbvwylytduvuzvavgy --password "$SUPABASE_DB_PASSWORD"
+          pnpm supabase db push --linked --dry-run
+          pnpm supabase db push --linked
+
+  integration:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Provar HTTP, RLS e RBAC no Supabase de produção
+        env:
+          BUSINESS_DATABASE_URL: ${{ secrets.BUSINESS_DATABASE_URL }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
-      - run: pnpm build
+        run: |
+          test -n "$BUSINESS_DATABASE_URL"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_POOLER_URL"
+          pnpm test

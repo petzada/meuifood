@@ -49,15 +49,39 @@ membership autenticada. Até essa identidade confiável existir, o entrypoint n�
 ativa rotas de negócio: `store_id` nunca deve ser aceito de header, query string
 ou body arbitrários como substituto da autenticação.
 
+O runtime da API exige `BUSINESS_DATABASE_URL` com o login exclusivo
+`foode_business`. Toda transação assume essa role obrigatoriamente; antes de
+escutar, a API também rejeita credencial cuja sessão seja `postgres`, cuja role
+efetiva não seja `foode_business` ou que possua `BYPASSRLS`. A senha desse login
+é provisionada manualmente no Supabase e mantida apenas nos secrets do GitHub
+Actions e nas variables da API na Railway, nunca em migration ou no Git.
+
+JWTs do Painel são verificados pela API contra o JWKS do Supabase, incluindo
+assinatura ES256, issuer, audience e expiração. `store_id` e papel vêm da
+membership consultada a cada request, portanto remover um Operador invalida o
+acesso mesmo para uma sessão já emitida. O secret `SUPABASE_SERVICE_ROLE_KEY`
+fica isolado no adapter Auth Admin usado para convites; queries de Loja e equipe
+continuam no Prisma com a role RLS.
+
+O Painel usa `@supabase/ssr` para cookies/PKCE, e-mail e senha. Configure somente
+as variáveis públicas `NEXT_PUBLIC_SUPABASE_URL` e
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no admin, além de `API_URL`. O callback de
+convite é `/auth/confirm`, seguido da definição de senha.
+
 O seed é idempotente e mantém o único Comerciante-modelo no modo
 `pilot_platform`. A migration e os testes de RLS são executados exclusivamente
 no Supabase de produção linkado pela CLI. Fixtures sintéticas usam identificadores
 únicos e cleanup exato; não existe fallback para banco local.
 
-Na Actions, o passo de testes recebe somente os secrets
-`SUPABASE_DB_PASSWORD` e `SUPABASE_POOLER_URL`, configurados manualmente no
-repositório. Sem ambos, a suíte remota falha explicitamente; ela nunca faz skip,
-usa mock ou recorre a banco local.
+Na Actions, os passos remotos recebem somente os secrets necessários e falham
+explicitamente se algum estiver ausente; a suíte nunca faz skip, usa mock ou
+recorre a banco local. Quando uma migration altera RLS/RBAC, o workflow executa
+um DAG fail-closed: `quality` (sem secrets) precisa ficar verde antes de
+`migrate`; `migrate` faz dry-run e aplica pela Supabase CLI no projeto Foode
+Delivery; somente depois `integration` executa toda a prova HTTP/RLS/RBAC em
+produção. Esse fluxo usa `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
+`SUPABASE_POOLER_URL` e `BUSINESS_DATABASE_URL` nos passos mínimos indicados no
+workflow.
 
 ## Verificação
 

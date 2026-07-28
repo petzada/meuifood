@@ -84,9 +84,7 @@ describe("isolamento de Loja pela API e RLS no Supabase de produção", () => {
   beforeAll(async () => {
     const databaseUrl = await productionDatabaseUrl();
     administrativeDatabase = createAdministrativeDatabase(databaseUrl);
-    businessDatabase = createBusinessDatabase(databaseUrl, {
-      assumeBusinessRole: true,
-    });
+    businessDatabase = createBusinessDatabase(databaseUrl);
 
     const storeA = await administrativeDatabase.store.create({
       data: {

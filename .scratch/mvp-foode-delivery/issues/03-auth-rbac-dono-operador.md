@@ -15,3 +15,19 @@
 - [ ] Testes HTTP verificam respostas e ausência de efeito persistido para RBAC negado e tentativa cross-Loja.
 - [ ] Esconder navegação no Painel é apenas UX e não substitui autorização no servidor.
 
+## Comments
+
+- 2026-07-28 — Exceção mínima autorizada para eliminar a circularidade com a
+  Decisão 55, sem iniciar os demais requisitos do Ticket 04: o workflow deste
+  ticket separa `quality` (lint, typecheck, testes sem dependência da migration
+  e build) → `migrate` (dry-run e aplicação automática via Supabase CLI no
+  project-ref `emdbvwylytduvuzvavgy`) → `integration` (suíte HTTP/RLS/RBAC
+  completa no Supabase de produção). A prova remota não possui skip, mock ou
+  fallback local; ela apenas executa depois da migration por dependência do DAG.
+  O Ticket 04 permanece `ready-for-agent` e nenhum outro critério seu foi
+  iniciado por esta exceção.
+- 2026-07-28 — Gate operacional antes do primeiro push: configurar manualmente
+  `SUPABASE_ACCESS_TOKEN` e `BUSINESS_DATABASE_URL` nos GitHub Actions secrets.
+  A segunda URL deve usar uma senha forte exclusiva da role `foode_business`,
+  nunca `SUPABASE_DB_PASSWORD`, e também deve ser configurada no serviço API da
+  Railway. Nenhum valor é gerado, exibido ou gravado pelo agente/repositório.

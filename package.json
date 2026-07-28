@@ -13,6 +13,7 @@
     "dev": "pnpm run build:packages && pnpm --parallel --filter './apps/*' dev",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm run build:packages && pnpm -r --if-present typecheck",
+    "test:quality": "pnpm run build:packages && pnpm --filter @foode/api test:quality && pnpm --filter @foode/admin test && pnpm --filter @foode/web test && pnpm --filter @foode/shared test && pnpm --filter @foode/ui test && pnpm --filter @foode/db test",
     "test": "pnpm run build:packages && pnpm -r --if-present test",
     "build": "pnpm -r --if-present build"
   },
