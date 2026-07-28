@@ -1,18 +1,17 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** F → [40](40-marketing-no-apps-web.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** G → [41](41-loja-fechada-pause-checkout.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · D [38] · E [39] · **F [40]**
+… · E [39] · F [40] · **G [41]**
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **G** | Loja fechada / horário | Lacuna |
-| H | Frete: bairro (não km) | Lacuna / contraponto |
+| **H** | Frete: bairro (não km) | Lacuna / contraponto |
 | I | Guest → conta | Lacuna |
 | J | Sem staging | Contraponto |
 | K | Fidelidade MVP | Lacuna |
@@ -20,20 +19,22 @@ A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · D 
 
 ---
 
-## Rodada atual — próxima pergunta: **G**
+## Rodada atual — próxima pergunta: **H**
 
-### G) Pedido com loja fechada / fora do horário?
+### H) Taxa de delivery no MVP: bairro e/ou km?
 
-**Contexto:** Cardápio tem horário de funcionamento ([13](13-cardapio-mvp.md)); comportamento do checkout fora do horário não estava fechado.
+**Contexto:** [08](08-fulfillment-delivery-e-retirada.md) diz “por bairro e/ou por km”. Km puxa geocoding no dia 1.
 
-**Recomendação:** Cardápio **visível** (SEO/share WhatsApp); checkout **bloqueado** com mensagem clara (“abre às HH:MM”). Dono pode forçar **pausado** independente do horário (toggle emergência).
+**Recomendação MVP:** loja escolhe **um** modo — **por bairro** (lista + preço) **ou** **taxa fixa**. **Km / raio:** pós-MVP. Endereço fora das zonas → não permite delivery.
+
+**Contraponto:** “bairro e/ou km” no dia 1 é overbuild para GTM local de ~10 lojas.
 
 ---
 
 ## Fila
 
-**H** frete bairro ou taxa fixa (km depois) · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
+**I** guest→conta · **J** sem staging · **K** fidelidade simples.
 
 ## Próximo passo
 
-Founder responde **G**.
+Founder responde **H**.
