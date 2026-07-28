@@ -23,6 +23,6 @@ Histórico: [06](06-gateways-taxas-e-tiers.md).
 
 ## Em aberto
 
+- Checklist fino de permissões dono vs operador → **fechado** [38](38-rbac-dono-operador-mvp.md).  
 - Homologação BaaS (execução).  
-- Checklist fino de permissões dono vs operador (grilling D).  
 - Meios checkout / billing UI → **fechados** [34](34-meios-pagamento-checkout-mvp.md) / [35](35-ui-billing-plano-painel.md).

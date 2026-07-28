@@ -31,12 +31,12 @@ Para: **3 preços conforme faturamento** do comerciante; **mesmo produto complet
 
 Motivo: o dono não quer que o **operador de delivery** (funcionário) veja **faturamento**, mensalidade ou relatórios financeiros sensíveis.
 
-| Papel (MVP) | Acesso típico |
+| Papel (MVP) | Acesso |
 | --- | --- |
-| **Dono / admin** | Tudo: config, cardápio, pedidos, pagamentos, relatórios, planos |
-| **Operador** | Pedidos/status do dia a dia; **sem** faturamento, taxas, mensalidade, relatórios financeiros |
+| **Dono / admin** | Tudo: config, cardápio, pedidos, pagamentos, relatórios, planos, equipe, fidelidade |
+| **Operador** | **Só pedidos/status** — matriz fechada em [38](38-rbac-dono-operador-mvp.md) |
 
-Detalhe fino de checklist de permissões pode ser fechado na stack; a regra de produto é: **operação ≠ visão financeira**.
+Detalhe canônico: [38](38-rbac-dono-operador-mvp.md).
 
 ## Multi-lojas / workspaces
 

@@ -15,7 +15,7 @@ Papel do comerciante no painel: acesso total (config, cardápio, pedidos, pagame
 _Avoid_: Admin genérico, owner (salvo campo técnico `owner`)
 
 **Operador**:
-Funcionário da loja com acesso operacional a pedidos/status; sem visão financeira, taxas, mensalidade ou relatórios sensíveis.
+Funcionário da loja com acesso **somente** a pedidos/status; sem cardápio, horários, frete, relatórios, plano, equipe ou fidelidade.
 _Avoid_: Atendente, colaborador, staff (salvo UI)
 
 **Consumidor**:

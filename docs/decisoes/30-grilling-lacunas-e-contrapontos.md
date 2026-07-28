@@ -1,18 +1,17 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** C → [37](37-brand-foode-ui-outline-taste.md)  
-**Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Brand:** [FOODE-BRAND.md](../FOODE-BRAND.md)
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** D → [38](38-rbac-dono-operador-mvp.md)  
+**Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · **C [37]** (marca Foode + outline + taste-skill)
+A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · C [37] · **D [38]**
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **D** | Matriz dono vs operador | Lacuna |
-| E | Cancelamento + estorno piloto | Lacuna |
+| **E** | Cancelamento + estorno piloto | Lacuna |
 | F | Marketing no `web` | Lacuna leve |
 | G | Loja fechada / horário | Lacuna |
 | H | Frete: bairro (não km) | Lacuna / contraponto |
@@ -23,32 +22,27 @@ A [31] · Comercial [32] · N [33] · O [34] · P [35] · B [36] · **C [37]** (
 
 ---
 
-## Rodada atual — próxima pergunta: **D**
+## Rodada atual — próxima pergunta: **E**
 
-### D) Matriz mínima dono vs operador no MVP?
+### E) Cancelamento + estorno no piloto (`pilot_platform`)?
 
-**Contexto:** [11](11-planos-por-faturamento-features-completas.md) — operação ≠ financeiro; checklist fino aberto. UI de plano ([35](35-ui-billing-plano-painel.md)) é sensível.
+**Contexto:** Status **Cancelado** existe ([09](09-ciclo-pedido-status.md)); estorno self-service fora ([24](24-arquitetura-pagamentos.md)). No piloto o dinheiro passa pelas contas Foode.
 
 **Recomendação:**
 
-| Área | Dono | Operador |
-| --- | --- | --- |
-| Pedidos (ver/mover status) | Sim | Sim |
-| Cardápio (CRUD / disponibilidade) | Sim | **Não** |
-| Horários / taxas entrega / retirada | Sim | Não |
-| Relatórios / financeiro | Sim | Não |
-| Plano / billing UI | Sim | Não |
-| Equipe (convidar/remover) | Sim | Não |
-| Cupom/fidelidade config | Sim | Não |
-
-Operador sem editar cardápio no MVP reduz superfície de RBAC; abre depois se doer.
+1. Lojista (dono **ou** operador) cancela → pedido `cancelled`.  
+2. Se pagamento online **já confirmado** → ledger `refund_needed`.  
+3. Estorno = **manual** no painel Woovi/Asaas do founder + marcar `refunded`.  
+4. Se cobrança **ainda pendente** → cancelar via API se possível; senão deixar expirar.  
+5. Pagamento na entrega: só status, sem ledger de gateway.  
+6. Sem UI de “estornar” no admin no MVP.
 
 ---
 
 ## Fila
 
-**E** cancel → refund_needed manual · **F** marketing no `web` · **G** fechado = checkout bloqueado · **H** frete bairro/fixa · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
+**F** marketing no `web` · **G** fechado = checkout bloqueado · **H** frete bairro/fixa · **I** guest→conta · **J** sem staging · **K** fidelidade simples.
 
 ## Próximo passo
 
-Founder responde **D**.
+Founder responde **E**.

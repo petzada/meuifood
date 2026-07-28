@@ -23,10 +23,10 @@
 
 ## Ops de produto no MVP (manual / enxuto — não é “feature plataforma” ainda)
 
-- Cobrança da **assinatura** Foode: pagamento **por fora** + **flag** de plano no painel (UI de billing existe, read-only no pagamento) — [35](35-ui-billing-plano-painel.md).  
-- Checklist fino de permissões dono vs operador — regra existe; matriz fina na implementação mínima / grilling D.  
+- Checklist fino de permissões dono vs operador — **fechado** [38](38-rbac-dono-operador-mvp.md).  
 - Homologação BaaS — **paralelo comercial**, não bloqueia código do piloto `pilot_platform`.  
-- Teto GMV — comercial fora; sem enforcement — [33](33-teto-gmv-comercial-fora-do-produto.md).
+- Teto GMV — comercial fora; sem enforcement — [33](33-teto-gmv-comercial-fora-do-produto.md).  
+- Cobrança da **assinatura** Foode: pagamento **por fora** + **flag** de plano no painel (UI de billing existe, read-only no pagamento) — [35](35-ui-billing-plano-painel.md).
 
 ## Pós-MVP já registrados (não esquecer)
 
