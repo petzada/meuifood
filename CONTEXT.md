@@ -81,8 +81,12 @@ Soma do total pago pelo consumidor em pedidos **Concluídos** no mês (itens + a
 _Avoid_: Receita da plataforma, faturamento do CNPJ fora do canal, GMV de marketplace, GMV com maquininha na entrega
 
 **Mensalidade**:
-Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF), com âncora comercial de até R$ 15.000 de GMV. Preço e teto fecham **fora** da plataforma, antes do acesso. Mesmas features para quem assina. Sem meter de plano nem hard block no app.
-_Avoid_: Plano por feature, três faixas 129/179/229, comissão, take-rate de vitrine, barra GMV vs teto no painel
+Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF). No painel há UI de plano; no MVP a ativação é por flag após pagamento fora. Teto de GMV R$ 15k é âncora comercial, sem meter no app.
+_Avoid_: Três faixas 129/179/229, comissão, take-rate de vitrine, barra GMV vs teto
+
+**Plano (assinatura Foode)**:
+Produto comercial contratado pela loja (mensal ou anual). No MVP: tela no painel + ativação por flag ops; cobrança self-serve (PIX Woovi recorrente ou cartão Asaas) = pós-MVP.
+_Avoid_: Meter de GMV, overage automático
 
 **Taxa de pagamento**:
 MDR cobrado do comerciante no PIX/crédito/débito/voucher online (markup de gateway), distinto de mensalidade e de comissão de marketplace.

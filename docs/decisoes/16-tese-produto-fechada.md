@@ -30,6 +30,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 32 | [taxas + assinatura](32-taxas-e-assinatura-fixa-unica.md) | Pacote comercial vigente |
 | 33 | [teto GMV comercial](33-teto-gmv-comercial-fora-do-produto.md) | Sem meter/block no produto |
 | 34 | [meios checkout MVP](34-meios-pagamento-checkout-mvp.md) | PIX + crédito + na entrega; débito/voucher depois |
+| 35 | [UI billing plano](35-ui-billing-plano-painel.md) | Painel: plano mensal/anual; MVP flag+read-only; cobrança auto pós-MVP |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 

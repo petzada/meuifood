@@ -23,10 +23,11 @@
 
 ## Ops de produto no MVP (manual / enxuto — não é “feature plataforma” ainda)
 
-- Prorata / billing automático das faixas GMV — pode ser **manual/ops** no MVP.
-- Checklist fino de permissões dono vs operador — regra existe; matriz fina na implementação mínima.
-- Homologação BaaS — **paralelo comercial**, não bloqueia código do piloto `pilot_platform`.
+- Cobrança da **assinatura** Foode: pagamento **por fora** + **flag** de plano no painel (UI de billing existe, read-only no pagamento) — [35](35-ui-billing-plano-painel.md).  
+- Checklist fino de permissões dono vs operador — regra existe; matriz fina na implementação mínima / grilling D.  
+- Homologação BaaS — **paralelo comercial**, não bloqueia código do piloto `pilot_platform`.  
+- Teto GMV — comercial fora; sem enforcement — [33](33-teto-gmv-comercial-fora-do-produto.md).
 
 ## Pós-MVP já registrados (não esquecer)
 
-- Workspaces · WebSocket/SSE na Fastify · BaaS / `merchant_own_account` · PWA opcional · marca Foode própria se DESIGN.md Airbnb for substituído depois.
+- Workspaces · WebSocket/SSE na Fastify · BaaS / `merchant_own_account` · PWA opcional · marca Foode própria se DESIGN.md Airbnb for substituído depois · **cobrança automática da assinatura** (PIX recorrente Woovi e/ou cartão Asaas) — [35](35-ui-billing-plano-painel.md).

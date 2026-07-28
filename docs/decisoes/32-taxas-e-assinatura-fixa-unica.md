@@ -36,7 +36,7 @@ Lacuna Elo no contrato Asaas ([04](04-modelo-receita-saas-tiers-pagamento.md) / 
 - **Checkout MVP:** PIX + crédito + na entrega — [34](34-meios-pagamento-checkout-mvp.md). Débito e voucher = **pós-MVP** (taxas na tabela acima ficam como referência futura).  
 - Providers no build: Woovi = PIX; Asaas = crédito (débito/voucher depois).  
 - Copy comercial e ledger piloto: D+1 (PIX) / D+33 (crédito); na entrega sem ledger de gateway.  
-- Billing assinatura: fora do app ([33](33-teto-gmv-comercial-fora-do-produto.md)).
+- Billing assinatura: UI no painel + ativação por flag no MVP; cobrança auto pós-MVP — [35](35-ui-billing-plano-painel.md). Teto GMV fora — [33](33-teto-gmv-comercial-fora-do-produto.md).
 
 ## 4) Explicitamente fora (inalterado)
 

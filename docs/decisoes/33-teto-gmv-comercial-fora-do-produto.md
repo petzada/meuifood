@@ -13,9 +13,11 @@ O limite de **R$ 15.000 de GMV** / mês na assinatura R$ 179 é **âncora comerc
 | Negociação se volume crescer | **Manual / fora** da plataforma |
 | Bloquear pedidos ao passar R$ 15k | **Não** |
 | Overage automático | **Não** |
-| Painel com “GMV vs R$ 15k” / barra de plano | **Não** |
+| Painel com “GMV vs R$ 15k” / barra de plano/cota | **Não** |
 
-A plataforma foca em **gestão de delivery e cardápio digital**. Relatórios do dono mostram informações de **negócio úteis** (pedidos, faturamento do canal, etc.) — **sem** framing de cota de plano ou alerta de teto de assinatura.
+> **Nota:** UI de **assinatura Foode** (mensal/anual) no painel é outra decisão — [35](35-ui-billing-plano-painel.md). Aqui só se proíbe meter/enforcement de **teto de GMV**.
+
+A plataforma foca em **gestão de delivery e cardápio digital**. Relatórios do dono mostram informações de **negócio úteis** (pedidos, faturamento do canal, etc.) — **sem** framing de cota de plano GMV.
 
 ## Implicação para o código
 
