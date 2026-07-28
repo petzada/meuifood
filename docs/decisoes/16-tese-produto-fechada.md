@@ -34,6 +34,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 36 | [tenant `store_id`](36-tenant-store-id-canonico.md) | FK canônica em todo domínio |
 | 37 | [brand Foode + UI outline](37-brand-foode-ui-outline-taste.md) | Primary logo · taste-skill · containers sem fill/shadow |
 | 38 | [RBAC dono/operador](38-rbac-dono-operador-mvp.md) | Operador só pedidos/status |
+| 39 | [cancel + estorno auto](39-cancelamento-estorno-automatico.md) | Woovi/Asaas API; na entrega só status |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -56,9 +57,8 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 ## Fora deste ciclo / grilling aberto
 
-- Checklist fino de permissões dono vs operador → **fechado** [38](38-rbac-dono-operador-mvp.md).  
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: cancelamento/estorno).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: marketing no `web`).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 

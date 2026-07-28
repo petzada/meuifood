@@ -17,7 +17,7 @@
 | **Em preparo** | Lojista | Reflete no perfil/acompanhamento do cliente |
 | **Saiu para entrega** *ou* **Pronto para retirada** | Lojista | Conforme modalidade do pedido |
 | **Concluído** | Lojista (manual no MVP) | Fecha o ciclo |
-| **Cancelado** | Lojista | Encerra com cancelamento |
+| **Cancelado** | Lojista (dono ou operador) | Encerra; se PIX/crédito pago → estorno automático ([39](39-cancelamento-estorno-automatico.md)); na entrega = só status |
 
 ## Conclusão automática
 

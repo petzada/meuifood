@@ -29,10 +29,15 @@ Troca de modo = config da loja + secrets — **não** reescrever fluxo de checko
 
 - Homologação BaaS (execução comercial/compliance).
 - UI de onboarding de credenciais do lojista (modo `merchant_own_account`).
-- Estorno self-service no painel (manual no gateway no piloto).
+- Estorno **parcial** / estorno sem cancelar pedido.
+
+## Estorno (atualizado)
+
+Cancelamento de pedido com PIX/crédito **já pago** → estorno **automático** via API Woovi/Asaas — [39](39-cancelamento-estorno-automatico.md). Na entrega = só status.
 
 ## Rejeitado
 
 - Hardcode eterno sem modo/provider (refactor doloroso no 2º cliente).
 - Conta-por-lojista **obrigatória** já no 1º cliente amigo.
 - Subcontas Asaas em produção sem BaaS (teto R$ 2k).
+- Estorno manual no gateway como caminho feliz do piloto (revogado por [39](39-cancelamento-estorno-automatico.md)).
