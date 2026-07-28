@@ -1,8 +1,9 @@
 # Decisão: gateways, taxas ao lojista e tiers
 
-**Data:** jul/2026 · **Status:** superseded por [32](32-taxas-e-assinatura-fixa-unica.md) · **Sessão:** grilling #6 (fechamento)  
+**Data:** jul/2026 · **Status:** superseded (taxas → [32](32-taxas-e-assinatura-forma-unica.md); caminho BaaS/MEI/LTDA → [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md)) · **Sessão:** grilling #6 (fechamento)  
 
-> **Números abaixo são históricos.** Vigente: PIX **1,19% D+1** · crédito **3,29%+R$0,79 D+33** · débito/voucher · assinatura **R$ 179** até R$ 15k GMV — ver [32](32-taxas-e-assinatura-fixa-unica.md) e GMV [31](31-definicao-operacional-gmv.md).
+> **Números abaixo são históricos.** Vigente: PIX **1,19% D+1** · crédito **3,29%+R$0,79 D+33** · débito/voucher · assinatura **R$ 179** até R$ 15k GMV — ver [32](32-taxas-e-assinatura-forma-unica.md) e GMV [31](31-definicao-operacional-gmv.md).  
+> **Caminho comercial BaaS:** a linha “Fallback se BaaS atrasar → conta por lojista” abaixo foi **revogada** como política — espera sem limite até BaaS na LTDA ([52](52-espera-sem-limite-ate-baas.md)).
 
 ## 1) PIX — Woovi: plano escolhido
 
@@ -64,7 +65,7 @@ Ao bater qualquer teto → bloqueio até **homologação BaaS**. Não é “bug�
 | --- | --- | --- |
 | **Piloto — 1º cliente (comerciante-modelo, amigo)** | **C temporário** | Cartão no **Asaas do seu MEI**; repasse manual **D+32** |
 | **Lançamento / novos clientes** | **B (BaaS)** | Homologação **antes** de prospectar além do piloto; subcontas/split como padrão |
-| **Fallback se BaaS atrasar** | **A** | Conta Asaas por lojista — não generalizar C |
+| **Fallback se BaaS atrasar** | **A** | ~~Conta Asaas por lojista~~ — **revogado como política** em [52](52-espera-sem-limite-ate-baas.md); ver grilling [46](46-grilling-homologacao-baas-mei-ltda.md) |
 
 #### Regras do piloto C (obrigatório documentar com o amigo)
 

@@ -58,12 +58,13 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 ## Piloto vs escala (pagamentos cartão)
 
-- **1º cliente:** Asaas no MEI do founder + repasse manual conforme settlement (crédito ~D+33).  
-- **Novos clientes:** só após **BaaS** na **LTDA** (Tomadora); sem contingência comercial `merchant_own_account` — [46](46-grilling-homologacao-baas-mei-ltda.md) · [47](47-tomadora-baas-ltda-apos-piloto.md)–[54](54-implicacoes-minimas-modo-baas.md).
+- **Comerciante-modelo:** Asaas no MEI do founder + repasse (`pilot_platform`).  
+- **Pós-piloto validado:** abrir **LTDA** → homologar **BaaS** → migrar piloto + novos para **subcontas** (`baas`); UI onboarding no `admin`.  
+- **Sem** contingência comercial `merchant_own_account` — [46](46-grilling-homologacao-baas-mei-ltda.md) · [47](47-tomadora-baas-ltda-apos-piloto.md)–[54](54-implicacoes-minimas-modo-baas.md).
 
-## Fora deste ciclo / grilling aberto
+## Fora deste ciclo
 
-- Homologação BaaS: **caminho decidido** ([46](46-grilling-homologacao-baas-mei-ltda.md)); execução comercial (contato informativo + LTDA pós-piloto) em paralelo ao build.  
+- Homologação BaaS: **caminho decidido e confirmado** ([46](46-grilling-homologacao-baas-mei-ltda.md)); execução (contato informativo + LTDA pós-piloto) em paralelo ao build.  
 - Fronteira de lacunas produto/stack: **fechada** ([30](30-grilling-lacunas-e-contrapontos.md) · [31](31-definicao-operacional-gmv.md)–[45](45-cupom-conta-e-fidelidade-pos-mvp.md)).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).

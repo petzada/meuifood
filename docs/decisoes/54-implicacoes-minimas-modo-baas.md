@@ -5,6 +5,8 @@
 
 ## Decisão
 
+Após piloto validado + BaaS na LTDA, **tudo opera em subcontas** (`baas`): piloto migra e novos nascem nesse modo.
+
 Quando `baas` existir (pós-homologação na LTDA), o corte de produto/código é:
 
 ### Mantém (já em [24] / stack)

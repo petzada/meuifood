@@ -15,7 +15,7 @@ Playbook canônico de evidências e sequência:
 | **LTDA aberta** | Conta Asaas na LTDA = Tomadora; pedir homologação formal + receber playbook |
 | **Evidências de produto** | Marca Asaas em onboarding/comprovantes/contratos (conforme playbook); webhooks na criação de subconta; docs via `onboardingUrl` |
 | **Durante homologação** | Zero novos lojistas ([52](52-espera-sem-limite-ate-baas.md)); **não** depender do teto 10 / R$ 2k / 60d para GTM |
-| **BaaS liberado** | Migrar piloto → subconta ([50](50-migracao-piloto-para-baas.md)); novos nascem em `baas` (ativação manual) |
+| **BaaS liberado** | Migrar piloto → subconta ([50](50-migracao-piloto-para-baas.md)); novos nascem em `baas` via **UI onboarding no `admin`** ([54](54-implicacoes-minimas-modo-baas.md)); modelo único = subcontas |
 
 ## Limites do período de avaliação (lembrete)
 

@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
-**Data:** jul/2026 · **Status:** fronteira **fechada** (aguardando confirmação de entendimento compartilhado) · **Último:** #8 → [54](54-implicacoes-minimas-modo-baas.md)  
+**Data:** jul/2026 · **Status:** fronteira **fechada** · entendimento compartilhado **confirmado** · **Último:** #8 → [54](54-implicacoes-minimas-modo-baas.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI geral
 
@@ -18,8 +18,9 @@
 | --- | --- |
 | **MEI dá para Tomadora BaaS?** | **Não neste plano** — MEI só `pilot_platform` (1 comerciante-modelo) |
 | **LTDA quando?** | Após **piloto validado** (julgamento founder); **antes** do pedido formal de homologação |
-| **Ativar `baas`** | Só após homologação na LTDA; migrar piloto; novos nascem em `baas` |
-| **`merchant_own_account`** | Não é contingência comercial; espera sem limite |
+| **Ativar `baas`** | Só após homologação na LTDA; migrar piloto; novos nascem em `baas` (UI onboarding no `admin`) |
+| **`merchant_own_account`** | Não é contingência comercial; espera sem limite até BaaS |
+| **Pós-validação** | Tudo migra para **subcontas** (`baas`) — sem custódia MEI eterna |
 
 ## Fechado nesta sessão
 
@@ -40,4 +41,4 @@ Custódia no MEI, chargeback no nome do founder, faturamento aparente, LGPD de p
 
 ## Próximo passo
 
-Confirmar **entendimento compartilhado** com o founder. Depois: executar contato informativo Asaas ([51](51-contato-informativo-asaas-piloto.md)) em paralelo ao build do piloto.
+Executar contato informativo Asaas ([51](51-contato-informativo-asaas-piloto.md)) em paralelo ao build do piloto; LTDA + homologação formal só após piloto validado ([48](48-gatilho-piloto-validado-ltda.md)).

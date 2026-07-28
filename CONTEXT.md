@@ -113,8 +113,8 @@ Consumidor paga fora da plataforma (maquininha/dinheiro do lojista); sem take da
 _Avoid_: COD genérico sem contexto
 
 **Modo de cobrança**:
-Config da loja que define custódia/gateway: `pilot_platform`, `baas` ou `merchant_own_account`.
-_Avoid_: Gateway mode genérico, split (é mecanismo dentro de baas)
+Config da loja que define custódia/gateway: `pilot_platform`, `baas` ou `merchant_own_account` (este último = enum só; **não** política comercial vigente).
+_Avoid_: Gateway mode genérico, split (é mecanismo dentro de baas), “fallback conta do lojista” como plano se BaaS atrasar
 
 **Tomadora BaaS**:
 PJ da Foode (alvo: **LTDA** pós-piloto) que orquestra subcontas/split Asaas para comerciantes; não é instituição autorizada pelo Bacen.
@@ -133,12 +133,12 @@ Julgamento manual do founder de que o comerciante-modelo opera a plataforma de p
 _Avoid_: Go/no-go automático, “4 semanas = validado” como regra
 
 **Comerciante-modelo**:
-Único comerciante do piloto (`pilot_platform`); próximos só após homologação BaaS, com ativação manual.
+Único comerciante do piloto (`pilot_platform`); próximos só após homologação BaaS, via onboarding de subconta no `admin`.
 _Avoid_: “Primeiro cliente” ambíguo, beta multi-loja
 
 **Onboarding de subconta**:
-Fluxo no `admin` (pós-BaaS) para criar/acompanhar subconta Asaas do comerciante (`apiKey`, `walletId`, docs); ativação manual pela Foode.
-_Avoid_: Self-serve aberto pré-homologação, script-only como único caminho
+Fluxo no `admin` (pós-BaaS) para criar/acompanhar subconta Asaas do comerciante (`apiKey`, `walletId`, docs); ativação assistida pela Foode — modelo único pós-validação.
+_Avoid_: Self-serve aberto pré-homologação, script-only como único caminho, custódia MEI eterna
 
 **Ledger de repasse**:
 Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.

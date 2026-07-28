@@ -1,19 +1,20 @@
 # Decisão: novos comerciantes só após BaaS homologado
 
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling BaaS #3  
-**Depende de:** [47](47-tomadora-baas-ltda-apos-piloto.md) · [48](48-gatilho-piloto-validado-ltda.md) · [24](24-arquitetura-pagamentos.md)
+**Depende de:** [47](47-tomadora-baas-ltda-apos-piloto.md) · [48](48-gatilho-piloto-validado-ltda.md) · [24](24-arquitetura-pagamentos.md) · [54](54-implicacoes-minimas-modo-baas.md)
 
 ## Decisão
 
 - Durante piloto e na janela LTDA → homologação: **apenas 1 comerciante-modelo**.  
-- **Próximos comerciantes esperam** BaaS homologado; ativação **manual** (ops), sem onboarding self-serve de pagamento no MVP.  
-- **Não** usar `merchant_own_account` nem o período de avaliação (10 / R$ 2k / 60d) para escalar nessa janela.
+- **Próximos comerciantes esperam** BaaS homologado; ativação **manual pela Foode** via **UI de onboarding de subconta no `admin`** ([54](54-implicacoes-minimas-modo-baas.md)) — sem self-serve aberto de pagamento.  
+- **Não** usar `merchant_own_account` nem o período de avaliação (10 / R$ 2k / 60d) para escalar nessa janela.  
+- Espera **sem limite** de calendário até BaaS — [52](52-espera-sem-limite-ate-baas.md).
 
 ## Por quê
 
 - Evita custódia multi-lojista no MEI e evita teto inviável de avaliação.  
 - Alinha GTM consultivo (~10 lojas) a um único modo alvo: `baas` sob a LTDA.  
-- Ativação manual cabe no ritmo “sem pressa”.
+- Ativação manual (assistida) cabe no ritmo “sem pressa”.
 
 ## Rejeitado (nesta fase)
 

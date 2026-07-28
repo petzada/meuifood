@@ -2,7 +2,7 @@
 
 **Data:** jul/2026 · **Tipo:** pesquisa técnica (padrões / ops / infra) · **Não é decisão**
 
-**Contexto de produto já fechado (não reabrir):** PIX Woovi (custo 0,80% → cobrar 1,29%); cartão Asaas; piloto 1º cliente = Asaas no MEI do founder + repasse D+32; demais clientes após BaaS Asaas (fallback: conta Asaas por lojista); WhatsApp MVP = só `wa.me`; web mobile-first em `foodedelivery.com.br/loja/[slug]`.
+**Contexto de produto já fechado (não reabrir):** PIX Woovi + cartão Asaas; piloto = MEI + `pilot_platform`; escala = BaaS na LTDA / subcontas — ver decisões [46](../decisoes/46-grilling-homologacao-baas-mei-ltda.md)–[54](../decisoes/54-implicacoes-minimas-modo-baas.md) (o “fallback conta por lojista” abaixo é **histórico de pesquisa**, revogado como política em [52](../decisoes/52-espera-sem-limite-ate-baas.md)). WhatsApp MVP = só `wa.me`; web mobile-first em `foodedelivery.com.br/loja/[slug]`.
 
 Detalhes de taxas/MDR: ver `04`–`08`. Este doc foca em **como integrar, hospedar e operar**.
 

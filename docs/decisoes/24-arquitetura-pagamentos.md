@@ -12,11 +12,11 @@
 
 | Modo | Quando | Comportamento |
 | --- | --- | --- |
-| **`pilot_platform`** | **Só 1º cliente** | Credenciais **MEI do founder** (env/secrets); money-in na conta Foode; **ledger de repasse** (crédito ~D+33; débito D+4; voucher D+16; PIX D+1) |
-| **`baas`** | Pós-homologação | Subcontas/split Asaas (e segregação Woovi se necessário) |
-| **`merchant_own_account`** | Fallback se BaaS atrasar | API keys do lojista; Foode não custodia |
+| **`pilot_platform`** | **Só comerciante-modelo** | Credenciais **MEI do founder** (env/secrets); money-in na conta Foode; **ledger de repasse** (crédito ~D+33; débito D+4; voucher D+16; PIX D+1) |
+| **`baas`** | Pós-homologação na **LTDA** | Subcontas/split Asaas (e segregação Woovi se necessário); onboarding no `admin` — [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md) |
+| **`merchant_own_account`** | Enum no código **apenas** | API keys do lojista; Foode não custodia. **Não** é plano comercial nem fallback automático se BaaS atrasar — [52](52-espera-sem-limite-ate-baas.md) |
 
-Troca de modo = config da loja + secrets — **não** reescrever fluxo de checkout.
+Troca de modo = config da loja + secrets — **não** reescrever fluxo de checkout. Política comercial: piloto → LTDA → `baas`; zero novos até BaaS; piloto migra para subconta.
 
 ### Simplicidade do piloto (1 cliente) — requisito explícito
 
@@ -27,8 +27,8 @@ Troca de modo = config da loja + secrets — **não** reescrever fluxo de checko
 
 ## Fora / depois
 
-- Homologação BaaS: caminho comercial fechado em [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md) (LTDA Tomadora; UI onboarding subconta no `admin`).  
-- UI de onboarding de credenciais do lojista no modo `merchant_own_account` (não é plano comercial vigente — [52](52-espera-sem-limite-ate-baas.md)).  
+- Homologação BaaS / LTDA Tomadora / UI onboarding subconta: **decididos** — [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md).  
+- Implementar ou ativar `merchant_own_account` como política comercial (exigiria **nova** decisão — [52](52-espera-sem-limite-ate-baas.md)).  
 - Estorno **parcial** / estorno sem cancelar pedido.
 
 ## Estorno (atualizado)
