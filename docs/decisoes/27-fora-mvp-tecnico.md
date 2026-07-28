@@ -14,10 +14,12 @@
 | WebSocket / SSE / Supabase Realtime no painel | [23](23-realtime-pedidos-polling.md) |
 | Executar BaaS Asaas em produção (além do desenho/modos) | [06](06-gateways-taxas-e-tiers.md), [24](24-arquitetura-pagamentos.md) |
 | UI de conta gateway por lojista | [24](24-arquitetura-pagamentos.md) |
+| **Débito e voucher online no checkout** | [34](34-meios-pagamento-checkout-mvp.md) · taxas futuras em [32](32-taxas-e-assinatura-fixa-unica.md) |
 | Redis, worker sempre-on, staging/preview | [25](25-hospedagem-ci-ops.md) · **Sentry free e Railway Cron entram** — [29](29-libs-ops-acrescimos-mvp.md) |
 | Catálogo Airbnb inteiro (property-card, search-orb, …) | [26](26-estrutura-monorepo.md) · tokens/primitives **sim** via DESIGN.md + shadcn — [29](29-libs-ops-acrescimos-mvp.md) |
 | KDS, NF-e, estoque completo, impressão térmica | [11](11-planos-por-faturamento-features-completas.md) |
 | PCI próprio / multi-gateway (MP, Cielo, …) | [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md) |
+| Meter/hard block/overage de teto GMV R$ 15k | [33](33-teto-gmv-comercial-fora-do-produto.md) |
 
 ## Ops de produto no MVP (manual / enxuto — não é “feature plataforma” ainda)
 

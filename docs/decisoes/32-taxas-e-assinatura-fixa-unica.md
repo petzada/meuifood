@@ -33,10 +33,10 @@ Lacuna Elo no contrato Asaas ([04](04-modelo-receita-saas-tiers-pagamento.md) / 
 
 ## 3) Implicações de produto / stack
 
-- Checkout online precisa modelar **quatro** meios: PIX, crédito, débito, voucher (+ na entrega fora do GMV/MDR).  
-- Providers: Woovi = PIX; Asaas = crédito, débito, voucher.  
-- Copy comercial e ledger piloto usam D+1 / D+33 / D+4 / D+16 conforme a tabela.  
-- Billing: mensal R$ 179 ou anual antecipado R$ 1.718,40 — **cobrança e teto GMV fora do app** ([33](33-teto-gmv-comercial-fora-do-produto.md)); self-serve de plano não é MVP.
+- **Checkout MVP:** PIX + crédito + na entrega — [34](34-meios-pagamento-checkout-mvp.md). Débito e voucher = **pós-MVP** (taxas na tabela acima ficam como referência futura).  
+- Providers no build: Woovi = PIX; Asaas = crédito (débito/voucher depois).  
+- Copy comercial e ledger piloto: D+1 (PIX) / D+33 (crédito); na entrega sem ledger de gateway.  
+- Billing assinatura: fora do app ([33](33-teto-gmv-comercial-fora-do-produto.md)).
 
 ## 4) Explicitamente fora (inalterado)
 

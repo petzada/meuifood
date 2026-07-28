@@ -97,11 +97,11 @@ Pagamento online via Asaas; **3,29% + R$ 0,79** D+33, qualquer bandeira à vista
 _Avoid_: Maquininha (isso é na entrega)
 
 **Débito online**:
-Pagamento online via Asaas; **2,19% + R$ 0,55** D+4.
+Pagamento online via Asaas; taxa futura **2,19% + R$ 0,55** D+4. **Fora do MVP** ([34](docs/decisoes/34-meios-pagamento-checkout-mvp.md)).
 _Avoid_: Débito na maquininha do lojista
 
 **Voucher online**:
-Pagamento online via Asaas (vale/voucher); **3,89%** D+16.
+Pagamento online via Asaas (vale/voucher); taxa futura **3,89%** D+16. **Fora do MVP** ([34](docs/decisoes/34-meios-pagamento-checkout-mvp.md)).
 _Avoid_: Cupom de fidelidade Foode (é outro conceito)
 
 **Pagamento na entrega**:

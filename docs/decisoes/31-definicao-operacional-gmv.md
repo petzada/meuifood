@@ -13,14 +13,16 @@
 
 **Meios que entram no GMV:** apenas pagamentos **online** na plataforma:
 
-| Meio | Conta no GMV? |
-| --- | --- |
-| PIX online | Sim |
-| Cartão de crédito online | Sim |
-| Cartão de débito online | Sim |
-| Voucher online | Sim |
-| Pagamento na entrega | **Não** |
-| Pedidos cancelados | **Não** |
+| Meio | Conta no GMV? | Escopo |
+| --- | --- | --- |
+| PIX online | Sim | MVP ([34](34-meios-pagamento-checkout-mvp.md)) |
+| Cartão de crédito online | Sim | MVP |
+| Cartão de débito online | Sim (quando existir) | Pós-MVP |
+| Voucher online | Sim (quando existir) | Pós-MVP |
+| Pagamento na entrega | **Não** | MVP |
+| Pedidos cancelados | **Não** | — |
+
+No MVP, GMV apurado = pedidos **Concluídos** pagos com **PIX ou crédito** (inclui itens, adicionais e taxa de delivery desses pedidos).
 
 ## Motivo
 

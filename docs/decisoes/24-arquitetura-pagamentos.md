@@ -7,7 +7,7 @@
 
 ### Forma do código
 
-- Módulo **`payments`** na `api` com **providers** plugáveis: **`woovi`** (PIX) e **`asaas`** (crédito, débito, voucher).
+- Módulo **`payments`** na `api` com **providers** plugáveis: **`woovi`** (PIX) e **`asaas`** (crédito no MVP; débito/voucher pós-MVP — [34](34-meios-pagamento-checkout-mvp.md)).
 - Cada loja tem **modo de cobrança** (enum/config), sem hardcode permanente do piloto no checkout:
 
 | Modo | Quando | Comportamento |
