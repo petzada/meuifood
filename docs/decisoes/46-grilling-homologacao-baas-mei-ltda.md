@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
-**Data:** jul/2026 · **Status:** em andamento · **Último:** pergunta #1 (aguardando)  
+**Data:** jul/2026 · **Status:** em andamento · **Último:** #1 → [47](47-tomadora-baas-ltda-apos-piloto.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI
 
@@ -24,7 +24,7 @@ Entendimento compartilhado sobre:
 
 | # | Decisão |
 | --- | --- |
-| — | _(ainda nenhuma)_ |
+| 1 | [47](47-tomadora-baas-ltda-apos-piloto.md) — MEI só piloto; Tomadora = LTDA após piloto validado; LTDA antes do contato de homologação |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -36,8 +36,8 @@ Entendimento compartilhado sobre:
 | Período de avaliação: **10** subcontas · **R$ 2.000**/subconta · **60 dias** | [FAQ avaliação](https://docs.asaas.com/docs/faq-periodo-de-avaliacao) |
 | `apiKey` de subconta só continua pós-homologação BaaS (ou filiais mesmo prefixo CNPJ) | docs criação de subcontas |
 | Tomadora = **pessoa jurídica** BR; Foode **não** precisa de licença Bacen (Asaas = Prestadora) | [blog Asaas / Res. 16](https://blog.asaas.com/regulamentacao-baas/) |
-| **Não há** FAQ público dizendo “Tomadora deve ser LTDA” — só PJ/CNPJ | lacuna → confirmar com gerente |
+| **Não há** FAQ público dizendo “Tomadora deve ser LTDA” — founder **escolhe** LTDA como veículo pós-piloto ([47](47-tomadora-baas-ltda-apos-piloto.md)) | decisão comercial, não exigência pública Asaas |
 
 ## Próxima pergunta
 
-**#1** — Conta raiz da Tomadora: tentar homologar BaaS no **MEI** Foode e só abrir LTDA se Asaas/limite MEI bloquear, **ou** abrir LTDA antes do primeiro contato de homologação?
+**#2** — Critério de **piloto validado** (gatilho para abrir a LTDA).

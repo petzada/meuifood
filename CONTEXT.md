@@ -116,6 +116,18 @@ _Avoid_: COD genérico sem contexto
 Config da loja que define custódia/gateway: `pilot_platform`, `baas` ou `merchant_own_account`.
 _Avoid_: Gateway mode genérico, split (é mecanismo dentro de baas)
 
+**Tomadora BaaS**:
+PJ da Foode (alvo: **LTDA** pós-piloto) que orquestra subcontas/split Asaas para comerciantes; não é instituição autorizada pelo Bacen.
+_Avoid_: White label (termo legado), Foode como “banco”, MEI como Tomadora de escala
+
+**Prestadora BaaS**:
+Instituição autorizada que processa/custodia — no arranjo Foode, o **Asaas** (marca obrigatória em onboarding/comprovantes).
+_Avoid_: Gateway genérico, PSP sem distinguir do papel Bacen
+
+**Homologação BaaS**:
+Liberação comercial/compliance com gerente Asaas (playbook marca, docs, Res. Conjunta 16/17) para operar subcontas sem o teto do período de avaliação.
+_Avoid_: “Ativar subcontas” sem homologação, sandbox como equivalente
+
 **Ledger de repasse**:
 Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.
 _Avoid_: Extrato bancário, settlement genérico
