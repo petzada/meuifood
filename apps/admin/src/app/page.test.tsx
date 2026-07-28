@@ -17,6 +17,7 @@ describe("shell do Painel", () => {
 
     expect(html).toContain("Pedidos");
     expect(html).not.toContain("Cardápio");
+    expect(html).not.toContain("Funcionamento");
     expect(html).not.toContain("Equipe");
     expect(html).not.toContain("Configurações");
   });
@@ -26,6 +27,8 @@ describe("shell do Painel", () => {
 
     expect(html).toContain("Cardápio");
     expect(html).toContain("#cardapio");
+    expect(html).toContain("Funcionamento");
+    expect(html).toContain("#funcionamento");
   });
 
   it("oferece ao Dono a gestão funcional da Equipe", () => {

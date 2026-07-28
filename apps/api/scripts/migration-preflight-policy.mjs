@@ -23,6 +23,10 @@ export function assertIsolationCatalog({ role, tables }) {
     "store_members",
     "menu_categories",
     "menu_items",
+    "menu_complement_groups",
+    "menu_complement_options",
+    "menu_additionals",
+    "store_operating_periods",
   ]);
   for (const table of tables) {
     if (!table.rowSecurity || !table.forceRowSecurity) {

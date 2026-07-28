@@ -2,6 +2,7 @@
 
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #G  
 **Depende de:** [13](13-cardapio-mvp.md)
+**Complementada por:** [58](58-timezone-horarios-loja-mvp.md) — timezone e regras dos períodos
 
 ## Decisão
 

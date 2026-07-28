@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import Fastify, {
   type FastifyBaseLogger,
   type FastifyReply,
@@ -23,6 +24,8 @@ import {
   registerErrorObservability,
 } from "./observability.js";
 import { registerMenuCustomizationRoutes } from "./menu-customization-routes.js";
+import { calculateStoreOperation } from "./store-operation.js";
+import { registerStoreOperationRoutes } from "./store-operation-routes.js";
 
 type BuildAppOptions = {
   businessDatabase?: BusinessDatabase;
@@ -31,6 +34,7 @@ type BuildAppOptions = {
   memberInvitationService?: MemberInvitationService;
   menuImagePublicBaseUrl?: string;
   menuImageStorage?: MenuImageStorage;
+  now?: () => Temporal.Instant;
   verifyAccessToken?: (token: string) => Promise<{ userId: string }>;
 };
 
@@ -138,6 +142,7 @@ export function buildApp(options: BuildAppOptions = {}) {
     memberInvitationService,
     menuImagePublicBaseUrl,
     menuImageStorage,
+    now = () => Temporal.Now.instant(),
     verifyAccessToken,
   } = options;
 
@@ -161,7 +166,18 @@ export function buildApp(options: BuildAppOptions = {}) {
           return reply.code(404).send({ error: "store_not_found" });
         }
 
-        return reply.code(200).send({ storefront });
+        const config =
+          await businessDatabase.findPublicStoreOperationBySlug(slug);
+        if (!config) {
+          return reply.code(404).send({ error: "store_not_found" });
+        }
+
+        return reply.code(200).send({
+          storefront: {
+            ...storefront,
+            operation: calculateStoreOperation({ ...config, now: now() }),
+          },
+        });
       },
     );
   }
@@ -210,6 +226,11 @@ export function buildApp(options: BuildAppOptions = {}) {
       return reply.code(200).send({
         context: { role: context.role, storeId: context.storeId },
       });
+    });
+
+    registerStoreOperationRoutes(app, {
+      businessDatabase,
+      requireMembership,
     });
 
     app.get("/team/members", async (request, reply) => {

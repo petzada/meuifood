@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
+import { Temporal } from "@js-temporal/polyfill";
 import {
   createAdministrativeDatabase,
   createTransactionalBusinessDatabase,
@@ -10,6 +11,7 @@ import {
   assertIsolationCatalog,
   pendingCanonicalMigrations,
 } from "./migration-preflight-policy.mjs";
+import { proveStoreOperationPreflight } from "./store-operation-preflight.js";
 import { readCanonicalMigrations } from "../../../packages/db/scripts/canonical-migrations.mjs";
 import { validateMigrationSql } from "../../../packages/db/scripts/migration-policy.mjs";
 import { productionDatabaseUrl } from "../../../packages/db/scripts/production-database-url.mjs";
@@ -113,7 +115,11 @@ try {
               'stores',
               'store_members',
               'menu_categories',
-              'menu_items'
+              'menu_items',
+              'menu_complement_groups',
+              'menu_complement_options',
+              'menu_additionals',
+              'store_operating_periods'
             )
         `;
         assertIsolationCatalog({ role, tables });
@@ -145,15 +151,32 @@ try {
             { role: "owner", storeId: storeB.id, userId: ownerB },
           ],
         });
+        const category = await transaction.menuCategory.create({
+          data: {
+            name: "Fixture funcionamento",
+            sortOrder: 0,
+            storeId: storeA.id,
+          },
+        });
+        await transaction.menuItem.create({
+          data: {
+            categoryId: category.id,
+            name: "Item visível",
+            priceCents: 1000,
+            storeId: storeA.id,
+          },
+        });
 
         const identities = new Map([
           ["owner-a", ownerA],
           ["operator-a", operatorA],
           ["owner-b", ownerB],
         ]);
+        let currentTime = Temporal.Instant.from("2026-07-27T15:00:00Z");
         const app = buildApp({
           businessDatabase: createTransactionalBusinessDatabase(transaction),
           logger: false,
+          now: () => currentTime,
           verifyAccessToken: async (token) => {
             const userId = identities.get(token);
             if (!userId) throw new Error("invalid_preflight_token");
@@ -201,6 +224,14 @@ try {
           if (persisted.json().store.name !== `Preflight B ${runId}`) {
             throw new Error("Preflight alterou a Loja protegida.");
           }
+
+          await proveStoreOperationPreflight({
+            app,
+            setCurrentTime: (value) => {
+              currentTime = Temporal.Instant.from(value);
+            },
+            storeASlug: storeA.slug,
+          });
         } finally {
           await app.close();
         }
