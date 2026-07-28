@@ -1,6 +1,15 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // O Prisma decide a extensao dos imports relativos olhando o tsconfig mais
+  // proximo. Nosso tsconfig.base usa moduleResolution "Bundler" (para o dev
+  // com tsx/vitest), entao ele gerava imports sem extensao (ex.:
+  // "./internal/class"). O tsc so transpila e nao reescreve especificadores,
+  // entao o dist/*.js final ficava com imports sem extensao. O Node ESM puro
+  // (sem bundler) exige o caminho exato do arquivo e falha com
+  // ERR_MODULE_NOT_FOUND ao rodar "node dist/server.js" em producao. Fixamos
+  // a extensao em "js" para casar com o que o tsc realmente emite.
+  importFileExtension = "js"
 }
 
 datasource db {
