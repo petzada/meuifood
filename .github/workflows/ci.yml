@@ -19,6 +19,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrations:validate
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test:quality
@@ -42,10 +43,12 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
+          pnpm db:migrations:validate
           pnpm --filter @foode/db migrations:sync-supabase
           pnpm supabase link --project-ref emdbvwylytduvuzvavgy --password "$SUPABASE_DB_PASSWORD"
           pnpm supabase db push --linked --dry-run
           pnpm supabase db push --linked
+          pnpm supabase migration list --linked
 
   integration:
     needs: migrate
@@ -67,4 +70,11 @@ jobs:
           test -n "$BUSINESS_DATABASE_URL"
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_POOLER_URL"
+          set +e
           pnpm test
+          test_status=$?
+          pnpm db:production:verify
+          verify_status=$?
+          set -e
+          test "$test_status" -eq 0
+          test "$verify_status" -eq 0
