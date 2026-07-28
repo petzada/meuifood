@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
-**Data:** jul/2026 · **Status:** em andamento · **Último:** #6 → [52](52-espera-sem-limite-ate-baas.md)  
+**Data:** jul/2026 · **Status:** em andamento · **Último:** #7 → [53](53-checklist-evidencias-baas-asaas.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI
 
@@ -30,6 +30,7 @@ Entendimento compartilhado sobre:
 | 4 | [50](50-migracao-piloto-para-baas.md) — Piloto migra para subconta `baas`; novos já nascem em `baas` |
 | 5 | [51](51-contato-informativo-asaas-piloto.md) — Contato informativo no piloto; homologação só na LTDA |
 | 6 | [52](52-espera-sem-limite-ate-baas.md) — Zero novos até BaaS; sem contingência comercial `merchant_own_account` |
+| 7 | [53](53-checklist-evidencias-baas-asaas.md) — Checklist de evidências / sequência canônica |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -45,4 +46,4 @@ Entendimento compartilhado sobre:
 
 ## Próxima pergunta
 
-**#7** — Confirmar checklist de evidências / sequência de homologação.
+**#8** — Implicações mínimas de produto/código para o modo `baas` (sem redesenhar a stack).
