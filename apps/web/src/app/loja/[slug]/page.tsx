@@ -1,0 +1,134 @@
+import { OutlineContainer } from "@foode/ui";
+import { notFound } from "next/navigation";
+
+type PublicMenuItem = {
+  description: string;
+  id: string;
+  imageUrl: string | null;
+  name: string;
+  priceCents: number;
+};
+
+type PublicMenuCategory = {
+  id: string;
+  items: PublicMenuItem[];
+  name: string;
+};
+
+type PublicStorefront = {
+  categories: PublicMenuCategory[];
+  name: string;
+  slug: string;
+};
+
+function apiUrl() {
+  const value = process.env.API_URL?.trim();
+  if (!value) throw new Error("API_URL_is_required");
+  return value;
+}
+
+function formatPrice(priceCents: number) {
+  return (priceCents / 100).toLocaleString("pt-BR", {
+    currency: "BRL",
+    style: "currency",
+  });
+}
+
+async function loadStorefront(slug: string): Promise<PublicStorefront | null> {
+  const response = await fetch(
+    new URL(`/public/stores/${encodeURIComponent(slug)}/menu`, apiUrl()),
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("storefront_request_failed");
+  const payload = (await response.json()) as { storefront?: PublicStorefront };
+  if (!payload.storefront?.slug || !Array.isArray(payload.storefront.categories)) {
+    throw new Error("storefront_response_invalid");
+  }
+  return payload.storefront;
+}
+
+export default async function StorefrontPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) notFound();
+
+  const storefront = await loadStorefront(normalized);
+  if (!storefront) notFound();
+
+  return (
+    <main className="min-h-[100dvh] bg-[var(--color-canvas)]">
+      <header className="border-b border-[var(--color-hairline)] px-4 py-5 md:px-8">
+        <div className="mx-auto max-w-3xl">
+          <p className="text-sm font-bold text-[var(--color-primary-active)]">Foode</p>
+          <h1 className="mt-2 text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--color-ink)]">
+            {storefront.name}
+          </h1>
+          <p className="mt-2 max-w-[48ch] text-[var(--color-body)]">
+            Cardápio da Loja. Escolha os itens disponíveis para pedir depois.
+          </p>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
+        {storefront.categories.length === 0 ? (
+          <OutlineContainer className="p-6">
+            <h2 className="text-xl font-bold text-[var(--color-ink)]">Cardápio em preparação</h2>
+            <p className="mt-2 text-[var(--color-muted)]">
+              Esta Loja ainda não publicou itens disponíveis.
+            </p>
+          </OutlineContainer>
+        ) : (
+          <div className="grid gap-8">
+            {storefront.categories.map((category) => (
+              <section key={category.id} aria-labelledby={`category-${category.id}`}>
+                <h2
+                  id={`category-${category.id}`}
+                  className="text-xl font-bold tracking-[-0.02em] text-[var(--color-ink)]"
+                >
+                  {category.name}
+                </h2>
+                <div className="mt-4 grid gap-4">
+                  {category.items.map((item) => (
+                    <OutlineContainer
+                      key={item.id}
+                      as="article"
+                      className="overflow-hidden p-0"
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          alt=""
+                          className="aspect-[16/10] w-full object-cover"
+                          src={item.imageUrl}
+                        />
+                      ) : null}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-lg font-bold text-[var(--color-ink)]">
+                            {item.name}
+                          </h3>
+                          <p className="shrink-0 font-bold text-[var(--color-primary-active)]">
+                            {formatPrice(item.priceCents)}
+                          </p>
+                        </div>
+                        {item.description ? (
+                          <p className="mt-2 text-sm leading-relaxed text-[var(--color-body)]">
+                            {item.description}
+                          </p>
+                        ) : null}
+                      </div>
+                    </OutlineContainer>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

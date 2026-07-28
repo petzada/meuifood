@@ -29,7 +29,7 @@ Derivados da stack já fechada; **não** incluir Redis só por hábito.
 
 | Necessidade | Solução MVP | Por quê |
 | --- | --- | --- |
-| Imagens do cardápio | **Supabase Storage** (+ CDN público/signed URLs) | Já no ecossistema; evita S3/R2 extra |
+| Imagens do cardápio | ~~Supabase Storage (+ CDN público/signed URLs)~~ — **superseded por [57](57-cloudflare-r2-imagens-cardapio.md):** **Cloudflare R2** (PUT pré-assinado; leitura pública via `R2_PUBLIC_BASE_URL`) | R2 para objetos de mídia do Cardápio; Supabase permanece Postgres/Auth/RLS |
 | Auth e-mail (senha / magic link / convite) | **Supabase Auth** (SMTP padrão ou config mínima) | Já decidido em [22](22-auth-lojista-e-consumidor.md) |
 | Webhooks PIX/cartão | Rotas na `api` + URL estável `api.…` | [24](24-arquitetura-pagamentos.md) |
 | Idempotência / fila leve de eventos | **Tabela** `payment_events` (unique id) + processamento na `api` | Sem Redis/SQS |
@@ -52,7 +52,7 @@ Derivados da stack já fechada; **não** incluir Redis só por hábito.
 - Staging / preview environments
 - Datadog / OpenTelemetry completo (Sentry free **entra** — [29](29-libs-ops-acrescimos-mvp.md))
 - Multi-região, K8s, filas cloud (SQS/Rabbit)
-- CDN à parte além do que Storage/Railway já derem
+- CDN à parte além do que R2 (`R2_PUBLIC_BASE_URL`) / Railway já derem — [57](57-cloudflare-r2-imagens-cardapio.md) (histórico: “Storage/Railway”)
 
 ### Atualização vs âncora [17](17-monorepo-e-infra-preferencias.md)
 

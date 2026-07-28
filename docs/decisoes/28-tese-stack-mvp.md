@@ -5,7 +5,7 @@
 
 ## Em uma frase
 
-Monorepo **pnpm** com **Next (`web` + `admin`)**, **Fastify (`api`)**, **Postgres/Auth/RLS/Storage no Supabase**, deploy **Railway** + CI GitHub → produção; pagamentos **Woovi + Asaas** com modo piloto MEI e caminho a **BaaS na LTDA** ([46](46-grilling-homologacao-baas-mei-ltda.md)).
+Monorepo **pnpm** com **Next (`web` + `admin`)**, **Fastify (`api`)**, **Postgres/Auth/RLS no Supabase**, imagens do Cardápio no **Cloudflare R2** ([57](57-cloudflare-r2-imagens-cardapio.md); histórico: Storage no Supabase), deploy **Railway** + CI GitHub → produção; pagamentos **Woovi + Asaas** com modo piloto MEI e caminho a **BaaS na LTDA** ([46](46-grilling-homologacao-baas-mei-ltda.md)).
 
 ## Confirmação
 
@@ -39,7 +39,8 @@ Railway Cron                  → reconciliação (exit)
          ├─ packages/db      (Prisma)
          ├─ packages/shared  (Zod + tokens DESIGN.md)
          ├─ packages/ui      (shadcn seletivo)
-         └─ Supabase         (Postgres + RLS + Auth + Storage)
+         ├─ Supabase         (Postgres + RLS + Auth)
+         └─ Cloudflare R2    (imagens do Cardápio — [57](57-cloudflare-r2-imagens-cardapio.md); histórico: Storage no Supabase)
 ```
 
 ## Âncoras de produto que a stack respeita

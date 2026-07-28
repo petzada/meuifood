@@ -16,7 +16,8 @@
 
 ## Já implícitos na tese (bootstrap sem nova escolha)
 
-- Zod · `@supabase/ssr` · verify JWT (`jose`/JWKS) na Fastify · `@supabase/supabase-js` Storage · helper Prisma `$transaction` + `set_config` (RLS efetivo)
+- Zod · `@supabase/ssr` · verify JWT (`jose`/JWKS) na Fastify · helper Prisma `$transaction` + `set_config` (RLS efetivo)
+- ~~`@supabase/supabase-js` Storage~~ — **superseded por [57](57-cloudflare-r2-imagens-cardapio.md):** upload/leitura de imagens do Cardápio via **Cloudflare R2**; cliente S3 autorizado na implementação: `@aws-sdk/client-s3` + presigner (ainda não adicionado nesta etapa documental)
 
 ## Design (supersede parcial — ver [37](37-brand-foode-ui-outline-taste.md))
 

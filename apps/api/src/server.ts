@@ -6,6 +6,7 @@ import {
   supabaseAuthConfiguration,
 } from "./auth.js";
 import { createSupabaseMemberInvitationService } from "./member-invitations.js";
+import { menuImageStorageFromEnvironment } from "./menu-image-storage.js";
 
 function requiredEnvironment(name: string) {
   const value = process.env[name]?.trim();
@@ -18,6 +19,8 @@ const businessDatabase = createBusinessDatabase(
   requiredEnvironment("BUSINESS_DATABASE_URL"),
 );
 const supabaseUrl = requiredEnvironment("SUPABASE_URL");
+const menuImageStorage = menuImageStorageFromEnvironment();
+const menuImagePublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim();
 const app = buildApp({
   businessDatabase,
   memberInvitationService: createSupabaseMemberInvitationService({
@@ -25,6 +28,8 @@ const app = buildApp({
     serviceRoleKey: requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
     supabaseUrl,
   }),
+  ...(menuImagePublicBaseUrl ? { menuImagePublicBaseUrl } : {}),
+  ...(menuImageStorage ? { menuImageStorage } : {}),
   verifyAccessToken: createSupabaseAccessTokenVerifier(
     supabaseAuthConfiguration(supabaseUrl),
   ),

@@ -18,7 +18,12 @@ export function assertIsolationCatalog({ role, tables }) {
     throw new Error("foode_business herda role privilegiada.");
   }
 
-  const requiredTables = new Set(["stores", "store_members"]);
+  const requiredTables = new Set([
+    "stores",
+    "store_members",
+    "menu_categories",
+    "menu_items",
+  ]);
   for (const table of tables) {
     if (!table.rowSecurity || !table.forceRowSecurity) {
       throw new Error(`RLS efetiva ausente em ${table.name}.`);

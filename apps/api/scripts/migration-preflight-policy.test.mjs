@@ -38,6 +38,12 @@ describe("preflight transacional de migrations", () => {
             name: "store_members",
             rowSecurity: true,
           },
+          {
+            forceRowSecurity: true,
+            name: "menu_categories",
+            rowSecurity: true,
+          },
+          { forceRowSecurity: true, name: "menu_items", rowSecurity: true },
         ],
       }),
     ).toThrow("foode_business possui privilégio de bypass");
@@ -56,6 +62,12 @@ describe("preflight transacional de migrations", () => {
             name: "store_members",
             rowSecurity: true,
           },
+          {
+            forceRowSecurity: true,
+            name: "menu_categories",
+            rowSecurity: true,
+          },
+          { forceRowSecurity: true, name: "menu_items", rowSecurity: true },
         ],
       }),
     ).toThrow("RLS efetiva ausente");
@@ -74,6 +86,12 @@ describe("preflight transacional de migrations", () => {
             name: "store_members",
             rowSecurity: true,
           },
+          {
+            forceRowSecurity: true,
+            name: "menu_categories",
+            rowSecurity: true,
+          },
+          { forceRowSecurity: true, name: "menu_items", rowSecurity: true },
         ],
       }),
     ).toThrow("foode_business herda role privilegiada");
