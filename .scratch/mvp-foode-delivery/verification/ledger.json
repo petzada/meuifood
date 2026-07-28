@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-28T18:34:57.543Z",
+  "updatedAt": "2026-07-28T19:25:42.129Z",
   "meta": {
     "busySkips": 0
   },
@@ -131,17 +131,17 @@
         ".github/workflows/ci.yml"
       ],
       "footprintFiles": 9,
-      "verificationKey": "f09d8608c1e9564ec4213bde9a3335eba184f459fadf6a6bd885805e8638adde",
+      "verificationKey": "0cb57880d88c4824078bff489c9dfe389a3988e4cc94b475a95f48b15e3ee0ae",
       "parts": {
-        "ticket": "563680a5801621ac29e8bdf3a62efc6cf6e9b2b7d3dfbce3f9f70c10cb009ccd",
-        "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
-        "docs": "875b407d60fae4f86f300515339a8deb44b27cf7bcc90a9ab4e810eb2a598da3",
-        "scoped": "640cf1be36054ed9f32bcdbed3f98ab30c2b46679f1bdf50f44ceb7240bdfc36"
+        "ticket": "e4605c731f94013128c2108cf117e99b39e9d07e0efbb1a07cc52c9bd4c11399",
+        "spec": "6db8a5d4052b569a2922e34ab11d69fd59c99fd7901ff8e26b993fb916c9c0d5",
+        "docs": "39ec9137e86254d08085ebd94c5ee6ac52bfa227bcf9d52eb2bcb8e853d06a79",
+        "scoped": "984efce651c8ecbf2621eb5f758cf19529429ecf7c0b3b88c747e99afddfb702"
       },
-      "headSha": "2c561c71fe27aee5187f5715cc2769c97a92cf14",
-      "lastVerifiedAt": "2026-07-28T18:17:39.230Z",
-      "runs": 1,
-      "note": "verificado em f80718d: politica fail-closed; 1 alto + 1 medio + 1 nota CORRIGIDOS pelo orquestrador em dd803ab — correcoes SEM verificacao independente; gates 1 e 2 fechados"
+      "headSha": "bca86fb459ca4e2a354831c1f11c424349e954d8",
+      "lastVerifiedAt": "2026-07-28T19:25:42.129Z",
+      "runs": 2,
+      "note": "rodada 2 independente em master: politica resistiu a 15 vetores; 1 alto + 1 medio das correcoes do orquestrador CORRIGIDOS em 3d3a71a (residuo amplo restaurado + queue: max)"
     }
   }
 }

@@ -1,20 +1,20 @@
 # Verificação automática — mvp-foode-delivery
 
-_Atualizado em 2026-07-28T18:34:58.018Z · branch `cursor/ci-migrations-producao-391f` · HEAD `aa1a5c25`_
+_Atualizado em 2026-07-28T19:25:42.634Z · branch `master` · HEAD `bca86fb4`_
 
 Relatórios gerados pelo loop de verificação (orquestrador Opus + verificadores Sonnet).
 Cada relatório confronta a implementação com `spec.md`, o ticket, `docs/decisoes/` e `docs/adr/`.
 
 - Tickets: **16** · sinalizados como concluídos: **4**
-- Conformes: **4** · com divergências: **0** · na fila: **0**
+- Conformes: **1** · com divergências: **0** · na fila: **3**
 - Bloqueadores abertos: **0**
 
 | # | Ticket | Impl. | Veredito | Abertos | Bloq. | Verificado em | Relatório |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 01 | Bootstrapar monorepo e identidade Foode | sim | ✅ conforme | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/01-bootstrap-monorepo-identidade-foode.md) |
-| 02 | Instalar Loja, `store_id` e RLS efetiva | sim | ✅ conforme | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/02-loja-store-id-rls.md) |
-| 03 | Autenticar Dono e Operador e aplicar RBAC | sim | ✅ conforme | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/03-auth-rbac-dono-operador.md) |
-| 04 | Bloquear produção com CI e migrations validadas | sim | ✅ conforme | 0 | 0 | 2026-07-28 18:17 | [relatório](reports/04-ci-migrations-producao.md) |
+| 01 | Bootstrapar monorepo e identidade Foode | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/01-bootstrap-monorepo-identidade-foode.md) |
+| 02 | Instalar Loja, `store_id` e RLS efetiva | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/02-loja-store-id-rls.md) |
+| 03 | Autenticar Dono e Operador e aplicar RBAC | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/03-auth-rbac-dono-operador.md) |
+| 04 | Bloquear produção com CI e migrations validadas | sim | ✅ conforme | 0 | 0 | 2026-07-28 19:25 | [relatório](reports/04-ci-migrations-producao.md) |
 | 05 | Gerenciar e publicar o Cardápio da Loja | não | — | — | — | — | — |
 | 06 | Configurar Complementos e montar o carrinho | não | — | — | — | — | — |
 | 07 | Aplicar horários e Pausa no Canal próprio | não | — | — | — | — | — |
@@ -32,7 +32,9 @@ Cada relatório confronta a implementação com `spec.md`, o ticket, `docs/decis
 
 ## Na fila
 
-Nada pendente.
+- `01` 01 — Bootstrapar monorepo e identidade Foode — ticket, spec ou footprint mudaram desde a última verificação
+- `02` 02 — Instalar Loja, `store_id` e RLS efetiva — ticket, spec ou footprint mudaram desde a última verificação
+- `03` 03 — Autenticar Dono e Operador e aplicar RBAC — ticket, spec ou footprint mudaram desde a última verificação
 
 ## Como parar o loop
 
