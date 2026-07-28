@@ -67,8 +67,8 @@ Como o pedido chega ao consumidor: delivery ou retirada no balcão (se a loja at
 _Avoid_: Modalidade de entrega (salvo copy longa), shipping
 
 **Delivery**:
-Entrega no endereço do consumidor; taxa configurável pela loja (bairro e/ou km).
-_Avoid_: Frete (salvo copy)
+Entrega no endereço do consumidor; taxa por **bairro** ou **taxa fixa** (um modo por loja). Km/raio = pós-MVP.
+_Avoid_: Frete (salvo copy), shipping
 
 **Retirada**:
 Consumidor busca no balcão; opcional por loja.
