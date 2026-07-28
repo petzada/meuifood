@@ -23,7 +23,6 @@ Histórico: [06](06-gateways-taxas-e-tiers.md).
 
 ## Em aberto
 
-- Meios no checkout MVP → **fechado** [34](34-meios-pagamento-checkout-mvp.md).  
 - Homologação BaaS (execução).  
 - Checklist fino de permissões dono vs operador (grilling D).  
-- Cobrança assinatura no produto (grilling P).
+- Meios checkout / billing UI → **fechados** [34](34-meios-pagamento-checkout-mvp.md) / [35](35-ui-billing-plano-painel.md).

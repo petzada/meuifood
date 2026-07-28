@@ -13,6 +13,7 @@
 | Provedor | **Supabase Auth** |
 | Método | **E-mail + senha** |
 | Equipe | **Convite de operador** (e-mail); operador entra com senha no mesmo Auth |
+| Onboarding dono (MVP) | Founder **convida** via Supabase Auth → painel → UI de **plano** ([35](35-ui-billing-plano-painel.md)) |
 | Autorização | JWT → `api` aplica **RBAC** (dono vs operador) + `store_id`; RLS reforça tenant |
 
 ### Consumidor (`web`)

@@ -55,7 +55,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 - Checklist fino de permissões dono vs operador.  
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: assinatura anual / ops).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: `store_id` / tenant).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 
