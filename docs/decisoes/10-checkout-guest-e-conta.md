@@ -15,18 +15,19 @@ O MVP oferece **as duas formas** de pedir:
 
 - Nome completo  
 - Telefone (WhatsApp)  
-- Endereço (cálculo de entrega, comunicação e base para marketing WhatsApp **pós-MVP**)
+- Endereço (cálculo de entrega, comunicação)  
+- **Sem** e-mail obrigatório no guest — e-mail entra ao criar conta ([43](43-guest-conta-vinculo-pedido.md))
 
 ### Híbrido pós-pedido (também no MVP)
 
 1. Cliente conclui como guest (baixa fricção no 1º ponto).  
 2. Após o pedido, oferecer **criar conta** + eventual **bônus/cupom de fidelidade** (opt-in do comerciante).  
-3. Ao criar a conta, **vincular o pedido acabado** e iniciar o histórico.
+3. Ao criar a conta: e-mail + magic link; **vincular o pedido** (e opcionalmente outros da mesma loja/telefone) — [43](43-guest-conta-vinculo-pedido.md).
 
-### Login (direção, stack depois)
+### Login
 
-- Preferir **baixa fricção**: magic link ou equivalente.  
-- Escolha exata de provedor/stack = **decisão posterior** (fase técnica), não bloqueia a tese de produto.
+- Consumidor: **magic link** ([22](22-auth-lojista-e-consumidor.md)).  
+- Detalhe de vínculo guest→conta: [43](43-guest-conta-vinculo-pedido.md).
 
 ## Implicações
 

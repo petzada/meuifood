@@ -1,37 +1,41 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** H → [42](42-taxa-delivery-bairro-ou-fixa.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** I → [43](43-guest-conta-vinculo-pedido.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-… · G [41] · **H [42]** (frete bairro/fixa; km pós-MVP)
+… · H [42] · **I [43]**
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **I** | Guest → conta | Lacuna |
-| J | Sem staging | Contraponto |
+| **J** | Sem staging | Contraponto |
 | K | Fidelidade MVP | Lacuna |
 | M | Homologação BaaS | Comercial |
 
 ---
 
-## Rodada atual — próxima pergunta: **I**
+## Rodada atual — próxima pergunta: **J**
 
-### I) Guest → criar conta: como vincular?
+### J) Sem staging Railway — o que mitiga risco de webhooks/migrations?
 
-**Contexto:** [10](10-checkout-guest-e-conta.md) — guest sem e-mail; conta = magic link ([22](22-auth-lojista-e-consumidor.md)).
+**Contexto:** [25](25-hospedagem-ci-ops.md) = PR → CI → produção; sem staging. Pagamentos + RLS aumentam risco.
 
-**Recomendação:** Guest **sem** e-mail obrigatório (nome, telefone, endereço se delivery). Ao “criar conta” pós-pedido: pede e-mail + confirma telefone do pedido; magic link; vincula **aquele** `order_id` (e opcionalmente outros com mesmo telefone na mesma `store_id`). Sem merge cross-loja automático.
+**Recomendação:** Manter **sem** staging completo, com mitigação:
+
+1. Sandbox/test mode Woovi e Asaas enquanto disponível  
+2. Loja interna / `is_demo` no mesmo Postgres para QA  
+3. Migrations expand/contract cuidadosas  
+4. Reabrir staging só após incidente real no piloto
 
 ---
 
 ## Fila
 
-**J** sem staging completo (sandbox gateways + loja demo) · **K** fidelidade = cupom/desconto simples opt-in.
+**K** fidelidade MVP = cupom/desconto simples opt-in (não “10 pedidos = item grátis” complexo).
 
 ## Próximo passo
 
-Founder responde **I**.
+Founder responde **J**.

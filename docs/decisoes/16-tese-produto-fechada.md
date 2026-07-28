@@ -38,6 +38,7 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 40 | [marketing no `web`](40-marketing-no-apps-web.md) | Landing no mesmo Next; sem 4º serviço |
 | 41 | [loja fechada / pause](41-loja-fechada-pause-checkout.md) | Cardápio visível; checkout bloqueado; toggle emergência |
 | 42 | [taxa delivery](42-taxa-delivery-bairro-ou-fixa.md) | Bairro ou fixa; km pós-MVP |
+| 43 | [guest → conta](43-guest-conta-vinculo-pedido.md) | E-mail no create account; vínculo order_id |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -61,7 +62,7 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 ## Fora deste ciclo / grilling aberto
 
 - Homologação BaaS (execução).  
-- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: guest → conta).
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md) (próxima: staging / ambientes).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 

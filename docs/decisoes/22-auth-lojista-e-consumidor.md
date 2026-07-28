@@ -27,7 +27,7 @@
 ## Implicações técnicas (MVP)
 
 - Dois “mundos” de identidade no Auth (lojista vs consumidor) — separar por metadata/role ou tabelas de perfil (`store_members` vs `customers`), sem misturar sessões no UX.
-- Guest: linhas de pedido com `customer_user_id` nulo; ao criar conta, backfill / link por e-mail+pedido (regra anti-abuso simples na implementação).
+- Guest: linhas de pedido com `customer_user_id` nulo; ao criar conta, vínculo conforme [43](43-guest-conta-vinculo-pedido.md).
 - `api` valida JWT Supabase; contexto RLS alinhado ao `store_id` / usuário conforme [21](21-banco-orm-multitenant.md).
 
 ## Rejeitado neste ciclo
