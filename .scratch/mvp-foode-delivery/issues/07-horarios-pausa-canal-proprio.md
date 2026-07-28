@@ -6,13 +6,13 @@
 
 **Status:** needs-review
 
-- [ ] Dono configura períodos válidos por dia e dias fechados.
-- [ ] Pausa tem efeito imediato sem alterar ou apagar horários.
+- [x] Dono configura períodos válidos por dia e dias fechados.
+- [x] Pausa tem efeito imediato sem alterar ou apagar horários.
 - [x] O estado canônico distingue Loja aberta, fora do horário e em Pausa.
 - [x] Fora do horário inclui próximo horário de abertura quando calculável.
 - [x] Cardápio permanece visível em todos os estados e não oferece agendamento.
-- [ ] Operador não vê nem altera horários ou Pausa.
-- [ ] Testes usam relógio controlável e duas Lojas para provar estados e isolamento.
+- [x] Operador não vê nem altera horários ou Pausa.
+- [x] Testes usam relógio controlável e duas Lojas para provar estados e isolamento.
 
 ## Comments
 
@@ -31,4 +31,8 @@
   cruzadas de carrinho/customizações + estados da Loja passaram localmente. Os
   quatro itens pendentes continuam desmarcados até evidência factual do CI
   Node 24 com migration/preflight/integração no Supabase real.
+- 2026-07-28 — CI factual verde no run `30407874589`, commit `4e003be`:
+  `quality` (Node 24), `migrate` (migration + preflight transacional) e
+  `integration` (HTTP + Postgres/RLS/RBAC no Supabase de produção) passaram.
+  Os quatro aceites pendentes foram marcados somente após essa evidência.
 
