@@ -152,6 +152,6 @@ _Avoid_: Gamificação, cashback, RPG de pontos
 Ação no painel que marca o pedido como cancelado; se houver PIX/crédito pago, dispara estorno automático no gateway.
 _Avoid_: Void genérico, delete
 
-**Estorno**:
-Devolução automática via API Woovi (PIX) ou Asaas (crédito) após cancelamento de pedido já pago.
-_Avoid_: Reembolso manual no dashboard do gateway como caminho feliz
+**Pausa (loja)**:
+Toggle do dono que bloqueia o checkout imediatamente, independente do horário de funcionamento.
+_Avoid_: Fechado (é horário), offline genérico

@@ -11,7 +11,7 @@ Cardápio MVP = **essencial + opcionais/complementos**.
 | Categorias | Sim |
 | Itens (nome, preço, foto, descrição) | Sim |
 | Disponibilidade liga/desliga (item) | Sim |
-| Horário / funcionamento da loja | Sim |
+| Horário / funcionamento da loja | Sim — fora do horário: cardápio visível, checkout bloqueado; toggle pausado — [41](41-loja-fechada-pause-checkout.md) |
 | Complementos configuráveis pelo comerciante | Sim |
 | Adicionais com preço (configuráveis) | Sim |
 
