@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
-**Data:** jul/2026 · **Status:** em andamento · **Último:** #1 → [47](47-tomadora-baas-ltda-apos-piloto.md)  
+**Data:** jul/2026 · **Status:** em andamento · **Último:** #2 → [48](48-gatilho-piloto-validado-ltda.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI
 
@@ -25,6 +25,7 @@ Entendimento compartilhado sobre:
 | # | Decisão |
 | --- | --- |
 | 1 | [47](47-tomadora-baas-ltda-apos-piloto.md) — MEI só piloto; Tomadora = LTDA após piloto validado; LTDA antes do contato de homologação |
+| 2 | [48](48-gatilho-piloto-validado-ltda.md) — Gatilho = julgamento founder (ponta a ponta); sem métrica mínima escrita |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -40,4 +41,4 @@ Entendimento compartilhado sobre:
 
 ## Próxima pergunta
 
-**#2** — Critério de **piloto validado** (gatilho para abrir a LTDA).
+**#3** — Janela entre LTDA aberta / homologação pedida e BaaS liberado: o que fazer com o 2º+ comerciante?

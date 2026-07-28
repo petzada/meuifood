@@ -29,6 +29,6 @@
 
 ## Aberto (próximas perguntas do grilling)
 
-- Critério de **piloto validado** (gatilho da LTDA).  
+- Critério de piloto validado → **fechado** em [48](48-gatilho-piloto-validado-ltda.md).  
 - Janela entre LTDA aberta e BaaS liberado (2º+ comerciante).  
 - Migração do piloto MEI → subconta sob LTDA.

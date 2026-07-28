@@ -128,6 +128,10 @@ _Avoid_: Gateway genérico, PSP sem distinguir do papel Bacen
 Liberação comercial/compliance com gerente Asaas (playbook marca, docs, Res. Conjunta 16/17) para operar subcontas sem o teto do período de avaliação.
 _Avoid_: “Ativar subcontas” sem homologação, sandbox como equivalente
 
+**Piloto validado**:
+Julgamento manual do founder de que o comerciante-modelo opera a plataforma de ponta a ponta; gatilho para abrir a LTDA. Sem métrica mínima escrita (GMV/N pedidos).
+_Avoid_: Go/no-go automático, “4 semanas = validado” como regra
+
 **Ledger de repasse**:
 Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.
 _Avoid_: Extrato bancário, settlement genérico
