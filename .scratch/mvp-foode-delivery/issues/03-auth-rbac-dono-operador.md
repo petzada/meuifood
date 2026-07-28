@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Instalar Loja, `store_id` e RLS efetiva.
 
-**Status:** ready-for-agent
+**Status:** needs-review
 
 - [ ] Dono e Operador usam convite, e-mail e senha no Supabase Auth.
 - [ ] A API valida JWT/JWKS e rejeita token ausente, inválido, expirado ou sem membership.
@@ -49,3 +49,6 @@
 - 2026-07-28 — O status e os critérios permanecem abertos exclusivamente para o
   gate de verificação Claude/Sonnet. Não marcar `done` antes de o relatório externo
   do Ticket 03 ser produzido, lido e processado integralmente.
+- 2026-07-28 — Reviews internos, checks locais e CI estão verdes. O ticket entrou
+  na fila externa como `needs-review`, conforme o handshake de conclusão em duas
+  fases; `done` permanece reservado ao processamento do relatório externo.
