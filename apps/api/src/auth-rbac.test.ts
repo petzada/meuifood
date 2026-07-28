@@ -92,7 +92,10 @@ async function productionDatabaseUrls() {
 }
 
 describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => {
-  const runId = randomUUID();
+  // Em CI, CI_RUN_ID identifica a run inteira, permitindo que a checagem de
+  // resíduo global (verify-production-state.mjs) só acuse fixtures desta
+  // execução. Fora de CI, cai para um UUID aleatório.
+  const runId = process.env.CI_RUN_ID ?? randomUUID();
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
   let businessDatabase: BusinessDatabase;

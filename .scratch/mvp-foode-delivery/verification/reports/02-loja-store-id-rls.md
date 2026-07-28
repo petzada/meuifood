@@ -4,9 +4,11 @@
 - Verificado em: 2026-07-28T00:00:00-03:00 · HEAD `57087cc` · branch `cursor/loja-store-id-rls-391f` (checkout local, base `cursor/bootstrap-monorepo-391f`)
 - Rodada: 2 (rechecagem para merge da PR #4) · Verificado em: 2026-07-28 · HEAD `170fbab` · branch `cursor/loja-store-id-rls-391f` → `master`
 - Rodada: 3 (rechecagem de regressão após o ticket 03 — auth/RBAC) · Verificado em: 2026-07-28 · HEAD `8b7f080` · branch `cursor/auth-rbac-dono-operador-391f`
+- Rodada: 4 (rechecagem de regressão após o ticket 04 — CI + migrations validadas) · Verificado em: 2026-07-28 · HEAD `aa1a5c2`
 - Footprint (rodada 1-2): `packages/db/prisma/schema.prisma`, `packages/db/prisma/migrations/20260728130000_store_tenant_rls/migration.sql`, `packages/db/prisma/migrations/20260728132500_allow_admin_role_assumption/migration.sql`, `packages/db/prisma/migrations/migration_lock.toml`, `packages/db/prisma.config.ts`, `packages/db/prisma/seed.ts`, `packages/db/src/seed.ts`, `packages/db/src/index.ts`, `packages/db/package.json`, `packages/db/scripts/sync-supabase-migrations.mjs`, `apps/api/src/app.ts`, `apps/api/src/server.ts`, `apps/api/src/store-routes.test.ts`, `apps/api/.env.example`, `.env.example`, `package.json`, `README.md`, `supabase/.gitignore`, `supabase/config.toml`, `.github/workflows/ci.yml`, `reports/02-spec.md`, `reports/02-standards.md`
-- Footprint adicional tocado pelo ticket 03 e reavaliado nesta rodada (`git diff 170fbab..8b7f080`): `packages/db/src/index.ts`, `packages/db/prisma/migrations/20260728150000_staff_identity_lookup/migration.sql` (nova), `packages/db/prisma/migrations/20260728170000_membership_cardinality/migration.sql` (nova), `apps/api/src/server.ts`, `apps/api/src/app.ts`, `apps/api/src/store-routes.test.ts`, `apps/api/src/auth.ts` (novo), `apps/api/src/member-invitations.ts` (novo), `.github/workflows/ci.yml`
-- Bloqueadores: 0 · Altos: 0 · Médios: 0 · Notas: 4 (3 da rodada 1-2, todas resolvidas ou adiadas conforme abaixo) — ver "O que mudou desde a rodada 2"
+- Footprint adicional tocado pelo ticket 03 e reavaliado na rodada 3 (`git diff 170fbab..8b7f080`): `packages/db/src/index.ts`, `packages/db/prisma/migrations/20260728150000_staff_identity_lookup/migration.sql` (nova), `packages/db/prisma/migrations/20260728170000_membership_cardinality/migration.sql` (nova), `apps/api/src/server.ts`, `apps/api/src/app.ts`, `apps/api/src/store-routes.test.ts`, `apps/api/src/auth.ts` (novo), `apps/api/src/member-invitations.ts` (novo), `.github/workflows/ci.yml`
+- Footprint adicional tocado pelo ticket 04 e reavaliado nesta rodada (`git diff 8b7f080..HEAD`): `packages/db/src/index.ts`, `packages/db/scripts/sync-supabase-migrations.mjs`, `.github/workflows/ci.yml`, mais os scripts novos `packages/db/scripts/{canonical-migrations,migration-policy,production-database-url,production-state,validate-migrations,verify-production-state}.mjs` e `apps/api/scripts/preflight-production-migrations.ts` (novo, lido como contexto necessário por consumir `createTransactionalBusinessDatabase`). `apps/api/src/store-routes.test.ts`, `apps/api/src/auth-rbac.test.ts` e `packages/db/prisma/**` sem diff desde `8b7f080`.
+- Bloqueadores: 0 · Altos: 0 · Médios: 0 · Notas: 4 (todas da rodada 1-3, resolvidas ou adiadas — nenhuma nova nesta rodada) — ver "O que mudou desde a rodada 3"
 
 ## Requisitos do ticket
 
@@ -323,5 +325,153 @@ Evidência, requisito por requisito:
   comando que escreve no repo ou toca o banco foi executado), mas desta vez
   foi possível confirmar a execução real via `gh run view` — a suíte rodou de
   fato no CI no HEAD desta rodada, não é uma inferência por leitura de código.
+
+Nenhum achado novo de severidade Bloqueador, Alto ou Médio nesta rodada.
+
+## O que mudou desde a rodada 3
+
+- Rodada: 4 (rechecagem de regressão após o ticket 04 — CI + migrations
+  validadas) · Verificado em: 2026-07-28 · HEAD `aa1a5c2`
+- Footprint desta rodada (`git diff 8b7f080..HEAD -- packages/db
+  apps/api/src/store-routes.test.ts`, mais o consumidor novo do export
+  refatorado como contexto necessário): `packages/db/src/index.ts`,
+  `packages/db/scripts/sync-supabase-migrations.mjs` (mais os scripts novos
+  `canonical-migrations.mjs`, `migration-policy.mjs`, `production-database-url.mjs`,
+  `production-state.mjs`, `validate-migrations.mjs`, `verify-production-state.mjs`),
+  `.github/workflows/ci.yml`, `apps/api/scripts/preflight-production-migrations.ts`
+  (novo, consome `createTransactionalBusinessDatabase`). `apps/api/src/store-
+  routes.test.ts` e `apps/api/src/auth-rbac.test.ts` **sem diff** desde
+  `8b7f080` (`git diff 8b7f080..HEAD` vazio para os dois) — R7/R8 não têm
+  nenhuma linha nova para reavaliar. `packages/db/prisma/**` também sem diff
+  (nenhuma migration nova, `schema.prisma` idêntico) — R1/R2/R3/R4 do banco
+  em si intocados.
+
+Pergunta desta rodada: o Ticket 04 (CI + migrations validadas), que refatorou
+`packages/db/src/index.ts` (+168/−) e reescreveu `sync-supabase-
+migrations.mjs` e `ci.yml`, **enfraqueceu** o isolamento que o Ticket 02
+provou?
+
+**Veredito da mudança: o isolamento foi MANTIDO** (não fortalecido de forma
+que mude o veredito de conformidade, não enfraquecido). A parte que mais se
+aproxima de fortalecimento — a prova RLS/RBAC transacional no preflight de
+migration — é aditiva e roda fora do runtime de produção, então não altera o
+veredito de "mantido" sobre a garantia core do Ticket 02 (contexto local à
+transação em produção).
+
+Tabela de evidência atual (HEAD `aa1a5c2`) para os requisitos reavaliados:
+
+| # | Requisito (resumo) | Veredito | Evidência atual |
+| --- | --- | --- | --- |
+| R1 | Prisma ownership único de schema/migrations/client | OK (mantido) | `packages/db/prisma/schema.prisma` sem diff desde `8b7f080`; zero migrations novas. `sync-supabase-migrations.mjs:31-34` só regenera `supabase/migrations` a partir de `readCanonicalMigrations()` (`canonical-migrations.mjs:5-8`, raiz fixa em `packages/db/prisma/migrations`), apagando o conteúdo antigo (`sync-supabase-migrations.mjs:24-29`) antes — nunca lê de volta. |
+| R5 | Contexto `store_id` local à transação, role não privilegiada em runtime | OK (mantido) | `packages/db/src/index.ts:66-77` (`inStoreContext`) preserva `SET LOCAL ROLE foode_business` + `set_config(..., true)` byte-a-byte em efeito; refatorado para receber `Prisma.TransactionClient` já aberto em vez de abrir `$transaction`. `createBusinessDatabase` (`index.ts:205-214`, `withDatabase`) continua abrindo **uma transação nova por chamada de método** — nenhuma sessão persiste entre requests. `apps/api/src/server.ts:17-19` (sem diff) continua usando `createBusinessDatabase`, não a variante transacional nova. |
+| R6 | Credencial privilegiada restrita a migrations/ops | OK (mantido) | Único novo consumidor de `createAdministrativeDatabase`/credencial privilegiada é `apps/api/scripts/preflight-production-migrations.ts:41-43` (script de CI, roda em transação com rollback). `verify-production-state.mjs:13-15` idem, só verificação read-only. Nenhuma rota de `apps/api/src/app.ts` mudou. |
+| R7/R8 | Prova de isolamento HTTP contra Postgres real, sem mock | OK (mantido) | `apps/api/src/store-routes.test.ts` e `apps/api/src/auth-rbac.test.ts`: diff vazio contra `8b7f080`. Prova adicional nova e fora do escopo estrito de R7/R8: preflight transacional (`preflight-production-migrations.ts:156-198`) repete leitura/escrita cruzada e RBAC contra o schema pós-migration-pendente, com rollback garantido (`rollbackProof`, linha 201). |
+
+Evidência, requisito por requisito (narrativa completa):
+
+- **R5 — contexto `store_id` local à transação:** `inStoreContext`
+  (`packages/db/src/index.ts:66-77`) foi refatorado para receber um
+  `Prisma.TransactionClient` já aberto em vez de abrir o `$transaction`
+  internamente, mas o corpo continua idêntico em efeito: `SET LOCAL ROLE
+  foode_business` (linha 71) e `set_config('app.current_store_id', ...,
+  true)` (linhas 72-74) — terceiro argumento `true` preservado em toda
+  ocorrência, incluindo `set_config('app.current_user_id', ..., true)`
+  (linha 165) dentro de `resolveMembershipContext`. Quem abre o
+  `$transaction` real para o runtime de produção é
+  `createBusinessDatabase` (linha 205), inalterado em comportamento
+  observável: cada chamada de método (`findStore`, `updateStoreName`,
+  `addOperator`, etc.) continua abrindo **um `prisma.$transaction` novo por
+  chamada** (`withDatabase`, linhas 207-214, com o mesmo `{ maxWait: 15_000,
+  timeout: 15_000 }` de antes) e só then constrói um
+  `createTransactionalBusinessDatabase(transaction)` de uso único para essa
+  transação. Não existe caminho em que duas requests HTTP compartilhem a
+  mesma transação/role/`set_config` — cada request continua ganhando sua
+  própria transação, seu próprio `SET LOCAL ROLE`, seu próprio `set_config`
+  local, exatamente como a rodada 3 verificou. `apps/api/src/server.ts:17-19`
+  (sem diff desde `8b7f080`) continua chamando `createBusinessDatabase(...)`,
+  não a variante transacional — confirmado por `git diff 8b7f080..HEAD --
+  apps/api/src/server.ts` vazio.
+  A única consumidora nova de `createTransactionalBusinessDatabase`
+  (exportada pela primeira vez em `index.ts:79`) é
+  `apps/api/scripts/preflight-production-migrations.ts:146-154`, um script
+  de CI que roda **dentro** de uma transação administrativa que será revertida
+  (`throw rollbackProof`, linha 201; `catch` que só engole esse sentinel,
+  linhas 205-207) — não é o entrypoint HTTP de produção, não fica de pé
+  entre requests reais, e a role ainda é rebaixada via `SET LOCAL ROLE
+  foode_business` antes de qualquer query de negócio (a query que aplica a
+  migration pendente, linha 70, roda antes do rebaixamento, como credencial
+  administrativa — comportamento esperado para DDL). Nenhum `set_config`
+  ou `SET ROLE` sem escopo `LOCAL`/transação apareceu em nenhum arquivo do
+  diff (`grep -n "set_config\|SET.*ROLE" packages/db/src/index.ts
+  apps/api/scripts/preflight-production-migrations.ts` só retorna as
+  ocorrências já citadas, todas com `true`/`LOCAL`).
+- **R6 — credencial privilegiada restrita a migrations/ops:** nenhuma rota
+  de negócio em `apps/api/src/app.ts` mudou neste diff (fora do footprint
+  do ticket 04) e nenhuma passou a usar `createAdministrativeDatabase`. O
+  único novo consumidor de credencial administrativa é
+  `apps/api/scripts/preflight-production-migrations.ts:41-43`
+  (`createAdministrativeDatabase(await productionDatabaseUrl("o
+  preflight"))`) — um script de CI, não uma rota HTTP, que aplica SQL de
+  migration pendente e depois se rebaixa via `SET LOCAL ROLE
+  foode_business` antes de qualquer chamada à `app` de negócio. Os scripts
+  novos `packages/db/scripts/verify-production-state.mjs:13-15` e
+  `production-database-url.mjs` também só usam a credencial privilegiada
+  (via `SUPABASE_DB_PASSWORD`/`SUPABASE_POOLER_URL`) para consultas de
+  verificação de estado (histórico de migrations, resíduo de fixtures) —
+  scripts de CI/ops, exatamente o uso esperado e correto por R6. `.github/
+  workflows/ci.yml`: o job `migrate` (linhas 28-55) é quem recebe
+  `SUPABASE_ACCESS_TOKEN`/`SUPABASE_DB_PASSWORD`/`SUPABASE_POOLER_URL` para
+  `migrations:preflight`, `migrations:sync-supabase` e `supabase db push`;
+  o job `integration` (linhas 57-84) roda `pnpm test` com
+  `BUSINESS_DATABASE_URL` (role restrita) e só usa a credencial privilegiada
+  depois, no passo `pnpm db:production:verify` (linha 80), que é
+  `verify-production-state.mjs` — uma consulta read-only de verificação, não
+  uma rota de negócio. `set +e`/`set -e` em torno de `pnpm test` e
+  `pnpm db:production:verify` (linhas 77-84) captura os dois status e falha
+  o step se qualquer um for não-zero — não é skip nem swallow de falha, os
+  dois `test "$x" -eq 0` finais garantem isso.
+- **R7/R8 — prova de isolamento:** `apps/api/src/store-routes.test.ts` e
+  `apps/api/src/auth-rbac.test.ts` têm diff vazio contra `8b7f080` — nenhuma
+  asserção, nenhum `skip`/`only`/`retry`, nenhum cleanup foi tocado pelo
+  ticket 04. A prova segue idêntica à rodada 3 (fortalecida). O que existe
+  de novo é uma prova *adicional*, fora do escopo de R7/R8 propriamente dito
+  (que é sobre "testes" no plural genérico, satisfeito pela suíte existente):
+  o preflight transacional (`apps/api/scripts/preflight-production-
+  migrations.ts:156-198`) roda as mesmas categorias de asserção (leitura
+  cruzada 404, escrita cruzada 404, RBAC nega Operador 403, persistência
+  intacta) contra o schema **pós-migration-pendente**, antes de aplicar de
+  fato via `db push` — sem `try/catch` ao redor das `assertStatus` (que
+  lançam e propagam), sem skip. Isso não substitui R7/R8, mas também não os
+  enfraquece; é uma camada extra de gate antes de produção, consistente com
+  o requisito do próprio ticket 04 ("Migration inválida... ou quebra de
+  isolamento falha antes de qualquer ação de produção").
+- **R1 — Prisma como owner único de schema/migrations/client:**
+  `sync-supabase-migrations.mjs` mudou de "ler `prisma/migrations/*/migration.sql`
+  e copiar para `supabase/migrations/*.sql`" para "ler via
+  `readCanonicalMigrations()` (`canonical-migrations.mjs:12-49`, que também
+  só lê de `packages/db/prisma/migrations` — `defaultPrismaMigrationsRoot`,
+  linha 5-8), validar cada uma com `validateMigrationSql` e então **apagar
+  todos os `.sql` existentes em `supabase/migrations`** (linhas 24-29) antes
+  de reescrevê-los a partir do canônico (linhas 31-34)." A fonte de verdade
+  continua sendo exclusivamente `packages/db/prisma/migrations`; a pasta
+  `supabase/migrations` é destruída e regenerada a cada execução, não lida
+  de volta em nenhum ponto do script — reforça, não inverte, o ownership do
+  Prisma. `packages/db/prisma/schema.prisma` não mudou (diff vazio) e
+  nenhuma migration nova foi adicionada pelo ticket 04 (`git diff
+  8b7f080..HEAD --stat -- packages/db/prisma` vazio).
+
+**Notas anteriores:** nenhuma das notas das rodadas 1-3 foi reaberta; nenhuma
+nota nova qualifica como Bloqueador/Alto/Médio nesta rodada.
+
+**Achado NOTA (não bloqueador):** `apps/api/scripts/preflight-production-
+migrations.ts` e os scripts novos em `packages/db/scripts/` ficaram fora do
+footprint literal citado no ticket para esta rodada (`packages/db/src/index.ts`,
+`packages/db/scripts/sync-supabase-migrations.mjs`, `.github/workflows/ci.yml`),
+mas foram lidos como contexto necessário porque consomem diretamente o export
+novo `createTransactionalBusinessDatabase` de `packages/db/src/index.ts` — sem
+essa leitura não seria possível confirmar que o único uso dessa função fora do
+próprio `index.ts` é um script de CI transacional com rollback, não uma rota
+de negócio. Isso é uma nota de método desta verificação, não uma divergência
+de conformidade.
 
 Nenhum achado novo de severidade Bloqueador, Alto ou Médio nesta rodada.

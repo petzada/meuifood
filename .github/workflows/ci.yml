@@ -28,6 +28,17 @@ jobs:
   migrate:
     needs: quality
     runs-on: ubuntu-latest
+    # Existe um único banco (o Supabase de produção, sem staging/local — ver
+    # decisões/55). Duas runs em paralelo (ex.: push em master + PR) escrevem
+    # e apagam fixtures sintéticas no mesmo banco ao mesmo tempo, produzindo
+    # falso positivo de resíduo em verify-production-state.mjs. O grupo é uma
+    # string fixa (não usa github.ref) para valer entre branches diferentes,
+    # e é o mesmo em `migrate` e `integration` para serializar qualquer job
+    # que toque o banco, de qualquer run. `quality` não entra: não toca banco.
+    # cancel-in-progress: false — cancelar no meio deixaria fixtures órfãs.
+    concurrency:
+      group: supabase-producao-migrations
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -41,6 +52,10 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
+          # Identificador único desta run, usado para marcar as fixtures
+          # sintéticas (ver preflight-production-migrations.ts) e permitir
+          # que a checagem de resíduo seja escopada só a elas.
+          CI_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
@@ -57,6 +72,11 @@ jobs:
   integration:
     needs: migrate
     runs-on: ubuntu-latest
+    # Mesmo grupo do job `migrate`: é o par que toca o banco de produção
+    # nesta run (fixtures de RLS/RBAC + verificação de resíduo).
+    concurrency:
+      group: supabase-producao-migrations
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -70,6 +90,9 @@ jobs:
           BUSINESS_DATABASE_URL: ${{ secrets.BUSINESS_DATABASE_URL }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
+          # Mesma identidade usada pelo job `migrate`: escopa as fixtures
+          # desta run e a checagem de resíduo (verify-production-state.mjs).
+          CI_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           test -n "$BUSINESS_DATABASE_URL"
           test -n "$SUPABASE_DB_PASSWORD"

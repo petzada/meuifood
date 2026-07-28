@@ -41,7 +41,10 @@ for (const migration of migrations) {
 const database = createAdministrativeDatabase(
   await productionDatabaseUrl("o preflight"),
 );
-const runId = randomBytes(8).toString("hex");
+// Em CI, CI_RUN_ID identifica a run inteira (mesmo valor no preflight e nos
+// testes de integração), permitindo que a checagem de resíduo global só
+// acuse fixtures desta execução. Fora de CI, cai para um valor aleatório.
+const runId = process.env.CI_RUN_ID ?? randomBytes(8).toString("hex");
 const fixtureStoreIds: string[] = [];
 let pendingCount = 0;
 let proofCompleted = false;
