@@ -39,6 +39,11 @@ jobs:
     concurrency:
       group: supabase-producao-migrations
       cancel-in-progress: false
+      # Sem `queue: max` o GitHub guarda só UM job pendente por grupo: um
+      # terceiro pedido cancela o que estava na fila. Isso poderia cancelar um
+      # `integration` já enfileirado depois de o `migrate` correspondente ter
+      # aplicado a migration em produção — banco alterado, prova não executada.
+      queue: max
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -77,6 +82,11 @@ jobs:
     concurrency:
       group: supabase-producao-migrations
       cancel-in-progress: false
+      # Sem `queue: max` o GitHub guarda só UM job pendente por grupo: um
+      # terceiro pedido cancela o que estava na fila. Isso poderia cancelar um
+      # `integration` já enfileirado depois de o `migrate` correspondente ter
+      # aplicado a migration em produção — banco alterado, prova não executada.
+      queue: max
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6

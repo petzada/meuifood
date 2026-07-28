@@ -1,245 +1,157 @@
 # Verificação — Ticket 04 Bloquear produção com CI e migrations validadas
 
 - Veredito: **divergências**
-- Verificado em: 2026-07-28T18:00:00-03:00 · HEAD `f80718d` · PR #6
-- Footprint: `packages/db/scripts/migration-policy.mjs`, `packages/db/scripts/migration-policy.test.mjs`, `apps/api/scripts/preflight-production-migrations.ts`, `apps/api/scripts/migration-preflight-policy.mjs`, `packages/db/scripts/production-database-url.mjs`, `packages/db/scripts/verify-production-state.mjs`, `packages/db/scripts/production-state.mjs`, `packages/db/scripts/canonical-migrations.mjs`, `packages/db/scripts/sync-supabase-migrations.mjs`, `.github/workflows/ci.yml`, `packages/db/src/index.ts`, `docs/decisoes/55-migrations-supabase-producao-ci.md`, `docs/decisoes/44-producao-only-sandbox-migrations-ci.md`, `docs/decisoes/25-hospedagem-ci-ops.md`, `README.md`
-- Bloqueadores: 0 · Altos: 1 · Médios: 1 · Notas: 2
+- Rodada: 2 (verificação final em `master`, pós-correções) · Verificado em: 2026-07-28 · HEAD `7555533` (merge de PR #8, que segue PR #7/f80718d)
+- Rodada anterior: `f80718d`, PR #6 — apontou 1 ALTO (`ALTER COLUMN TYPE`) e 1 MÉDIO (`RENAME`) na política, mais 2 NOTAs.
+- Footprint desta rodada: `packages/db/scripts/migration-policy.mjs`, `packages/db/scripts/migration-policy.test.mjs`, `.github/workflows/ci.yml`, `packages/db/scripts/verify-production-state.mjs`, `apps/api/scripts/preflight-production-migrations.ts`, `apps/api/src/store-routes.test.ts`, `apps/api/src/auth-rbac.test.ts`, `packages/db/prisma/schema.prisma`, `docs/decisoes/56-excecao-master-sem-branch-protection.md`, `docs/decisoes/25-hospedagem-ci-ops.md`
+- Bloqueadores: 0 · Altos: 1 · Médios: 1 · Notas: 1
 
 ## Método
 
-Além da leitura estática do desenho, o `validateMigrationSql` foi executado
-diretamente (import ESM, sem tocar banco/repo) contra ~22 vetores de ataque —
-incluindo os oito listados no prompt de verificação — para confirmar
-empiricamente, e não apenas por leitura de regex, o que a política aceita e
-rejeita. O script de prova está em
-`C:\Users\MARCIO~1.PET\AppData\Local\Temp\claude\...\scratchpad\probe-policy.mjs`
-(fora do produto, não commitado). Resultado bruto reproduzido abaixo nas
-seções relevantes. Também consultei o GitHub ao vivo (`gh pr view 6`, `gh api
-.../branches/master/protection`) para checar o estado real do PR e confirmar o
-403 de branch protection citado no ticket.
+Leitura estática de todo o diff `f80718d..7555533` (`git diff --stat`, e diff completo arquivo a arquivo). Execução real de `validateMigrationSql` (import ESM puro, sem tocar banco/repo) contra 15 vetores de ataque novos, focados especificamente nas três regras adicionadas nesta rodada (`ALTER COLUMN TYPE`, `RENAME`, `CONCURRENTLY`), incluindo tentativas de disfarce por espaçamento, identificador entre aspas, homóglifo Unicode, múltiplos statements na mesma linha e quebra de linha no meio do comando. Script em
+`C:\Users\MARCIO~1.PET\...\scratchpad\probe-policy-2.mjs` (fora do produto, não commitado). Conferi as três migrations existentes em `packages/db/prisma/migrations/*/migration.sql` contra as regras novas (nenhuma contém `rename`, `concurrently` ou `alter...type`). Consultei `gh pr view 7` e `gh pr view 8` (checks reais, não simulados) para confirmar que os workflows das duas correções rodaram verdes em produção, e usei uma busca externa para confirmar a semântica exata de `concurrency` de job do GitHub Actions (fila de 1 pendente, com descarte do job enfileirado anterior quando chega um novo pedido do mesmo grupo — comportamento documentado, não dedução minha).
 
 ## Requisitos do ticket
 
-| # | Requisito (resumo, já corrigido) | Veredito | Evidência |
+| # | Requisito (resumo; R2/R4 já superseded pelos Comments) | Veredito | Evidência |
 | --- | --- | --- | --- |
-| R1 | Workflow instala pelo lockfile e roda lint/typecheck/testes/build dos workspaces relevantes | Conforme | `.github/workflows/ci.yml:21-26` (`pnpm install --frozen-lockfile`, `db:migrations:validate`, `lint`, `typecheck`, `test:quality`, `build`) |
-| R2 (corrigido) | Sem Postgres descartável; CI aplica migrations e prova RLS/RBAC contra o Supabase de produção, role não privilegiada, fixtures sintéticas, cleanup exato e verificado | Conforme, com ressalva ALTA na política (ver seção própria) | `apps/api/scripts/preflight-production-migrations.ts:41-222` roda contra `productionDatabaseUrl` (Supabase real); prova HTTP usa `SET LOCAL ROLE foode_business` (`packages/db/src/index.ts:71,95`); cleanup verificado em dois níveis — teste (`apps/api/src/auth-rbac.test.ts:201-211`, `store-routes.test.ts:119-129`) e verificador independente (`packages/db/scripts/verify-production-state.mjs:23-37`) |
-| R3 | Migration inválida, drift ou quebra de isolamento falha antes de qualquer ação de produção | Conforme | `pendingCanonicalMigrations` exige que o histórico remoto seja prefixo exato (`apps/api/scripts/migration-preflight-policy.mjs:1-11`); `assertIsolationCatalog` barra role com bypass/superuser/RLS não forçada (`migration-preflight-policy.mjs:13-33`); passos do job `migrate` rodam em `bash -e` — qualquer falha aborta antes de `supabase db push` (`.github/workflows/ci.yml:44-55`) |
-| R4 (corrigido) | Quem aplica é GitHub Actions via Supabase CLI; `web`/`admin`/`api` não aplicam migration; Prisma segue owner do schema | Conforme | `.github/workflows/ci.yml:39-55` (`pnpm supabase db push`); nenhuma referência a `migrate`/`migration` em `apps/api/src/**` (boot não aplica nada); `pnpm db:migrate:deploy` continua existindo em `package.json:12` como utilitário manual, não é chamado por CI nem por boot de serviço |
-| R5 | `web`/`admin` não aplicam migrations; requests de negócio sob RLS | Conforme | Nenhum workspace `web`/`admin` referencia migration; `apps/api/src/server.ts:44` chama `assertRestrictedRuntime()` antes de aceitar tráfego, testado em `auth-rbac.test.ts:275-279` |
-| R6 | Falhas visíveis em stdout/Sentry sem revelar credenciais | Conforme | Nenhum `console.log`/`echo` em scripts de migration imprime URL, senha ou token — apenas contagens (`verify-production-state.mjs:45`, `preflight-production-migrations.ts:216`, `validate-migrations.mjs:10`); `ci.yml` usa `test -n "$VAR"` para validar segredo presente sem ecoar valor |
-| R7 | Exatamente três serviços sempre-on, sem staging/preview/`is_demo` | Conforme (não verificável 100% do repo) | Nenhum arquivo `railway.json`/`railway.toml`/`Procfile` no repo (config fica no dashboard Railway, fora do escopo de leitura); `docs/decisoes/44` mantém rejeição de `is_demo`; README documenta "Wait for CI" nos três serviços, mas isso é o próprio gate externo (a) que o ticket já declara aberto |
+| R1 | Lockfile + lint/typecheck/testes/build dos workspaces relevantes | Conforme | `.github/workflows/ci.yml:21-26`; PR #8 (mudança em `schema.prisma`) rodou `quality`/`migrate`/`integration` verdes (`gh pr view 8`, run `30389442556`), provando que `importFileExtension = "js"` não quebra typecheck/test/build |
+| R2 (corrigido) | Sem banco descartável; provas contra Supabase de produção, role não privilegiada, cleanup exato e verificado | Conforme com ressalva ALTA | Preflight roda contra produção (`apps/api/scripts/preflight-production-migrations.ts:41-45`); role `foode_business` (`packages/db/src/index.ts`, inalterado); cleanup agora tem uma lacuna de cobertura — ver Auditoria, item 3 |
+| R3 | Falha antes de qualquer ação de produção | Conforme | Inalterado desde a rodada 1 (`migration-preflight-policy.mjs`, `ci.yml` job `migrate needs: quality`) |
+| R4 (corrigido) | GitHub Actions via Supabase CLI aplica; nenhum app aplica | Conforme | Inalterado; `ci.yml:59-70` |
+| R5 | `web`/`admin` não aplicam migration; RLS vale | Conforme | Sem mudança no footprint desta rodada |
+| R6 | Falhas visíveis sem revelar credencial | Conforme | `ci.yml` segue usando `test -n "$VAR"`; nenhum script novo ecoa segredo (`verify-production-state.mjs:44-51` só imprime contagem e, agora, o `CI_RUN_ID`, que não é segredo) |
+| R7 | Três serviços sempre-on, sem staging/preview/`is_demo` | Conforme (externo, não re-verificado nesta rodada) | Nenhum arquivo Railway no diff desta rodada |
 
-## Política de migration
+## Auditoria das correções do orquestrador
 
-**Fail-closed.** O núcleo de decisão não é a lista de padrões destrutivos
-(`destructiveStatements`, `packages/db/scripts/migration-policy.mjs:1-22`,
-que é só uma camada de mensagens amigáveis) — é o `allowedStatement`
-(`migration-policy.mjs:26-27`), uma **allowlist de prefixo de comando**: só
-`CREATE TYPE/TABLE/INDEX/POLICY`, `ALTER TABLE/ROLE`, `GRANT`, `DROP INDEX` e
-`DO` passam; qualquer outro tipo de statement (UPDATE solto, INSERT, WITH/CTE,
-CREATE FUNCTION/PROCEDURE/TRIGGER, COMMENT ON, SET, VACUUM, ALTER TYPE) cai no
-`else` final e é rejeitado com "estrutura SQL não autorizada"
-(`migration-policy.mjs:97-102`). Isso é o comportamente correto de uma
-allowlist: nega por padrão o que não reconhece.
+### 1. `migration-policy.mjs` — três regras novas (`ALTER COLUMN TYPE`, `RENAME`, `CONCURRENTLY`)
 
-Vetores testados empiricamente (script `probe-policy.mjs`, execução real, sem
-tocar banco):
+**Resolve.** Rodei 15 vetores de ataque reais contra `validateMigrationSql` (script de prova citado no Método), incluindo os pedidos explicitamente no prompt de verificação:
 
-| Vetor | Resultado | Avaliação |
-| --- | --- | --- |
-| `DO $$ ... $$` com `PERFORM`/`CALL`/`UPDATE`/literal | **REJEITADO** ("bloco DO não autorizado") | Escape relatado está de fato fechado — `allowedDoBody` (linha 31) exige o corpo canônico exato, ancorado `^...$`, sem folga para efeitos adicionais |
-| `DO $tag$...$tag$` com tag customizada, corpo canônico | **ACEITO** (correto) | Delimitador customizado funciona para o caso legítimo |
-| `DO $tag$...$tag$` com corpo canônico mas tag ficticia tentando "vazar" texto após o fechamento (`DO $a$ ... $a$ $b$ ... $b$; delete from stores;`) | **REJEITADO** ("controle transacional não autorizado" ou estrutura não autorizada, dependendo da forma) | Não há combinação de tags mal-formadas que produza SQL válido em Postgres *e* escape da allowlist ao mesmo tempo — tag incompatível gera erro de sintaxe real no Postgres antes mesmo de chegar a produção |
-| `DO 'texto com PERFORM/CALL'` (aspas simples, sem `$$`) | **REJEITADO** ("bloco DO não autorizado") | Cai no `\bdo\b` de segurança em `validateDoBlocks` (linha 56) |
-| `EXECUTE 'drop table stores'` dentro de `DO` | **REJEITADO** ("SQL dinâmico EXECUTE") | Qualquer `EXECUTE`, destrutivo ou não, é banido — inclusive fecha `format()`/concatenação, já que a palavra `EXECUTE` em si é o gatilho |
-| `EXECUTE format('delete from %I', 'stores')` | **REJEITADO** ("SQL dinâmico EXECUTE") | Mesmo caso acima |
-| `CREATE OR REPLACE FUNCTION ... $$ delete from stores $$` | **REJEITADO** (pega antes como "comando destrutivo DELETE", mas mesmo sem DELETE cairia em "estrutura não autorizada" pois `function` não está na allowlist de `CREATE`) | Bloqueado em duas camadas independentes |
-| `CREATE TRIGGER ... EXECUTE FUNCTION f()` | **REJEITADO** ("SQL dinâmico EXECUTE") | Efeito colateral: toda sintaxe de trigger usa a palavra `EXECUTE`, então trigger é hoje estruturalmente impossível de passar — mais conservador que o necessário, não é brecha |
-| `ALTER TABLE ... DROP CONSTRAINT` | **REJEITADO** ("comando destrutivo DROP não autorizado") | Confirmado também por teste do próprio agente (`migration-policy.test.mjs:34-37`) |
-| `ALTER TABLE ... ALTER COLUMN ... DROP DEFAULT` | **REJEITADO** (pega como "DROP COLUMN" pelo regex genérico de `alter table ... drop`) | Falso positivo favorável (mais restritivo que o necessário) |
-| `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` / `NO FORCE ROW LEVEL SECURITY` / `BYPASSRLS` / `SUPERUSER` | **REJEITADO** | Confirmado, e já coberto por teste do agente |
-| `DROP POLICY`, `DROP SCHEMA ... CASCADE`, `DROP TYPE`, `DROP OWNED` | **REJEITADO** ("DROP não autorizado") | O catch-all `\bdrop\s+(?!index\b)` bloqueia qualquer `DROP` que não seja `DROP INDEX` |
-| `UPDATE stores SET ... ;` solto (sem `WHERE`) | **REJEITADO** ("estrutura SQL não autorizada") | `UPDATE` não está na allowlist de prefixos — bloqueado independente de ter `WHERE` ou não |
-| `WITH x AS (DELETE FROM orders RETURNING *) SELECT * FROM x;` (CTE) | **REJEITADO** ("comando destrutivo DELETE") | `destructiveStatements` roda sobre o texto inteiro do statement, não âncora ao início — captura DELETE embutido em CTE |
-| `WITH x AS (UPDATE stores SET ...) SELECT 1;` (CTE) | **REJEITADO** ("estrutura SQL não autorizada") | Prefixo `with` não está na allowlist |
-| `ALTER TABLE ... RENAME TO` / `RENAME COLUMN` | **ACEITO** | **Gap real — ver Divergências (MÉDIO)** |
-| `ALTER TABLE ... ALTER COLUMN ... TYPE integer` (cast com perda) | **ACEITO** | **Gap real — ver Divergências (ALTO)** |
-| `ALTER TABLE ... ALTER COLUMN ... SET NOT NULL` | **ACEITO** | Não é perda de dado (falha na aplicação se houver NULL existente, não apaga nada); aceitável |
-| `CREATE/DROP INDEX CONCURRENTLY` | **ACEITO** pela política estática | Não roda no preflight transacional (Postgres proíbe `CONCURRENTLY` dentro de transação) — falha antes do `db push`, não é vetor de perda de dado, é limitação operacional. Ver Divergências (NOTA) |
-| `ALTER TYPE ... ADD VALUE` | **REJEITADO** ("estrutura SQL não autorizada") | `ALTER` só permite `table`/`role`; estender um enum existente é hoje impossível via este pipeline — conservador demais, não é brecha de segurança |
-| `GRANT foode_business TO postgres` | **ACEITO** (correto, por desenho) | Confirmado como padrão já usado em migration real (`packages/db/prisma/migrations/20260728132500_allow_admin_role_assumption/migration.sql:4`) — não é escalonamento, é o mecanismo que permite `SET LOCAL ROLE foode_business` a partir da conexão administrativa |
-| `GRANT postgres TO foode_business` (inverso) | **REJEITADO** ("GRANT não autorizado") | Confirmado por teste do agente |
-| Comentário partindo a palavra-chave (`DR/**/OP TABLE`) | **REJEITADO** ("estrutura SQL não autorizada: DR OP TABLE") | Não é um vetor real: Postgres também não trata `DR/**/OP` como `DROP` (comentário é separador de token no lexer), então mesmo se a política aceitasse não haveria exploração possível |
+| Vetor | Resultado |
+| --- | --- |
+| `alter table orders alter column total type numeric(10,2);` | REJEITADO |
+| Quebra de linha entre `ALTER TABLE`, `ALTER COLUMN` e `TYPE` | REJEITADO |
+| Identificador entre aspas (`"total"` → vira `""` no pré-processamento) | REJEITADO |
+| Identificador com homóglifo Unicode (`"tοtal"`, omicron grego) | REJEITADO (o regex de identificador aceita qualquer coisa entre aspas, então o disfarce nem era necessário) |
+| Dois statements na mesma linha, um legítimo + um `ALTER COLUMN TYPE` | REJEITADO |
+| `alter table orders rename to pedidos;` / `rename column ... to ...;` / `rename constraint ...;` | REJEITADO em todos os casos |
+| `alter index orders_pkey rename to orders_pk;` (objeto diferente) | REJEITADO (cai duplamente: pela regra `RENAME` e por `allowedStatement` não aceitar `alter index`) |
+| `create index concurrently ...` / `drop index concurrently ...`, inclusive com quebra de linha | REJEITADO |
+| Cast "legítimo" de alargamento (`varchar(50)` → `varchar(255)`) | REJEITADO — a política não distingue widening de narrowing, trata todo `ALTER COLUMN TYPE` como destrutivo por padrão, exigindo decisão explícita nova. É mais restritivo que o estritamente necessário, mas é o mesmo padrão fail-closed já usado para `DROP`; não é uma falha, é a postura correta dado o objetivo do ticket. |
 
-## Preflight transacional
+Não encontrei nenhuma combinação que destrua/renomeie dado e passe. O único `ACCEPTED` fora da tabela acima foi `create index conc/**/urrently orders_idx on orders (store_id);` (comentário partindo a palavra `CONCURRENTLY` ao meio) — mas isso não é SQL válido: um comentário de bloco separa tokens no lexer do Postgres, então `conc` e `urrently` seriam dois identificadores distintos e a migration falharia por erro de sintaxe real no banco antes de qualquer efeito. É a mesma classe de não-vetor já documentada na rodada 1 para `DR/**/OP TABLE`. Não é finding.
 
-- **Rollback garantido em qualquer caminho de erro.** O callback de
-  `database.$transaction(async (transaction) => {...})`
-  (`apps/api/scripts/preflight-production-migrations.ts:62-204`) sempre
-  termina em `throw` — ou o `rollbackProof` deliberado após
-  `proofCompleted = true` (linha 200-201), ou uma exceção real ocorrida antes
-  disso (erro de SQL, isolamento, HTTP). Prisma só faz `COMMIT` se o callback
-  resolver sem lançar; como não há nenhum caminho de retorno normal, o
-  `ROLLBACK` é estrutural, não condicional. O `catch` externo
-  (linha 205-207) só engole o `rollbackProof`; qualquer outro erro é
-  relançado e falha o passo do CI antes de `sync-supabase`/`supabase db
-  push`.
-- **Comandos não-transacionáveis.** `CREATE/DROP INDEX CONCURRENTLY` passam
-  na validação estática (ver tabela acima) mas falhariam ao rodar dentro do
-  `$transaction` (erro nativo do Postgres: "cannot run inside a transaction
-  block"). Isso interrompe o preflight com exceção — cai no mesmo caminho de
-  rollback/erro acima e o job falha **antes** do `db push`. Não é um vetor de
-  perda de dado; é uma migration que hoje nunca conseguiria ser aplicada por
-  este pipeline (mesmo sendo estruturalmente inofensiva). Registrado como
-  NOTA em Divergências.
-- **Role da prova HTTP.** Confirmada como `foode_business` (não privilegiada):
-  toda operação de negócio passa por `inStoreContext`
-  (`packages/db/src/index.ts:66-77`), que executa
-  `SET LOCAL ROLE foode_business` antes de qualquer query, dentro da MESMA
-  transação injetada no Fastify via `createTransactionalBusinessDatabase`
-  (linha 79-203). O catálogo (`assertIsolationCatalog`,
-  `apps/api/scripts/migration-preflight-policy.mjs:13-33`) também confirma
-  antes da prova que essa role não tem `bypassrls`, não é `superuser` e não
-  herda role privilegiada.
-- **"Zero resíduos" — o que é provado, exatamente.** Duas verificações
-  independentes, em dois momentos:
-  1. Dentro do próprio preflight, após o rollback, uma query administrativa
-     conta `store.count({ where: { id: { in: fixtureStoreIds } } })` — confirma
-     que as duas Lojas sintéticas criadas *dentro da transação* não existem
-     mais depois do rollback (prova que o rollback realmente aconteceu no
-     banco, não é só uma suposição do cliente).
-  2. `packages/db/scripts/verify-production-state.mjs:23-37`, chamado no job
-     `integration` **depois** de `pnpm test` (que roda contra produção via
-     `BUSINESS_DATABASE_URL` e cria/streams fixtures reais, não em
-     transação), consulta por padrão de `slug` (`fixture-rls-%`,
-     `fixture-rbac-%`, `fixture-preflight-%`) — cobre fixtures de qualquer
-     suíte que siga a convenção de nome, não só as do preflight. `store_members`
-     tem `onDelete: Cascade` (`packages/db/prisma/schema.prisma:45`), então
-     apagar a Loja já remove os vínculos; a query ainda soma
-     `memberships` via join como checagem redundante caso o cascade
-     regrida. As suítes (`auth-rbac.test.ts:201-211`,
-     `store-routes.test.ts:119-129`) também fazem sua própria limpeza com
-     `afterAll` + `expect(residueCount).toBe(0)`, então há checagem em três
-     camadas (teste próprio, preflight, verificador independente).
+Também confirmei que nenhuma das 4 migrations existentes em `packages/db/prisma/migrations/` contém `rename`, `concurrently` ou `alter...type` (`grep -inE` vazio) — as regras novas não quebram histórico real, batendo com a alegação do Comment do ticket ("Nenhuma migration do histórico é afetada").
 
-## Risco real da exceção de branch protection
+Os 6 casos novos em `migration-policy.test.mjs:146-171` cobrem exatamente as duas formas de cada regra (`type` direto e `set data type`; `rename to` e `rename column`; `create`/`drop index concurrently`) — consistente com o que testei manualmente.
 
-**Não.** Um push direto em `master` com `quality` vermelho não consegue
-aplicar migration em produção — o próprio DAG do workflow impede isso, com ou
-sem branch protection. `migrate` declara `needs: quality`
-(`.github/workflows/ci.yml:28-29`); o comportamento padrão do GitHub Actions
-para um job com `needs` é só rodar se a dependência terminou com sucesso
-(equivalente a `if: success()`). O workflow dispara de forma idêntica em
-`push: branches: [master]` e em `pull_request`
-(`.github/workflows/ci.yml:3-6`) — não existe um caminho de push direto que
-use um workflow diferente ou puleum o DAG. Confirmado ao vivo: o run do PR #6
-(`30383519597`, checado via `gh pr view 6`) mostra os três jobs
-`quality`/`migrate`/`integration` em sequência, todos `SUCCESS`, no HEAD
-`f80718d`.
+### 2. `.github/workflows/ci.yml` — grupo de concorrência `supabase-producao-migrations`
 
-O risco residual da falta de branch protection não é essa corrida — é
-**auto-modificação do próprio gate**: sem branch protection (confirmado
-HTTP 403 ao vivo via `gh api repos/.../branches/master/protection` — mesmo
-erro documentado no ticket), nada impede um push direto e não revisado que
-altere `.github/workflows/ci.yml` (por exemplo removendo `needs: quality` de
-`migrate`, ou os `test -n "$VAR"`) e uma migration destrutiva no mesmo commit
-— o workflow que roda para aquele commit já nasce com a regra enfraquecida,
-porque o CI é definido no próprio repositório e é lido do commit em
-avaliação. Esse é o risco real da exceção: não é "vermelho migra", é
-"ninguém revisa antes do gate mudar". Mitigação declarada (Railway "Wait for
-CI") cobre o deploy de aplicação, não esse caminho específico de alteração do
-workflow.
+**Resolve o problema que motivou a correção, com ressalva MÉDIA.** A evidência de que o bug motivador era real está no próprio histórico: o commit `ebc4ac1` (PR #7) documenta que a run de `master` (`d4c359b`) e a da PR (`aa1a5c2`) rodaram ao mesmo tempo e a checagem de resíduo da PR falhou com "Lojas=2" por enxergar fixtures em voo da outra run — falso positivo confirmado, não uma hipótese.
 
-Adicionalmente: como o workflow dispara tanto em `pull_request` quanto em
-`push: master`, o job `migrate` já roda — e já aplica migrations no único
-Supabase de produção — a cada push numa branch de PR, antes mesmo do merge
-(exatamente o que aconteceu no run `30383519597` do PR #6, que é um evento de
-PR, não de push a `master`). Isso é consistente com a Decisão 55 (não há
-"depois do merge" citado, só "depois de quality e preflight verdes"), mas
-significa que o efetivo "ponto de aplicação" é o CI verde da branch, não o
-merge — vale registrar para não confundir "aprovar o PR" com "é agora que a
-migration entra em produção": ela pode já ter entrado antes.
+O grupo fixo (`supabase-producao-migrations`, sem `github.ref`) aplicado em `migrate` (`.github/workflows/ci.yml:39-41`) e `integration` (`ci.yml:77-79`) garante que **nenhum job que toque o banco roda em paralelo com outro**, de qualquer run — resolve a intercalação `migrate`-de-uma-run com `integration`-de-outra que o prompt pediu para investigar, porque o grupo é o mesmo nos dois jobs e o GitHub Actions serializa por grupo independentemente do nome do job.
+
+**Ressalva:** nem `migrate` nem `integration` declaram `queue: max` no bloco `concurrency` (`ci.yml:39-41`, `77-79`). O comportamento documentado do GitHub Actions para um grupo de concorrência sem `queue: max` é: **no máximo um job pendente por grupo**; se um terceiro pedido do mesmo grupo chega enquanto já existe um pendente, o pendente anterior é **cancelado** (não executa), mesmo com `cancel-in-progress: false` — esse parâmetro só protege o job que já está *rodando*, não o que está na fila. Com o workflow disparando em `pull_request` (qualquer branch, sem filtro) e em `push: master` (`ci.yml:3-6`), três ou mais runs simultâneas tocando o banco (ex.: push em `master` + duas PRs atualizadas quase ao mesmo tempo) são plausíveis para um founder solo iterando. Nesse cenário, um job `integration` que já estava na fila — cuja run correspondente já teve `migrate` aplicado com sucesso em produção — pode ser cancelado antes de rodar, e a prova RLS/RBAC e a verificação de resíduo que R2 exige para aquela migration específica simplesmente não executam. Isso não resulta em deploy inseguro (o check não fecha como sucesso, então "Wait for CI" da Railway não libera), mas deixa a prova daquela execução permanentemente pendente até alguém notar o `cancelled` e re-disparar manualmente. Registrado como MÉDIO abaixo.
+
+### 3. `verify-production-state.mjs` — resíduo escopado por `CI_RUN_ID`
+
+**Não resolve sem abrir buraco — e o buraco é o motivo de esta ser a ressalva ALTA da rodada.**
+
+Primeiro, o sufixo: os três geradores realmente terminam o slug com `${runId}`, sem sufixo extra depois:
+- `apps/api/scripts/preflight-production-migrations.ts:120,128` → `fixture-preflight-a-${runId}`, `fixture-preflight-b-${runId}`
+- `apps/api/src/store-routes.test.ts:98,107` → `fixture-rls-a-${runId}`, `fixture-rls-b-${runId}`
+- `apps/api/src/auth-rbac.test.ts:155,181` → `fixture-rbac-${runId}`, `fixture-rbac-b-${runId}`
+
+E os três leem `process.env.CI_RUN_ID` (`preflight-production-migrations.ts:47`, `store-routes.test.ts:80`, `auth-rbac.test.ts:98`), que recebe exatamente `${{ github.run_id }}-${{ github.run_attempt }}` tanto no job `migrate` (`ci.yml:58`) quanto no `integration` (`ci.yml:95`) — os dois jobs usam o mesmo valor. A query em `verify-production-state.mjs` usa `slug like '%' || $1` (sufixo, não prefixo/conteúdo), que casa corretamente com esse formato. Então, tecnicamente, a query **acha** o que é desta run. Isso responde "sim" à pergunta literal do prompt sobre terminação de sufixo.
+
+O problema real é outro, mais sério: **a prova deixou de proteger contra exatamente o cenário para o qual ela existe.** Antes desta mudança, `verify-production-state.mjs` era uma checagem independente e *não escopada* — pegava qualquer fixture `fixture-rls-%`/`fixture-rbac-%`/`fixture-preflight-%` no banco, não importa de qual run. Essa é a razão de ela existir como camada separada do `afterAll` de cada teste: o `afterAll` só limpa se o processo terminar normalmente; se uma run trava, é cancelada manualmente, ou o runner cai no meio do `pnpm test`, o `afterAll` pode não rodar, e a checagem independente era o que pegava esse resíduo *na próxima run*, falhando alto e forçando alguém a olhar. Agora, com o escopo por `CI_RUN_ID`, a query da próxima run só enxerga fixtures cujo slug termina no **seu próprio** `CI_RUN_ID` — resíduo deixado por uma run anterior que crashou nunca mais aparece para nenhuma run futura, porque nenhuma run futura tem aquele `CI_RUN_ID`. Responde a pergunta do prompt "se uma run anterior crashou e deixou fixture, quem pega agora?": **ninguém.** A prova de "zero resíduos" que a Decisão 55 exige ("cleanup exato e **verificado**") continua batendo para a run atual, mas silenciosamente parou de significar "banco sem lixo sintético" — passou a significar só "esta run não deixou lixo", o que é uma garantia estritamente mais fraca, e o comentário adicionado ao próprio arquivo (`verify-production-state.mjs`, bloco antes da query) confirma que essa foi uma escolha deliberada ("deixa de contar fixture de outra run"), não um efeito colateral não percebido.
+
+Agrava o ponto: essa perda de cobertura parece **desnecessária**, porque o problema que motivou a mudança (fixtures de duas runs em voo ao mesmo tempo colidindo na mesma checagem) já é resolvido pela correção do item 2 (grupo de concorrência) sozinha — com `migrate`/`integration` serializados, no momento em que `integration` roda, qualquer fixture residual encontrada pela query antiga (sem escopo) só pode pertencer a uma run *anterior já terminada* — exatamente o caso de crash que a checagem independente deveria continuar pegando. Ou seja: a correção do item 2 já eliminava o falso positivo relatado no commit `ebc4ac1`; a correção do item 3, feita em cima, não era necessária para resolver aquele bug específico e retirou da checagem justamente a capacidade de detectar o cenário mais perigoso (resíduo real de uma run que não terminou limpo). Classificado como **ALTO** — não é perda de dado de negócio (só fixtures sintéticas), mas é uma regressão real e silenciosa na garantia de R2 que a rodada 1 havia validado como "conforme".
+
+### 4. Geradores de fixture (`preflight-production-migrations.ts`, `store-routes.test.ts`, `auth-rbac.test.ts`) usando `CI_RUN_ID`
+
+**Resolve o que prometia** (alinhar o `runId` de cada gerador ao identificador da run de CI), mas é a mesma mudança que alimenta o buraco do item 3 — os dois foram avaliados juntos acima. Fora de CI (`process.env.CI_RUN_ID` indefinido), cada gerador cai de volta em um valor aleatório (`randomBytes`/`randomUUID`) e `verify-production-state.mjs` trata `$1::text is null` como "sem escopo", preservando o comportamento antigo para execução local — isso está correto e não é o problema.
+
+### 5. `packages/db/prisma/schema.prisma` — `importFileExtension = "js"`
+
+**Resolve, sem efeito colateral no que audita este ticket.** É uma opção do generator do Prisma Client (`packages/db/prisma/schema.prisma:9`, adicionada em `798e0c8`) que só afeta a extensão dos imports relativos emitidos no client TypeScript gerado (`packages/db/src/generated/prisma/`, `.gitignore:7`, não versionado) — não toca schema, migrations ou SQL. Confirmado via `gh pr view 8`: os três jobs (`quality`, `migrate`, `integration`) rodaram verdes no run `30389442556` com essa mudança, ou seja, `lint`/`typecheck`/`test:quality`/`build` e o preflight real contra produção não quebraram. O motivo documentado no commit (`ERR_MODULE_NOT_FOUND` em produção porque `moduleResolution: "Bundler"` gera import sem extensão e `tsc` não reescreve) é coerente com o sintoma descrito e não tem relação com a política de migration, RLS ou o gate de CI — está fora do escopo de risco deste ticket, só corrige um bug de build que teria quebrado o boot do serviço `api` em produção (o que teria sido pior: teria passado no CI mas falhado no deploy real, já que o CI não roda `node dist/server.js`).
 
 ## Divergências
 
-- **ALTO** — `ALTER TABLE ... ALTER COLUMN ... TYPE <tipo>` com cast que perde
-  dado (ex.: `numeric`→`integer`, truncamento de `varchar`) passa a política
-  sem qualquer verificação (`packages/db/scripts/migration-policy.mjs:26-27`,
-  confirmado por execução real: `validateMigrationSql` aceitou
-  `alter table "orders" alter column "total" type integer;` sem lançar).
-  Decisão 55 (`docs/decisoes/55-migrations-supabase-producao-ci.md:16`) declara
-  "Migrations destrutivas: Proibidas... Mudança destrutiva exige nova decisão
-  explícita". Um cast de tipo que trunca/perde precisão destrói dado por
-  efeito, mesmo sem usar `DROP`/`DELETE`/`TRUNCATE` — e a política atual não
-  distingue cast seguro (widening) de cast com perda. Correção sugerida:
-  bloquear `ALTER COLUMN ... TYPE` por padrão (mesmo tratamento dado a
-  `DROP`), exigindo decisão explícita nova como já ocorre para os demais
-  casos destrutivos, ou permitir só uma allowlist fechada de casts
-  comprovadamente seguros.
-- **MÉDIO** — `ALTER TABLE ... RENAME TO` / `RENAME COLUMN` passa a política
-  sem verificação (mesmo arquivo/linha; confirmado por execução real, ambos
-  os casos `ACCEPTED`). Não apaga linhas, mas renomear tabela/coluna quebra
-  silenciosamente o contrato de schema que o restante da política tenta
-  proteger (o app aponta para o nome antigo e passa a falhar em runtime, não
-  em CI). O prompt de verificação pediu explicitamente que este vetor fosse
-  checado. Não é uma violação literal da Decisão 55 (que só cita
-  `DROP TABLE`/`DROP COLUMN`/`DELETE`/`TRUNCATE`), mas é inconsistente com o
-  desenho "allowlist estrutural fail-closed" já adotado para o resto de
-  `ALTER TABLE`. Correção sugerida: bloquear `RENAME` (dentro de
-  `ALTER TABLE`) na mesma política, ou registrar formalmente que renomear é
-  aceito e por quê.
-- **NOTA** — `CREATE/DROP INDEX CONCURRENTLY` passam a validação estática mas
-  não podem rodar dentro da transação do preflight (restrição nativa do
-  Postgres). O efeito prático é fail-closed (o job `migrate` falha antes do
-  `db push`), mas a mensagem de erro que o founder veria seria um erro cru do
-  Postgres, não uma mensagem de política. Não bloqueia o merge; vale um
-  ajuste de DX futuro (detectar `CONCURRENTLY` e rejeitar cedo com mensagem
-  clara, já que hoje esse tipo de migration nunca consegue ser aplicado por
-  este pipeline de qualquer forma).
-- **NOTA** — O workflow dispara em `pull_request` (qualquer branch-base, sem
-  filtro) além de `push: master` (`.github/workflows/ci.yml:3-6`), então
-  `migrate`/`integration` já tocam produção a cada push numa branch de PR,
-  antes do merge. Não é uma falha de segurança (mesmo DAG fail-closed se
-  aplica), mas é uma nuance operacional que vale documentar: "merge" não é
-  o momento em que a migration entra em produção; o CI verde da branch é.
+- **ALTO** — `verify-production-state.mjs` (query construída a partir de
+  `packages/db/scripts/verify-production-state.mjs`, bloco `with fixture_stores as (...)`,
+  cláusula `and ($1::text is null or slug like '%' || $1)`) escopa a checagem de resíduo
+  por `CI_RUN_ID`, e com isso **para de detectar** fixtures sintéticas deixadas por uma run
+  anterior que não terminou seu `afterAll` (crash, cancelamento manual, queda de runner) —
+  nenhuma run futura tem o `CI_RUN_ID` daquela run para encontrá-las. Antes desta mudança
+  (rodada 1, validada como conforme), a checagem era ampla e pegaria esse resíduo na
+  próxima execução. Decisão 55 exige cleanup "exato e verificado"
+  (`docs/decisoes/55-migrations-supabase-producao-ci.md:18`); a verificação agora é exata
+  só para a própria run, não mais um gate independente contra resíduo histórico. Além disso,
+  a correção parece desnecessária: o grupo de concorrência (`ci.yml:39-41`, `77-79`) já
+  serializa os jobs que tocam o banco e sozinho resolve o falso positivo documentado em
+  `ebc4ac1` (duas runs em voo ao mesmo tempo), tornando o escopo por `CI_RUN_ID` uma troca
+  de cobertura por nada. Correção sugerida: reverter o escopo em
+  `verify-production-state.mjs` (manter a query ampla) agora que o grupo de concorrência
+  evita a colisão em voo; se o escopo for mantido por outro motivo, adicionar uma segunda
+  checagem, não escopada, que rode periodicamente ou no início de cada `integration` e falhe
+  alto se houver qualquer fixture com mais de N minutos, independentemente do `CI_RUN_ID`.
+- **MÉDIO** — `.github/workflows/ci.yml:39-41` e `77-79` declaram
+  `concurrency: { group: supabase-producao-migrations, cancel-in-progress: false }` sem
+  `queue: max`. O comportamento documentado do GitHub Actions para essa configuração é fila
+  de no máximo um job pendente por grupo; um terceiro pedido do mesmo grupo cancela o job
+  que já estava na fila, mesmo com `cancel-in-progress: false` (esse parâmetro só protege o
+  job em execução). Com o workflow disparando em `pull_request` sem filtro de branch e em
+  `push: master` (`ci.yml:3-6`), três ou mais runs simultâneas tocando o banco são plausíveis
+  para o operador único iterando em paralelo (branch + push direto, ou duas PRs). Um job
+  `integration` enfileirado pode ser cancelado antes de rodar mesmo depois de o `migrate`
+  correspondente já ter aplicado a migration em produção com sucesso — a prova RLS/RBAC e a
+  verificação de resíduo daquela execução específica (exigidas por R2) não chegam a rodar.
+  Não é inseguro para o deploy (o check não fecha verde, "Wait for CI" não libera), mas é uma
+  lacuna de verificação que passa despercebida até alguém checar manualmente o `cancelled`.
+  Correção sugerida: adicionar `queue: max` aos dois blocos de `concurrency`, ou aceitar
+  formalmente o risco documentando-o (hoje não está documentado em lugar nenhum, nem no
+  comentário do `ci.yml` nem em `docs/decisoes/`).
+- **NOTA** — `CREATE/DROP INDEX CONCURRENTLY` agora falha cedo com mensagem própria
+  (`migration-policy.mjs:38-44`, confirmado por execução real), fechando a NOTA de DX da
+  rodada 1. Sem novo achado aqui.
 
 ## Invariantes checadas
 
-- **Decisão 55** — banco único (Supabase de produção), sem Docker/local/
-  efêmero: confirmado, nenhum script do diff sobe ou referencia banco local
-  (`packages/db/scripts/*`, `apps/api/scripts/*`). Migration nunca destrói
-  dado: majoritariamente confirmado, com o gap ALTO de `ALTER COLUMN TYPE`
-  acima. Nada aplicado sem gate verde: confirmado pelo DAG.
-- **Segredos** — nenhuma credencial commitada; nenhum `echo`/`set -x`/log
-  imprime connection string, senha ou token nos scripts revisados
-  (`verify-production-state.mjs:45`, `preflight-production-migrations.ts:216`,
-  `validate-migrations.mjs:10` só imprimem contagens). `ci.yml` usa
-  `test -n "$VAR"` para validar presença sem ecoar valor.
-- **Infra** — nenhuma referência a Vercel, staging, preview, Redis,
-  WebSocket, SSE ou worker sempre-on no diff do ticket; nenhum arquivo de
-  config Railway no repositório (fora do escopo de leitura, gate externo (a)
-  do próprio ticket).
-- **RLS** — `assertIsolationCatalog` e `assertRestrictedRuntime` continuam
-  bloqueando role com bypass/superuser antes de aceitar tráfego ou concluir o
-  preflight; prova HTTP roda sob `foode_business`.
-- **Glossário** — nenhum termo do `CONTEXT.md` (`Avoid`) encontrado nos
-  arquivos do footprint.
+- **Decisão 55** — banco único, sem Docker/local/efêmero: nenhuma mudança nesta rodada
+  introduz um segundo banco. Migration nunca destrói dado: as duas lacunas da rodada 1
+  (`ALTER COLUMN TYPE`, `RENAME`) estão fechadas e verificadas empiricamente; nenhum novo
+  vetor destrutivo encontrado nas regras novas. Nada aplicado sem gate verde: DAG
+  `quality → migrate → integration` inalterado.
+- **Segredos** — `verify-production-state.mjs` agora imprime `CI_RUN_ID` na mensagem de log
+  (`resíduos sintéticos: 0 (escopo: run ...)`), que é um identificador de execução do GitHub
+  Actions (`run_id-run_attempt`), não uma credencial; não há vazamento.
+- **RLS** — sem mudança no footprint desta rodada (`inStoreContext`, `assertIsolationCatalog`
+  inalterados).
+- **Histórico de migrations** — as 4 migrations reais em
+  `packages/db/prisma/migrations/` não contêm `rename`, `concurrently` nem `alter ... type`
+  (confirmado por grep); as regras novas não afetam o passado, consistente com o Comment do
+  ticket.
 
 ## Conforme
 
-- R1, R3, R5, R6 plenamente conformes com evidência direta.
-- R2 e R4 (corrigidos) conformes na arquitetura geral — banco único, role não
-  privilegiada, cleanup em três camadas, aplicação só via GitHub
-  Actions/Supabase CLI — com a ressalva ALTA sobre `ALTER COLUMN TYPE`
-  registrada acima.
-- O escape em blocos `DO` relatado pelo agente (`PERFORM`/`CALL`/`UPDATE`)
-  está de fato fechado — reproduzi o caso e mais variações de tag customizada
-  e todas foram rejeitadas.
-- O rollback do preflight é estrutural (garantido por design do
-  `$transaction`, não por um `if` que pode ser esquecido), e a prova HTTP
-  roda comprovadamente sob a role não privilegiada.
-- O DAG `quality → migrate → integration` protege contra push vermelho por
-  si só; o gap real da falta de branch protection é auto-modificação do
-  workflow por push direto não revisado, não a corrida quality/migrate.
-- Nenhum segredo vaza em log/stdout nos scripts revisados.
+- R1, R3, R4, R5, R6 seguem conformes, sem regressão introduzida por esta rodada.
+- As duas lacunas ALTA/MÉDIA da rodada 1 na política de migration (`ALTER COLUMN TYPE`,
+  `RENAME`) estão fechadas — testei 15 vetores de disfarce (espaçamento, aspas, Unicode,
+  múltiplos statements, quebra de linha, objeto diferente) e nenhum destrói/renomeia dado
+  passando pela política. `CONCURRENTLY` também fechado com mensagem própria.
+- `importFileExtension = "js"` corrige um bug real de boot em produção sem efeito colateral
+  no CI (`quality`/`migrate`/`integration` verdes no run que a introduziu) e está fora do
+  raio de risco deste ticket.
+- O grupo de concorrência resolve o falso positivo real documentado no histórico
+  (`ebc4ac1`/PR #7) e impede intercalação de `migrate`/`integration` entre runs — mas sem
+  `queue: max` (ressalva MÉDIA).
+
+## Novos achados desta rodada não presentes na rodada 1
+
+- ALTO — escopo por `CI_RUN_ID` em `verify-production-state.mjs` remove a capacidade de
+  detectar resíduo de runs anteriores que não terminaram limpo.
+- MÉDIO — ausência de `queue: max` no grupo de concorrência permite cancelamento silencioso
+  de um job `integration` já enfileirado quando 3+ runs concorrentes tocam o banco.
