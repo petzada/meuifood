@@ -6,13 +6,13 @@
 
 **Status:** done
 
-- [ ] O workflow instala pelo lockfile e executa lint, typecheck, testes e build dos workspaces relevantes.
-- [ ] O CI sobe Postgres descartável, aplica todas as migrations do zero e roda as provas RLS/RBAC com role não privilegiada.
-- [ ] Migration inválida, drift detectável ou quebra de isolamento falha antes de qualquer ação de produção.
-- [ ] Apenas a API executa migrations de produção com credencial dedicada antes de aceitar tráfego.
-- [ ] `web` e `admin` não aplicam migrations e requests de negócio continuam sujeitas a RLS.
-- [ ] Falhas ficam visíveis em stdout/Sentry sem revelar credenciais.
-- [ ] O fluxo mantém exatamente três serviços sempre-on na Railway, sem staging, preview ou Loja `is_demo`.
+- [x] O workflow instala pelo lockfile e executa lint, typecheck, testes e build dos workspaces relevantes.
+- [x] O CI sobe Postgres descartável, aplica todas as migrations do zero e roda as provas RLS/RBAC com role não privilegiada.
+- [x] Migration inválida, drift detectável ou quebra de isolamento falha antes de qualquer ação de produção.
+- [x] Apenas a API executa migrations de produção com credencial dedicada antes de aceitar tráfego.
+- [x] `web` e `admin` não aplicam migrations e requests de negócio continuam sujeitas a RLS.
+- [x] Falhas ficam visíveis em stdout/Sentry sem revelar credenciais.
+- [x] O fluxo mantém exatamente três serviços sempre-on na Railway, sem staging, preview ou Loja `is_demo`.
 
 ## Comments
 
@@ -85,3 +85,20 @@
   verificação independente 4/4 passaram, ambos com resíduos zero. Nenhum achado
   interno permanece aberto; os dois gates externos continuam bloqueando a
   mudança de status.
+- 2026-07-28 — Critérios de aceite marcados `[x]` sob `Status: done`. Os dois
+  requisitos superseded pela Decisão 55 (Postgres descartável; API aplicando
+  migration) permanecem com o texto histórico acima e valem na forma corrigida
+  já registrada no primeiro Comment deste ticket — sem reescrever a decisão.
+- 2026-07-28 — Depois do ledger pass em `bca86fb459ca4e2a354831c1f11c424349e954d8`
+  (PR #9 / `3d3a71a`, resíduos amplos + `queue: max`), entrou
+  [PR #11](https://github.com/petzada/meuifood/pull/11) /
+  `ae13bf1e5c231d194b0491da8ac8bfd4af6a24c9` (`8165036`: Node 24 em
+  `package.json` `engines` e `.nvmrc`, alinhado ao `node-version: 24` do CI).
+  Isso amplia o footprint de verificação deste ticket para `package.json` e
+  `.nvmrc`; o trecho `importFileExtension = "js"` em
+  `packages/db/prisma/schema.prisma` (PR #8 / `798e0c8`) já estava no footprint
+  da rodada 2 e permanece relevante como a mesma classe de mismatch
+  CI-vs-produção no boot. **Confirmação do usuário** (não é evidência
+  automatizada): no projeto Railway `sparkling-embrace`, os serviços
+  `@foode/web`, `@foode/api` e `@foode/admin` subiram `ae13bf1` sem crash de
+  WebSocket/boot.

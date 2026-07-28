@@ -155,3 +155,15 @@ Agrava o ponto: essa perda de cobertura parece **desnecessária**, porque o prob
   detectar resíduo de runs anteriores que não terminaram limpo.
 - MÉDIO — ausência de `queue: max` no grupo de concorrência permite cancelamento silencioso
   de um job `integration` já enfileirado quando 3+ runs concorrentes tocam o banco.
+
+## Addendum — resolução pós-rodada 2
+
+- 2026-07-28 — As divergências **ALTO** (resíduo escopado por `CI_RUN_ID`) e **MÉDIO**
+  (ausência de `queue: max`) documentadas acima foram **resolvidas** em
+  `3d3a71a40a68de50c6b4b596361f9f5e8477c85a` / [PR #9](https://github.com/petzada/meuifood/pull/9)
+  (merge `bca86fb459ca4e2a354831c1f11c424349e954d8`). Evidência local no `master` atual:
+  `packages/db/scripts/verify-production-state.mjs` voltou à busca ampla de fixtures
+  `fixture-rls-%` / `fixture-rbac-%` / `fixture-preflight-%` (sem filtro por `CI_RUN_ID`);
+  `.github/workflows/ci.yml` declara `queue: max` nos jobs `migrate` e `integration`.
+  O ledger em `bca86fb` registra veredito `pass` com `openFindings: 0`. O corpo da
+  rodada 2 acima permanece como histórico do estado verificado em `7555533`.

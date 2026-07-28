@@ -13,7 +13,7 @@ Monorepo pnpm do Foode Delivery.
 
 ## Desenvolvimento
 
-Requer Node.js 20.9 ou superior e pnpm 10.
+Requer Node.js 24 ou superior e pnpm 10.
 
 ```bash
 pnpm install
