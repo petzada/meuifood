@@ -1,0 +1,17 @@
+:root {
+  --color-primary: #f35050;
+  --color-primary-active: #e04545;
+  --color-primary-soft: #ffe8e8;
+  --color-accent: #ffb800;
+  --color-on-primary: #ffffff;
+  --color-canvas: #ffffff;
+  --color-ink: #222222;
+  --color-body: #3f3f3f;
+  --color-muted: #6a6a6a;
+  --color-hairline: #dddddd;
+  --color-hairline-soft: #ebebeb;
+  --color-error: #c13515;
+  --radius-container: 1.5rem;
+  --radius-control: 999px;
+  --spacing-section: 4rem;
+}

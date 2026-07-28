@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "@foode/shared/brand.css";
+@import "@foode/ui/styles.css";
+
+@theme inline {
+  --font-sans: "Nunito Variable", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: "Nunito Variable", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-underline-offset: 0.2em;
+}
+
+.hero-photo {
+  border: 1px solid var(--color-hairline);
+  background: var(--color-primary-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
