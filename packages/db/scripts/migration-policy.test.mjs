@@ -87,6 +87,38 @@ describe("política de migrations de produção", () => {
     ).toThrow("SQL dinâmico EXECUTE");
   });
 
+  it.each([
+    "do $$ begin perform public.purge_business_data(); end $$;",
+    "do $$ begin call public.purge_business_data(); end $$;",
+    "do $$ begin update stores set name = 'apagada'; end $$;",
+    "do 'begin perform public.purge_business_data(); end';",
+  ])("rejeita efeitos indiretos em bloco DO: %s", (sql) => {
+    expect(() =>
+      validateMigrationSql("20260728189200_unsafe_do", sql),
+    ).toThrow("bloco DO não autorizado");
+  });
+
+  it("aceita somente o bloco DO canônico que cria a role sem privilégios", () => {
+    expect(() =>
+      validateMigrationSql(
+        "20260728189300_business_role",
+        `
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_roles WHERE rolname = 'foode_business'
+            ) THEN
+              CREATE ROLE foode_business
+                NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                NOINHERIT NOBYPASSRLS;
+            END IF;
+          END
+          $$;
+        `,
+      ),
+    ).not.toThrow();
+  });
+
   it("rejeita conceder uma role privilegiada à role de negócio", () => {
     expect(() =>
       validateMigrationSql(

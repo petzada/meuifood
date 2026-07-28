@@ -39,4 +39,25 @@
 ## Resultado
 
 Dois achados do revisor e um achado de execução, todos procedentes e corrigidos.
-Nova CI e evidências finais devem ser anexadas após o push corretivo.
+O push corretivo `0182b05` foi validado pelo run `30382305139`: `quality`,
+`migrate` e `integration` concluíram verdes. A suíte determinística de banco
+passou 30/30 e a API passou 25/25. O job de migrations validou as quatro
+migrations canônicas antes de tocar produção e não emitiu o warning de runtime
+Node 20 observado no run inicial.
+
+## Releitura corretiva
+
+1. **Alta — procedente e corrigido.** O revisor demonstrou que a primeira
+   correção ainda aceitava `DO $$ BEGIN PERFORM purge_business_data(); END $$`.
+   O teste foi reproduzido vermelho; a política agora aceita somente o bloco
+   canônico que cria `foode_business` com `NOLOGIN`, `NOSUPERUSER`,
+   `NOCREATEDB`, `NOCREATEROLE`, `NOINHERIT` e `NOBYPASSRLS`. `PERFORM`, `CALL`,
+   `UPDATE`, corpo em literal e SQL dinâmico dentro de `DO` falham fechado. A
+   suíte de banco passou 35/35 após a correção.
+2. **Baixa — procedente e corrigido.** A montagem da URL de produção e leitura
+   segura das credenciais foi centralizada em `production-database-url.mjs`,
+   compartilhada pelo preflight da API e pelo verificador independente.
+
+Após a releitura, não há achado de Standards aberto. Lint, typecheck,
+`test:quality`, build, preflight transacional real e verificação independente
+passaram; o preflight e o verificador encontraram zero resíduos.

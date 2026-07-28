@@ -40,3 +40,21 @@ Nenhum scope creep foi identificado.
 
 Um achado procedente foi corrigido. Dois permanecem adiados e impedem
 `needs-review`/`done` até ação ou decisão explícita do usuário.
+
+## Evidência após a correção
+
+O run `30382305139` confirmou o DAG verde na ordem `quality → migrate →
+integration`. No job `migrate`, a sequência observada foi: validação das quatro
+migrations canônicas; preflight transacional no Supabase com rollback e zero
+resíduos; `db push --dry-run`; `db push`; comparação exata das quatro versões
+locais/remotas. Depois do push, a integração passou banco 30/30 e API 25/25,
+incluindo RLS/RBAC, e a verificação independente confirmou histórico 4/4 e zero
+fixtures sintéticas residuais.
+
+Essa evidência encerra o achado 1. Ela não encerra os achados 2 e 3, que dependem
+respectivamente da configuração Railway e de uma decisão sobre o gate externo
+da `master`.
+
+Na releitura corretiva, o revisor não encontrou novo achado nem scope creep e
+manteve exatamente esses dois gates externos abertos, com severidade remanescente
+máxima alta.

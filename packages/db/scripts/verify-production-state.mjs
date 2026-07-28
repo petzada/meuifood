@@ -1,70 +1,18 @@
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import pg from "pg";
 
 import { readCanonicalMigrations } from "./canonical-migrations.mjs";
+import { productionDatabaseUrl } from "./production-database-url.mjs";
 import { assertProductionState } from "./production-state.mjs";
 
 const { Client } = pg;
-const databasePackageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const repositoryRoot = resolve(databasePackageRoot, "../..");
-
-function requiredSecret(source, name) {
-  const line = source
-    .split(/\r?\n/u)
-    .find((candidate) => candidate.trimStart().startsWith(`${name}=`));
-  if (!line) throw new Error(`${name} não foi configurada.`);
-
-  const value = line.slice(line.indexOf("=") + 1).trim();
-  const unquoted =
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-      ? value.slice(1, -1)
-      : value;
-  if (!unquoted) throw new Error(`${name} está vazia.`);
-  return unquoted;
-}
-
-async function productionDatabaseUrl() {
-  let password = process.env.SUPABASE_DB_PASSWORD?.trim();
-  let pooler = process.env.SUPABASE_POOLER_URL?.trim();
-  if (Boolean(password) !== Boolean(pooler)) {
-    throw new Error(
-      "SUPABASE_DB_PASSWORD e SUPABASE_POOLER_URL devem ser configuradas juntas.",
-    );
-  }
-
-  if (!password || !pooler) {
-    const environmentFile = resolve(repositoryRoot, ".env");
-    const poolerFile = resolve(repositoryRoot, "supabase/.temp/pooler-url");
-    if (!existsSync(environmentFile) || !existsSync(poolerFile)) {
-      throw new Error(
-        "Configure as credenciais do Supabase de produção para a verificação.",
-      );
-    }
-    const [environmentSource, poolerSource] = await Promise.all([
-      readFile(environmentFile, "utf8"),
-      readFile(poolerFile, "utf8"),
-    ]);
-    password = requiredSecret(environmentSource, "SUPABASE_DB_PASSWORD");
-    pooler = poolerSource.trim();
-  }
-
-  const url = new URL(pooler);
-  url.password = password;
-  url.searchParams.set("sslmode", "require");
-  url.searchParams.set("uselibpqcompat", "true");
-  return url.toString();
-}
 
 const localVersions = (await readCanonicalMigrations()).map(
   (migration) => migration.version,
 );
 
-const client = new Client({ connectionString: await productionDatabaseUrl() });
+const client = new Client({
+  connectionString: await productionDatabaseUrl("a verificação"),
+});
 await client.connect();
 try {
   const migrations = await client.query(

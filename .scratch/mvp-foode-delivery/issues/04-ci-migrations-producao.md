@@ -38,3 +38,18 @@
   obrigatório o gate de `master`, pois branch protection e rulesets retornam
   HTTP 403 no plano atual do repositório privado. Documentação não substitui
   essas confirmações.
+- 2026-07-28 — O push corretivo `0182b05` passou no GitHub Actions
+  (`30382305139`): jobs `quality`, `migrate` e `integration` verdes. A ordem do
+  job de produção foi validação canônica → preflight transacional com rollback
+  e resíduos zero → dry-run → push → histórico local/remoto exato 4/4. Depois,
+  banco 30/30 e API 25/25 passaram, e o verificador independente novamente
+  encontrou zero fixtures sintéticas residuais. Os dois gates externos acima
+  permanecem abertos; por isso o status continua `ready-for-agent`.
+- 2026-07-28 — A releitura corretiva encontrou um escape adicional em blocos
+  `DO`. TDD reproduziu o caso com `PERFORM`/`CALL`/`UPDATE`; a política agora só
+  aceita o bloco canônico de criação da role `foode_business` sem privilégios.
+  O helper de credenciais/URL de produção também foi centralizado. Lint,
+  typecheck, `test:quality` (banco 35/35), build, preflight real com rollback e
+  verificação independente 4/4 passaram, ambos com resíduos zero. Nenhum achado
+  interno permanece aberto; os dois gates externos continuam bloqueando a
+  mudança de status.

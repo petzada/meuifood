@@ -1,6 +1,4 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 
 import {
   createAdministrativeDatabase,
@@ -14,58 +12,9 @@ import {
 } from "./migration-preflight-policy.mjs";
 import { readCanonicalMigrations } from "../../../packages/db/scripts/canonical-migrations.mjs";
 import { validateMigrationSql } from "../../../packages/db/scripts/migration-policy.mjs";
+import { productionDatabaseUrl } from "../../../packages/db/scripts/production-database-url.mjs";
 
 const rollbackProof = new Error("rollback_migration_preflight");
-
-function requiredSecret(source: string, name: string) {
-  const line = source
-    .split(/\r?\n/u)
-    .find((candidate) => candidate.trimStart().startsWith(`${name}=`));
-  if (!line) throw new Error(`${name} não foi configurada.`);
-  const value = line.slice(line.indexOf("=") + 1).trim();
-  const unquoted =
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-      ? value.slice(1, -1)
-      : value;
-  if (!unquoted) throw new Error(`${name} está vazia.`);
-  return unquoted;
-}
-
-async function productionDatabaseUrl() {
-  let password = process.env.SUPABASE_DB_PASSWORD?.trim();
-  let pooler = process.env.SUPABASE_POOLER_URL?.trim();
-  if (Boolean(password) !== Boolean(pooler)) {
-    throw new Error(
-      "SUPABASE_DB_PASSWORD e SUPABASE_POOLER_URL devem ser configuradas juntas.",
-    );
-  }
-
-  if (!password || !pooler) {
-    const environmentFile = new URL("../../../.env", import.meta.url);
-    const poolerFile = new URL(
-      "../../../supabase/.temp/pooler-url",
-      import.meta.url,
-    );
-    if (!existsSync(environmentFile) || !existsSync(poolerFile)) {
-      throw new Error(
-        "Configure as credenciais do Supabase de produção para o preflight.",
-      );
-    }
-    const [environmentSource, poolerSource] = await Promise.all([
-      readFile(environmentFile, "utf8"),
-      readFile(poolerFile, "utf8"),
-    ]);
-    password = requiredSecret(environmentSource, "SUPABASE_DB_PASSWORD");
-    pooler = poolerSource.trim();
-  }
-
-  const url = new URL(pooler);
-  url.password = password;
-  url.searchParams.set("sslmode", "require");
-  url.searchParams.set("uselibpqcompat", "true");
-  return url.toString();
-}
 
 function syntheticTaxId() {
   return [...randomBytes(14)].map((byte) => String(byte % 10)).join("");
@@ -89,7 +38,9 @@ for (const migration of migrations) {
   validateMigrationSql(migration.name, migration.sql);
 }
 
-const database = createAdministrativeDatabase(await productionDatabaseUrl());
+const database = createAdministrativeDatabase(
+  await productionDatabaseUrl("o preflight"),
+);
 const runId = randomBytes(8).toString("hex");
 const fixtureStoreIds: string[] = [];
 let pendingCount = 0;
