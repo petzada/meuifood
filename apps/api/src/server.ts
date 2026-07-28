@@ -5,7 +5,7 @@ import {
   createSupabaseAccessTokenVerifier,
   supabaseAuthConfiguration,
 } from "./auth.js";
-import { createSupabaseStaffInvitationService } from "./staff-invitations.js";
+import { createSupabaseMemberInvitationService } from "./member-invitations.js";
 
 function requiredEnvironment(name: string) {
   const value = process.env[name]?.trim();
@@ -20,7 +20,7 @@ const businessDatabase = createBusinessDatabase(
 const supabaseUrl = requiredEnvironment("SUPABASE_URL");
 const app = buildApp({
   businessDatabase,
-  staffInvitationService: createSupabaseStaffInvitationService({
+  memberInvitationService: createSupabaseMemberInvitationService({
     redirectTo: requiredEnvironment("ADMIN_AUTH_REDIRECT_URL"),
     serviceRoleKey: requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
     supabaseUrl,

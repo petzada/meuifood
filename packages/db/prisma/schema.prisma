@@ -45,7 +45,6 @@ model StoreMember {
   store     Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, userId])
-  @@unique([userId])
   @@index([userId])
   @@map("store_members")
 }

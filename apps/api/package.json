@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "provision:owner": "tsx src/provision-owner.ts",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test:quality": "vitest run src/app.test.ts",

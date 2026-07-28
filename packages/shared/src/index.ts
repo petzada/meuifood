@@ -6,3 +6,7 @@ export const healthResponseSchema = z.object({
 });
 
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
+
+export const membershipRoleSchema = z.enum(["owner", "operator"]);
+
+export type MembershipRole = z.infer<typeof membershipRoleSchema>;

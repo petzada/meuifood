@@ -96,6 +96,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
   let businessDatabase: BusinessDatabase;
+  let ambiguousUserId: string;
   let crossStoreOperatorMembershipId: string;
   let invalidPrivateKey: SigningKey;
   const invitedEmails: string[] = [];
@@ -184,6 +185,13 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
     await administrativeDatabase.storeMember.create({
       data: { role: "owner", storeId: storeBId, userId: ownerBUserId },
     });
+    ambiguousUserId = randomUUID();
+    await administrativeDatabase.storeMember.createMany({
+      data: [
+        { role: "operator", storeId, userId: ambiguousUserId },
+        { role: "operator", storeId: storeBId, userId: ambiguousUserId },
+      ],
+    });
     const crossStoreOperator = await administrativeDatabase.storeMember.create({
       data: { role: "operator", storeId: storeBId, userId: randomUUID() },
     });
@@ -232,7 +240,10 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
 
   function invitationService(invitedUserId: string = randomUUID()) {
     return {
-      async inviteOperator(email: string) {
+      async findEmailsByUserIds(userIds: string[]) {
+        return Object.fromEntries(userIds.map((userId) => [userId, null]));
+      },
+      async inviteMember(email: string) {
         invitedEmails.push(email);
         return { userId: invitedUserId };
       },
@@ -252,7 +263,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
     });
 
     try {
-      const response = await app.inject({ method: "GET", url: "/staff/context" });
+      const response = await app.inject({ method: "GET", url: "/team/context" });
 
       expect(response.statusCode).toBe(401);
       expect(response.json()).toEqual({ error: "unauthorized" });
@@ -279,7 +290,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       const response = await app.inject({
         headers: { authorization: `Bearer ${await tokenFactory()}` },
         method: "GET",
-        url: "/staff/context",
+        url: "/team/context",
       });
 
       expect(response.statusCode).toBe(401);
@@ -296,7 +307,26 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       const response = await app.inject({
         headers: { authorization: `Bearer ${await accessToken()}` },
         method: "GET",
-        url: "/staff/context",
+        url: "/team/context",
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({ error: "membership_required" });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("falha fechado quando a identidade possui memberships ambíguas", async () => {
+    const app = buildApp({ businessDatabase, logger: false, verifyAccessToken });
+
+    try {
+      const response = await app.inject({
+        headers: {
+          authorization: `Bearer ${await accessToken({ subject: ambiguousUserId })}`,
+        },
+        method: "GET",
+        url: "/team/context",
       });
 
       expect(response.statusCode).toBe(403);
@@ -315,7 +345,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
           authorization: `Bearer ${await accessToken({ subject: ownerUserId })}`,
         },
         method: "GET",
-        url: "/staff/context",
+        url: "/team/context",
       });
 
       expect(response.statusCode, response.body).toBe(200);
@@ -359,7 +389,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
     const app = buildApp({
       businessDatabase,
       logger: false,
-      staffInvitationService: invitationService(),
+      memberInvitationService: invitationService(),
       verifyAccessToken,
     });
 
@@ -368,13 +398,13 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       const response = await app.inject({
         headers: { authorization: `Bearer ${operatorToken}` },
         method: "GET",
-        url: "/staff/members",
+        url: "/team/members",
       });
       const invitationResponse = await app.inject({
         headers: { authorization: `Bearer ${operatorToken}` },
         method: "POST",
         payload: { email: `negado-${runId}@example.invalid` },
-        url: "/staff/operators/invitations",
+        url: "/team/operators/invitations",
       });
 
       expect(response.statusCode).toBe(403);
@@ -390,7 +420,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
     const app = buildApp({
       businessDatabase,
       logger: false,
-      staffInvitationService: invitationService(ownerUserId),
+      memberInvitationService: invitationService(ownerUserId),
       verifyAccessToken,
     });
 
@@ -400,7 +430,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
         headers: { authorization: `Bearer ${ownerToken}` },
         method: "POST",
         payload: { email: `duplicado-${runId}@example.invalid` },
-        url: "/staff/operators/invitations",
+        url: "/team/operators/invitations",
       });
 
       expect(response.statusCode).toBe(500);
@@ -449,7 +479,7 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
     const app = buildApp({
       businessDatabase,
       logger: false,
-      staffInvitationService: invitationService(invitedUserId),
+      memberInvitationService: invitationService(invitedUserId),
       verifyAccessToken,
     });
 
@@ -459,12 +489,12 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
         headers: { authorization: `Bearer ${ownerToken}` },
         method: "POST",
         payload: { email: `operador-${runId}@example.invalid` },
-        url: "/staff/operators/invitations",
+        url: "/team/operators/invitations",
       });
       const membersResponse = await app.inject({
         headers: { authorization: `Bearer ${ownerToken}` },
         method: "GET",
-        url: "/staff/members",
+        url: "/team/members",
       });
 
       expect(invitationResponse.statusCode, invitationResponse.body).toBe(201);
@@ -475,7 +505,11 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       expect(membersResponse.statusCode, membersResponse.body).toBe(200);
       expect(membersResponse.json().members).toEqual(
         expect.arrayContaining([
-          { id: ownerMembershipId, role: "owner", userId: ownerUserId },
+          expect.objectContaining({
+            id: ownerMembershipId,
+            role: "owner",
+            userId: ownerUserId,
+          }),
           expect.objectContaining({ role: "operator", userId: invitedUserId }),
         ]),
       );
@@ -493,12 +527,12 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       const deniedResponse = await app.inject({
         headers: { authorization: `Bearer ${ownerAToken}` },
         method: "DELETE",
-        url: `/staff/members/${crossStoreOperatorMembershipId}`,
+        url: `/team/members/${crossStoreOperatorMembershipId}`,
       });
       const ownerBContext = await app.inject({
         headers: { authorization: `Bearer ${ownerBToken}` },
         method: "GET",
-        url: "/staff/context",
+        url: "/team/context",
       });
 
       expect(deniedResponse.statusCode).toBe(404);
@@ -520,12 +554,12 @@ describe("autenticação e RBAC de Dono e Operador", { timeout: 15_000 }, () => 
       const removalResponse = await app.inject({
         headers: { authorization: `Bearer ${ownerToken}` },
         method: "DELETE",
-        url: `/staff/members/${removableOperatorMembershipId}`,
+        url: `/team/members/${removableOperatorMembershipId}`,
       });
       const nextRequest = await app.inject({
         headers: { authorization: `Bearer ${operatorToken}` },
         method: "GET",
-        url: "/staff/context",
+        url: "/team/context",
       });
 
       expect(removalResponse.statusCode, removalResponse.body).toBe(204);

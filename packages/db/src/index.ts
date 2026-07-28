@@ -4,14 +4,15 @@ import {
   PrismaClient,
   type Prisma,
 } from "./generated/prisma/client.js";
+import type { MembershipRole } from "./generated/prisma/enums.js";
 
 export type StoreContext = {
   storeId: string;
 };
 
-export type StaffContext = StoreContext & {
+export type MembershipContext = StoreContext & {
   membershipId: string;
-  role: "owner" | "operator";
+  role: MembershipRole;
   userId: string;
 };
 
@@ -22,20 +23,20 @@ export type StoreView = {
   slug: string;
 };
 
-export type StaffMemberView = {
+export type TeamMemberView = {
   id: string;
-  role: "owner" | "operator";
+  role: MembershipRole;
   userId: string;
 };
 
 export type BusinessDatabase = {
-  addOperator(context: StaffContext, userId: string): Promise<StaffMemberView>;
+  addOperator(context: MembershipContext, userId: string): Promise<TeamMemberView>;
   assertRestrictedRuntime(): Promise<void>;
   close(): Promise<void>;
   findStore(context: StoreContext, storeId: string): Promise<StoreView | null>;
-  listStaffMembers(context: StaffContext): Promise<StaffMemberView[]>;
-  removeOperator(context: StaffContext, membershipId: string): Promise<boolean>;
-  resolveStaffContext(userId: string): Promise<StaffContext | null>;
+  listTeamMembers(context: MembershipContext): Promise<TeamMemberView[]>;
+  removeOperator(context: MembershipContext, membershipId: string): Promise<boolean>;
+  resolveMembershipContext(userId: string): Promise<MembershipContext | null>;
   updateStoreName(
     context: StoreContext,
     storeId: string,
@@ -139,7 +140,7 @@ export function createBusinessDatabase(
           }),
       );
     },
-    async listStaffMembers(context) {
+    async listTeamMembers(context) {
       return await inStoreContext(
         prisma,
         context,
@@ -166,7 +167,7 @@ export function createBusinessDatabase(
         },
       );
     },
-    async resolveStaffContext(userId) {
+    async resolveMembershipContext(userId) {
       return await inStoreContext(
         prisma,
         { storeId: "00000000-0000-0000-0000-000000000000" },
@@ -174,10 +175,12 @@ export function createBusinessDatabase(
           await transaction.$executeRaw`
             SELECT set_config('app.current_user_id', ${userId}, true)
           `;
-          const membership = await transaction.storeMember.findFirst({
+          const memberships = await transaction.storeMember.findMany({
             where: { userId },
             select: { id: true, role: true, storeId: true, userId: true },
+            take: 2,
           });
+          const membership = memberships.length === 1 ? memberships[0] : undefined;
           return membership
             ? {
                 membershipId: membership.id,

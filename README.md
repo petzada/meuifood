@@ -68,6 +68,19 @@ as variáveis públicas `NEXT_PUBLIC_SUPABASE_URL` e
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no admin, além de `API_URL`. O callback de
 convite é `/auth/confirm`, seguido da definição de senha.
 
+O primeiro Dono de uma Loja é provisionado por uma operação consciente, depois
+do seed e das migrations, usando somente credenciais administrativas fora do
+runtime:
+
+```bash
+pnpm --filter @foode/api provision:owner -- <store_id> <email>
+```
+
+O comando exige `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e
+`ADMIN_AUTH_REDIRECT_URL`. Ele convida o Dono no Supabase Auth, persiste a
+membership `owner` na Loja informada e revoga o usuário convidado se a
+persistência falhar. A API Railway continua sem receber `DATABASE_URL`.
+
 O seed é idempotente e mantém o único Comerciante-modelo no modo
 `pilot_platform`. A migration e os testes de RLS são executados exclusivamente
 no Supabase de produção linkado pela CLI. Fixtures sintéticas usam identificadores
