@@ -1,4 +1,32 @@
 import type { FastifyRequest } from "fastify";
+import type { LoggerOptions } from "pino";
+
+const sensitiveFields = [
+  "accessToken",
+  "address",
+  "apiKey",
+  "authorization",
+  "cardNumber",
+  "cardholderName",
+  "cookie",
+  "cvc",
+  "cvv",
+  "email",
+  "password",
+  "phone",
+  "phoneNumber",
+  "refreshToken",
+  "secret",
+  "token",
+];
+
+const nestedSensitivePaths = sensitiveFields.flatMap((field) => [
+  field,
+  `*.${field}`,
+  `*.*.${field}`,
+  `*.*.*.${field}`,
+  `*.*.*.*.${field}`,
+]);
 
 function pathWithoutQuery(url: string | undefined) {
   return url?.split("?", 1)[0];
@@ -14,14 +42,7 @@ export const safeLoggerOptions = {
       "req.body",
       "req.query",
       "res.headers['set-cookie']",
-      "authorization",
-      "cookie",
-      "password",
-      "cardNumber",
-      "cvv",
-      "cvc",
-      "email",
-      "phone",
+      ...nestedSensitivePaths,
     ],
     censor: "[Redacted]",
   },
@@ -36,4 +57,4 @@ export const safeLoggerOptions = {
       return { statusCode: response.statusCode };
     },
   },
-};
+} satisfies LoggerOptions;

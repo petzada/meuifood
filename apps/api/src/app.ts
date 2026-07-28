@@ -1,4 +1,5 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyBaseLogger } from "fastify";
+import pino, { type DestinationStream } from "pino";
 
 import { healthResponseSchema } from "@foode/shared";
 
@@ -10,14 +11,23 @@ import {
 
 type BuildAppOptions = {
   logger?: boolean;
+  loggerDestination?: DestinationStream;
 };
 
 export function buildApp(options: BuildAppOptions = {}) {
   initializeObservability();
 
-  const app = Fastify({
-    logger: options.logger === false ? false : safeLoggerOptions,
-  });
+  const app =
+    options.logger === false
+      ? Fastify({ logger: false })
+      : options.loggerDestination
+        ? Fastify({
+            loggerInstance: pino(
+              safeLoggerOptions,
+              options.loggerDestination,
+            ) as FastifyBaseLogger,
+          })
+        : Fastify({ logger: safeLoggerOptions });
 
   app.get("/health", async (_request, reply) => {
     const body = healthResponseSchema.parse({ status: "ok", service: "api" });

@@ -1,4 +1,4 @@
-import { OutlineContainer } from "@foode/ui";
+import { BrandMark, OutlineContainer } from "@foode/ui";
 import Image from "next/image";
 
 import logo from "../../../../public/images/logo.png";
@@ -8,23 +8,16 @@ export default function AdminHome() {
     <main className="min-h-[100dvh] md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b border-[var(--color-hairline)] px-4 py-4 md:border-b-0 md:border-r md:px-6 md:py-7">
         <div className="flex items-center justify-between md:block">
-          <span className="relative block h-11 w-28 overflow-hidden rounded-full bg-[var(--color-primary)]">
-            <Image
-              src={logo}
-              alt="Foode Delivery"
-              width={112}
-              height={112}
-              className="absolute left-1/2 top-1/2 h-auto w-28 -translate-x-1/2 -translate-y-1/2"
-              priority
-            />
-          </span>
-          <p className="text-sm font-extrabold text-[var(--color-muted)] md:mt-8">Painel Foode</p>
+          <BrandMark>
+            <Image src={logo} alt="Foode Delivery" width={112} height={112} priority />
+          </BrandMark>
+          <p className="text-sm font-bold text-[var(--color-muted)] md:mt-8">Painel Foode</p>
         </div>
         <nav aria-label="Navegação do Painel" className="mt-4 md:mt-6">
           <a
             href="#pedidos"
             aria-current="page"
-            className="flex min-h-12 items-center rounded-full bg-[var(--color-primary)] px-5 font-extrabold text-white"
+            className="flex min-h-12 items-center rounded-full bg-[var(--color-primary)] px-5 font-bold text-white"
           >
             Pedidos
           </a>
@@ -34,7 +27,7 @@ export default function AdminHome() {
       <section id="pedidos" className="px-4 py-8 md:px-10 md:py-10">
         <div className="mx-auto max-w-5xl">
           <p className="text-sm font-bold text-[var(--color-primary-active)]">Visão inicial</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.03em] text-[var(--color-ink)]">
+          <h1 className="mt-2 text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--color-ink)]">
             A operação da sua Loja começa aqui.
           </h1>
           <p className="mt-3 max-w-[56ch] leading-relaxed text-[var(--color-body)]">
@@ -44,7 +37,7 @@ export default function AdminHome() {
           <OutlineContainer className="mt-8 p-6 md:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-xl font-extrabold text-[var(--color-ink)]">Pedidos</h2>
+                <h2 className="text-xl font-bold text-[var(--color-ink)]">Pedidos</h2>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">Nenhuma operação configurada neste bootstrap.</p>
               </div>
               <span className="w-fit rounded-full border border-[var(--color-hairline)] px-4 py-2 text-sm font-bold text-[var(--color-muted)]">

@@ -29,7 +29,6 @@ a {
 
 .hero-photo {
   border: 1px solid var(--color-hairline);
-  background: var(--color-primary-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {

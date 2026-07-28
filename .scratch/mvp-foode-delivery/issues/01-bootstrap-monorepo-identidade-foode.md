@@ -14,3 +14,7 @@
 - [x] Sentry é inicializado nos três apps quando configurado e não impede execução local sem DSN.
 - [x] Logs usam stdout e não expõem secrets, autorização, cookies, dados de cartão ou dados pessoais desnecessários.
 - [x] Não entram Vercel, staging, preview, Redis, WebSocket, SSE, Rausch ou catálogo Airbnb.
+
+## Comments
+
+- 2026-07-28: Aceite completo após review Standards/Spec e correções registradas em `reports/01-standards.md` e `reports/01-spec.md`. `pnpm lint`, `pnpm typecheck`, `pnpm test` (5 testes) e `pnpm build` passaram; pre-flight visual desktop/mobile aprovada.
