@@ -6,6 +6,13 @@ import type { ReactNode } from "react";
 
 import logo from "../../../../public/images/logo.png";
 import { createClient } from "../lib/supabase/server";
+import {
+  MenuPanel,
+  menuFeedbackMessages,
+  type MenuCategory,
+  type MenuFeedback,
+  type MenuItem,
+} from "./menu/menu-panel";
 import { inviteOperator, removeOperator } from "./team/actions";
 import { SubmitButton } from "./team/submit-button";
 
@@ -30,9 +37,11 @@ const feedbackMessages: Record<TeamFeedback, string> = {
 };
 
 export function PanelShell({
+  menu,
   role,
   team,
 }: {
+  menu?: ReactNode;
   role: MembershipRole;
   team?: ReactNode;
 }) {
@@ -71,7 +80,7 @@ export function PanelShell({
           </h1>
           <p className="mt-3 max-w-[56ch] leading-relaxed text-[var(--color-body)]">
             {role === "owner"
-              ? "Acompanhe os Pedidos e mantenha os acessos da Equipe sob controle."
+              ? "Acompanhe os Pedidos e mantenha Cardápio e Equipe sob controle."
               : "Acompanhe os Pedidos e atualize o andamento da operação."}
           </p>
 
@@ -82,6 +91,7 @@ export function PanelShell({
             </p>
           </OutlineContainer>
         </section>
+        {menu}
         {team}
       </div>
     </main>
@@ -183,7 +193,7 @@ function apiUrl() {
 export default async function AdminHome({
   searchParams,
 }: {
-  searchParams: Promise<{ equipe?: string }>;
+  searchParams: Promise<{ cardapio?: string; equipe?: string }>;
 }) {
   const supabase = await createClient();
   const { error: claimsError } = await supabase.auth.getClaims();
@@ -209,8 +219,33 @@ export default async function AdminHome({
     throw new Error("membership_context_response_invalid");
   }
 
+  let menu: ReactNode = undefined;
   let team: ReactNode = undefined;
   if (role.data === "owner") {
+    const { cardapio, equipe } = await searchParams;
+    const menuResponse = await fetch(new URL("/menu", apiUrl()), {
+      cache: "no-store",
+      headers,
+    });
+    if (!menuResponse.ok) throw new Error("menu_request_failed");
+    const menuPayload = (await menuResponse.json()) as {
+      categories?: MenuCategory[];
+      items?: MenuItem[];
+    };
+    if (!Array.isArray(menuPayload.categories) || !Array.isArray(menuPayload.items)) {
+      throw new Error("menu_response_invalid");
+    }
+    const menuFeedback = Object.hasOwn(menuFeedbackMessages, cardapio ?? "")
+      ? (cardapio as MenuFeedback)
+      : undefined;
+    menu = (
+      <MenuPanel
+        categories={menuPayload.categories}
+        feedback={menuFeedback}
+        items={menuPayload.items}
+      />
+    );
+
     const membersResponse = await fetch(new URL("/team/members", apiUrl()), {
       cache: "no-store",
       headers,
@@ -222,12 +257,11 @@ export default async function AdminHome({
     if (!Array.isArray(membersPayload.members)) {
       throw new Error("team_members_response_invalid");
     }
-    const { equipe } = await searchParams;
     const feedback = Object.hasOwn(feedbackMessages, equipe ?? "")
       ? (equipe as TeamFeedback)
       : undefined;
     team = <TeamPanel feedback={feedback} members={membersPayload.members} />;
   }
 
-  return <PanelShell role={role.data} team={team} />;
+  return <PanelShell menu={menu} role={role.data} team={team} />;
 }

@@ -21,6 +21,13 @@ describe("shell do Painel", () => {
     expect(html).not.toContain("Configurações");
   });
 
+  it("oferece ao Dono a âncora de Cardápio na navegação", () => {
+    const html = renderToStaticMarkup(<PanelShell role="owner" />);
+
+    expect(html).toContain("Cardápio");
+    expect(html).toContain("#cardapio");
+  });
+
   it("oferece ao Dono a gestão funcional da Equipe", () => {
     const html = renderToStaticMarkup(
       <TeamPanel

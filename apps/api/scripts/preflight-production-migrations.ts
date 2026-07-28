@@ -109,7 +109,12 @@ try {
             relforcerowsecurity AS "forceRowSecurity"
           FROM pg_class
           WHERE relnamespace = 'public'::regnamespace
-            AND relname IN ('stores', 'store_members')
+            AND relname IN (
+              'stores',
+              'store_members',
+              'menu_categories',
+              'menu_items'
+            )
         `;
         assertIsolationCatalog({ role, tables });
 

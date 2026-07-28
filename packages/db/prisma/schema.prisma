@@ -40,6 +40,8 @@ model Store {
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   members     StoreMember[]
+  categories  MenuCategory[]
+  items       MenuItem[]
 
   @@map("stores")
 }
@@ -56,4 +58,36 @@ model StoreMember {
   @@unique([storeId, userId])
   @@index([userId])
   @@map("store_members")
+}
+
+model MenuCategory {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String     @map("store_id") @db.Uuid
+  name      String
+  sortOrder Int        @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items     MenuItem[]
+
+  @@index([storeId, sortOrder])
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId        String       @map("store_id") @db.Uuid
+  categoryId     String       @map("category_id") @db.Uuid
+  name           String
+  description    String       @default("")
+  priceCents     Int          @map("price_cents")
+  imageObjectKey String?      @map("image_object_key")
+  available      Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category       MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([storeId, categoryId])
+  @@map("menu_items")
 }
