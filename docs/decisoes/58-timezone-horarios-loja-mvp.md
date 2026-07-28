@@ -1,6 +1,6 @@
 # Decisão: timezone e períodos de funcionamento da Loja no MVP
 
-**Data:** jul/2026 · **Status:** decidido · **Sessão:** gate temporal Ticket 07  
+**Data:** jul/2026 · **Status:** decidido · **Sessão:** gate temporal Ticket 07
 **Depende de:** [41](41-loja-fechada-pause-checkout.md)
 
 ## Decisão
