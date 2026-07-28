@@ -37,3 +37,11 @@
   com owner explícito no Ticket 03, pois são pré-condições do wiring
   JWT/JWKS/membership; a nota de execução foi resolvida pelo harness/Actions do
   Ticket 02, sem skip, mock ou fallback local.
+- 2026-07-28 — Correção da cronologia da prova RLS na PR #4:
+  - No HEAD `57087cc`, a CI estava vermelha porque o runner não possuía as
+    credenciais necessárias; a prova remota não chegou a executar.
+  - A partir de `170fbab`, o workflow passou a consumir no passo `pnpm test` os
+    GitHub Actions secrets configurados manualmente, e a prova RLS passou a
+    executar de fato na CI contra Foode Delivery.
+  - A CI de `170fbab` confirmou `store-routes.test.ts` com dois testes
+    executados, API 4/4 sem skip e cleanup independente com resíduo zero.
