@@ -12,9 +12,10 @@
 | Apps | **3 serviços Railway:** `web`, `admin`, `api` |
 | Dados / Auth | **Projeto Supabase novo** (Postgres + Auth + RLS) |
 | Secrets | **Só** Railway variables + Supabase dashboard — nada no git |
-| Envs | **Sem** `development` / `preview` / staging no MVP — fluxo: PR → CI verde → **produção** |
-| CI | **GitHub Actions** em PR (lint / typecheck / testes mínimos) |
-| Deploy | Integração **Railway** após CI ok (validar rápido; trabalhar em produção com rede de CI) |
+| Envs | **Sem** `development` / `preview` / staging no MVP — fluxo: PR → CI verde → **produção** ([44](44-producao-only-sandbox-migrations-ci.md)) |
+| CI | **GitHub Actions** em PR (lint / typecheck / testes mínimos / **validação de migrations Prisma**) — [44](44-producao-only-sandbox-migrations-ci.md) |
+| Deploy | Integração **Railway** após CI ok |
+| Gateways em dev | **Sandbox** Woovi/Asaas — [44](44-producao-only-sandbox-migrations-ci.md) |
 
 ### DNS (padrão)
 
@@ -36,7 +37,7 @@ Derivados da stack já fechada; **não** incluir Redis só por hábito.
 | Ledger piloto D+32 | Tabela/relatório interno | [24](24-arquitetura-pagamentos.md) |
 | Logs | **Stdout Railway** + **Sentry** (free tier) | [29](29-libs-ops-acrescimos-mvp.md) |
 | Backup DB | **Backup do plano Supabase** (US$20) | Não inventar pipeline |
-| Migrations | Prisma migrate na pipeline/deploy da `api` (com cuidado em prod) | ORM [21](21-banco-orm-multitenant.md) |
+| Migrations | Prisma migrate na pipeline/deploy da `api` **após** check de migrations no GH Actions ([44](44-producao-only-sandbox-migrations-ci.md)) | ORM [21](21-banco-orm-multitenant.md) |
 | Healthcheck | `/health` na `api` (+ opcional nos Next) | Deploy Railway |
 
 ### Serviços Railway (contagem)

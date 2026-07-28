@@ -1,41 +1,37 @@
 # Grilling (grill-with-docs) — lacunas e contrapontos
 
-**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** I → [43](43-guest-conta-vinculo-pedido.md)  
+**Data:** jul/2026 · **Status:** rodada em andamento · **Último fechamento:** J → [44](44-producao-only-sandbox-migrations-ci.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md)
 
 ## Fechado nesta sessão
 
-… · H [42] · **I [43]**
+… · I [43] · **J [44]** (prod-only, sandbox PSP, migrations no CI, sem is_demo)
 
 ## Mapa restante
 
 | # | Tema | Tipo |
 | --- | --- | --- |
-| **J** | Sem staging | Contraponto |
-| K | Fidelidade MVP | Lacuna |
-| M | Homologação BaaS | Comercial |
+| **K** | Fidelidade MVP | Lacuna |
+| M | Homologação BaaS | Comercial (fora do grilling de código) |
 
 ---
 
-## Rodada atual — próxima pergunta: **J**
+## Rodada atual — próxima pergunta: **K** (última lacuna de produto desta fronteira)
 
-### J) Sem staging Railway — o que mitiga risco de webhooks/migrations?
+### K) Fidelidade no MVP — o que shipar?
 
-**Contexto:** [25](25-hospedagem-ci-ops.md) = PR → CI → produção; sem staging. Pagamentos + RLS aumentam risco.
+**Contexto:** [11](11-planos-por-faturamento-features-completas.md) cita cupons + “10 pedidos = 1 item”; [10](10-checkout-guest-e-conta.md) sugere cupom de boas-vindas ao criar conta.
 
-**Recomendação:** Manter **sem** staging completo, com mitigação:
+**Recomendação:** MVP enxuto:
 
-1. Sandbox/test mode Woovi e Asaas enquanto disponível  
-2. Loja interna / `is_demo` no mesmo Postgres para QA  
-3. Migrations expand/contract cuidadosas  
-4. Reabrir staging só após incidente real no piloto
+1. Opt-in do **dono** (desligado por padrão).  
+2. Ao criar conta pós-pedido: **cupom / desconto em R$** configurável (não “item grátis” estruturado).  
+3. Contador “N pedidos = recompensa” = **pós-MVP** se o cupom simples validar engajamento.
+
+Evita modelar estoque de “item grátis” e regras de elegibilidade no dia 1.
 
 ---
-
-## Fila
-
-**K** fidelidade MVP = cupom/desconto simples opt-in (não “10 pedidos = item grátis” complexo).
 
 ## Próximo passo
 
-Founder responde **J**.
+Founder responde **K**. Depois, grilling de lacunas desta fronteira fecha (M = comercial paralelo).
