@@ -16,12 +16,19 @@
 
 ## Comments
 
-- 2026-07-28 — Implementação local concluída nos commits `9d6308e`,
-  `d683021` e `fc563a4`. Evidências executadas: `pnpm lint`, `pnpm typecheck`,
+- 2026-07-28 — Implementação local concluída nos commits `5d29bc8`,
+  `1d0c29e` e `f8895d3`. Evidências executadas: `pnpm lint`, `pnpm typecheck`,
   `pnpm test:quality`, `pnpm build`, validação de migrations e testes
   temporais/UI específicos. O preflight transacional e `pnpm test` completo
   foram tentados, mas as provas remotas não iniciaram porque este worktree
   isolado não possui as credenciais do Supabase de produção. Por isso os itens
   que dependem de persistência/RLS/RBAC reais permanecem desmarcados até a
   rodada final após o Ticket 06.
+- 2026-07-28 — Gate de integração executado sobre `origin/master`
+  `8175c4a`: conflitos de schema, DB, API, preflight, Painel e Storefront foram
+  resolvidos preservando Tickets 06 e 07. `pnpm lint`, `pnpm typecheck`,
+  `pnpm test:quality`, `pnpm build`, `pnpm db:migrations:validate` e as provas
+  cruzadas de carrinho/customizações + estados da Loja passaram localmente. Os
+  quatro itens pendentes continuam desmarcados até evidência factual do CI
+  Node 24 com migration/preflight/integração no Supabase real.
 
