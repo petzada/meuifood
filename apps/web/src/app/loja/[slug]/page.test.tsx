@@ -120,6 +120,8 @@ describe("storefront /loja/[slug]", () => {
                 id: "cat-1",
                 items: [
                   {
+                    additionals: [],
+                    complementGroups: [],
                     description: "",
                     id: "item-1",
                     imageUrl: null,
