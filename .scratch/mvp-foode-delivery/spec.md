@@ -138,6 +138,7 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 - O Storefront resolve a Loja pelo Slug, obtém o Cardápio público e nunca aceita `store_id` arbitrário do navegador como fonte de tenant.
 - O Cardápio contém categorias, itens, imagens, disponibilidade, Complementos e Adicionais. Imagens usam Cloudflare R2 com autorização compatível com `store_id` e RBAC (PUT pré-assinado na API; leitura pública via base URL/CDN).
 - Loja fora do horário e Pausa são estados distintos. Ambos mantêm o Cardápio visível e bloqueiam a criação de Pedido; não existe agendamento.
+- Todas as Lojas do MVP usam `America/Sao_Paulo` via TZDB IANA. Períodos persistem horário civil local `HH:MM`, pertencem a um único dia e exigem `início < fim`; não há timezone por Loja nem período overnight.
 - Fulfillment é Delivery ou Retirada opcional. Cada Loja escolhe taxa por bairro ou Taxa fixa, nunca os dois modos simultaneamente. Distância/km não entra.
 - O servidor recalcula preços, escolhas e taxa de Delivery; totais enviados pelo navegador não são fonte de verdade.
 - O checkout aceita exclusivamente `pix`, `credit` e `on_delivery`. Débito e Voucher não aparecem como flags inativas ou alternativas escondidas.
