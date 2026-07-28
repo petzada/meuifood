@@ -22,3 +22,19 @@
   - **Migration nunca destrói dado:** `DROP TABLE`/`DROP COLUMN` com dado, `DELETE` ou `TRUNCATE` de dado de negócio exigem decisão explícita nova. Apagar as próprias fixtures sintéticas de teste não é destruição de dado.
   - **CI vermelho relacionado ao banco bloqueia a aplicação:** nada é aplicado em produção sem o verde.
 
+- 2026-07-28 — Implementação inicial e CI da PR #6 (`30380168302`) verdes no
+  DAG `quality → migrate → integration`: histórico local/remoto 4/4, API 22/22
+  e resíduos zero. As revisões internas independentes foram persistidas em
+  `verification/reports/04-standards.md` e `04-spec.md`.
+- 2026-07-28 — Achados internos procedentes corrigidos: política de migration
+  fail-closed com allowlist estrutural, descoberta canônica única, Actions v6 e
+  preflight no próprio Supabase. O preflight aplica apenas o SQL pendente em uma
+  transação, injeta a mesma `Prisma.TransactionClient` no Fastify para provar
+  HTTP/RLS/RBAC e força rollback antes de `db push`; consulta independente exige
+  zero resíduos.
+- 2026-07-28 — Dois gates externos continuam abertos e impedem
+  `needs-review`/`done`: confirmar manualmente **Wait for CI** e ausência de
+  pre-deploy migration nos três serviços Railway; e decidir como tornar
+  obrigatório o gate de `master`, pois branch protection e rulesets retornam
+  HTTP 403 no plano atual do repositório privado. Documentação não substitui
+  essas confirmações.

@@ -10,8 +10,9 @@
 | Item | MVP |
 | --- | --- |
 | Banco | **Um só**: Supabase de produção. Sem Postgres local, Docker, banco efêmero, simulador ou fallback |
-| Aplicação de migration | **Automática no banco remoto de produção**, e **só** depois de GitHub Actions verde |
-| CI vermelho relacionado ao banco | **Nada é aplicado** — falha do CI bloqueia a migration |
+| Aplicação de migration | **Automática no banco remoto de produção**, e **só** depois de `quality` e preflight transacional verdes |
+| Preflight | Migrations pendentes são aplicadas numa transação isolada no próprio Supabase, provas HTTP/RLS/RBAC usam a mesma visão e o fluxo sempre executa rollback antes do `db push` |
+| CI vermelho relacionado ao banco | **Nenhuma mudança é persistida** — falha de validação, preflight ou integração bloqueia a próxima ação |
 | Migrations destrutivas | **Proibidas.** Nenhuma migration apaga dados reais: sem `DROP TABLE`/`DROP COLUMN` com dado, sem `DELETE`/`TRUNCATE` de dados de negócio. Mudança destrutiva exige **nova decisão explícita** |
 | Ferramenta | Migrations aplicadas via **Supabase CLI**; **Prisma continua owner do schema e da autoria das migrations** ([21](21-banco-orm-multitenant.md)) — a CLI é o mecanismo de aplicação, não a fonte do schema |
 | Testes Seam 1 / Seam 2 | Rodam contra o **Supabase de produção**, com fixtures de **identificador sintético único** e **cleanup exato e verificado** |
@@ -20,7 +21,9 @@
 ## Por quê
 
 - Founder solo com ambiente único ([44](44-producao-only-sandbox-migrations-ci.md): só produção, sem staging/preview). Um banco só elimina divergência de policies entre ambientes — RLS é a invariante mais cara de errar e a que menos tolera "funcionava no local".
-- O risco de dado fica contido pelas duas travas combinadas: CI verde obrigatório **antes** de aplicar, e migration que nunca destrói dado.
+- O risco de dado fica contido pelas travas combinadas: validação estática
+  fail-closed, prova do efeito das migrations pendentes com rollback obrigatório,
+  CI verde antes de persistir e migration que nunca destrói dado.
 
 ## Rejeitado
 

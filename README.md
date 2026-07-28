@@ -91,18 +91,22 @@ Na Actions, os passos remotos recebem somente os secrets necessários e falham
 explicitamente se algum estiver ausente; a suíte nunca faz skip, usa mock ou
 recorre a banco local. Quando uma migration altera RLS/RBAC, o workflow executa
 um DAG fail-closed: `quality` (sem secrets) precisa ficar verde antes de
-`migrate`; `migrate` faz dry-run e aplica pela Supabase CLI no projeto Foode
-Delivery; somente depois `integration` executa toda a prova HTTP/RLS/RBAC em
-produção. Esse fluxo usa `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
+`migrate`; `migrate` aplica as migrations pendentes dentro de uma única
+transação no Supabase, prova HTTP/RLS/RBAC pela mesma sessão e força rollback.
+Somente depois desse preflight verde ele faz dry-run e aplica pela Supabase CLI
+no projeto Foode Delivery. Por fim, `integration` repete toda a prova
+HTTP/RLS/RBAC sobre o schema persistido em produção. Esse fluxo usa
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
 `SUPABASE_POOLER_URL` e `BUSINESS_DATABASE_URL` nos passos mínimos indicados no
 workflow.
 
-A validação local rejeita migrations vazias, timestamps duplicados e comandos
-destrutivos (`DROP TABLE`, `DROP COLUMN`, `DELETE` e `TRUNCATE`) antes de qualquer
-secret ser disponibilizado. Ao final da integração, uma conexão administrativa
+A validação local usa uma allowlist estrutural e rejeita migrations vazias,
+timestamps duplicados, remoções fora de `DROP INDEX`, `DELETE`, `TRUNCATE`,
+bypass de RLS, SQL dinâmico e controle transacional antes de qualquer secret ser
+disponibilizado. Ao final da integração, uma conexão administrativa
 independente da suíte compara o histórico remoto com as migrations Prisma e
-exige zero resíduos das fixtures `fixture-rls-*` e `fixture-rbac-*`, mesmo quando
-os testes falham.
+exige zero resíduos das fixtures `fixture-preflight-*`, `fixture-rls-*` e
+`fixture-rbac-*`, mesmo quando os testes falham.
 
 Nos três serviços Railway (`web`, `admin` e `api`), o autodeploy da branch
 `master` deve manter **Wait for CI** habilitado. Assim, o deploy permanece em

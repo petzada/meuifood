@@ -64,77 +64,66 @@ export function createAdministrativeDatabase(databaseUrl: string) {
 }
 
 async function inStoreContext<Result>(
-  prisma: PrismaClient,
+  transaction: Prisma.TransactionClient,
   context: StoreContext,
   operation: (transaction: Prisma.TransactionClient) => Promise<Result>,
 ) {
-  return await prisma.$transaction(
-    async (transaction) => {
-      await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
-      await transaction.$executeRaw`
-        SELECT set_config('app.current_store_id', ${context.storeId}, true)
-      `;
+  await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
+  await transaction.$executeRaw`
+    SELECT set_config('app.current_store_id', ${context.storeId}, true)
+  `;
 
-      return await operation(transaction);
-    },
-    { maxWait: 15_000, timeout: 15_000 },
-  );
+  return await operation(transaction);
 }
 
-export function createBusinessDatabase(
-  databaseUrl: string,
+export function createTransactionalBusinessDatabase(
+  transaction: Prisma.TransactionClient,
 ): BusinessDatabase {
-  const prisma = prismaClient(databaseUrl);
-
   return {
     async addOperator(context, userId) {
       return await inStoreContext(
-        prisma,
+        transaction,
         context,
-        async (transaction) =>
-          await transaction.storeMember.create({
+        async (storeTransaction) =>
+          await storeTransaction.storeMember.create({
             data: { role: "operator", storeId: context.storeId, userId },
             select: { id: true, role: true, userId: true },
           }),
       );
     },
     async assertRestrictedRuntime() {
-      await prisma.$transaction(async (transaction) => {
-        await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
-        const [runtime] = await transaction.$queryRaw<
-          Array<{
-            bypassRls: boolean;
-            roleName: string;
-            sessionUserName: string;
-          }>
-        >`
-          SELECT
-            current_user::text AS "roleName",
-            session_user::text AS "sessionUserName",
-            COALESCE(
-              (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user),
-              true
-            ) AS "bypassRls"
-        `;
-        if (
-          !runtime ||
-          runtime.roleName !== "foode_business" ||
-          runtime.bypassRls ||
-          runtime.sessionUserName === "postgres"
-        ) {
-          throw new Error("business_database_role_is_not_restricted");
-        }
-      });
+      await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
+      const [runtime] = await transaction.$queryRaw<
+        Array<{
+          bypassRls: boolean;
+          roleName: string;
+          sessionUserName: string;
+        }>
+      >`
+        SELECT
+          current_user::text AS "roleName",
+          session_user::text AS "sessionUserName",
+          COALESCE(
+            (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user),
+            true
+          ) AS "bypassRls"
+      `;
+      if (
+        !runtime ||
+        runtime.roleName !== "foode_business" ||
+        runtime.bypassRls ||
+        runtime.sessionUserName === "postgres"
+      ) {
+        throw new Error("business_database_role_is_not_restricted");
+      }
     },
-    async close() {
-      await prisma.$disconnect();
-    },
+    async close() {},
     async findStore(context, storeId) {
       return await inStoreContext(
-        prisma,
+        transaction,
         context,
-        async (transaction) =>
-          await transaction.store.findUnique({
+        async (storeTransaction) =>
+          await storeTransaction.store.findUnique({
             where: { id: storeId },
             select: storeViewSelect,
           }),
@@ -142,10 +131,10 @@ export function createBusinessDatabase(
     },
     async listTeamMembers(context) {
       return await inStoreContext(
-        prisma,
+        transaction,
         context,
-        async (transaction) =>
-          await transaction.storeMember.findMany({
+        async (storeTransaction) =>
+          await storeTransaction.storeMember.findMany({
             orderBy: [{ role: "asc" }, { createdAt: "asc" }],
             select: { id: true, role: true, userId: true },
           }),
@@ -153,10 +142,10 @@ export function createBusinessDatabase(
     },
     async removeOperator(context, membershipId) {
       return await inStoreContext(
-        prisma,
+        transaction,
         context,
-        async (transaction) => {
-          const result = await transaction.storeMember.deleteMany({
+        async (storeTransaction) => {
+          const result = await storeTransaction.storeMember.deleteMany({
             where: {
               id: membershipId,
               role: "operator",
@@ -169,13 +158,13 @@ export function createBusinessDatabase(
     },
     async resolveMembershipContext(userId) {
       return await inStoreContext(
-        prisma,
+        transaction,
         { storeId: "00000000-0000-0000-0000-000000000000" },
-        async (transaction) => {
-          await transaction.$executeRaw`
+        async (storeTransaction) => {
+          await storeTransaction.$executeRaw`
             SELECT set_config('app.current_user_id', ${userId}, true)
           `;
-          const memberships = await transaction.storeMember.findMany({
+          const memberships = await storeTransaction.storeMember.findMany({
             where: { userId },
             select: { id: true, role: true, storeId: true, userId: true },
             take: 2,
@@ -194,20 +183,71 @@ export function createBusinessDatabase(
     },
     async updateStoreName(context, storeId, name) {
       return await inStoreContext(
-        prisma,
+        transaction,
         context,
-        async (transaction) => {
-          const result = await transaction.store.updateMany({
+        async (storeTransaction) => {
+          const result = await storeTransaction.store.updateMany({
             where: { id: storeId },
             data: { name },
           });
           if (result.count === 0) return null;
 
-          return await transaction.store.findUnique({
+          return await storeTransaction.store.findUnique({
             where: { id: storeId },
             select: storeViewSelect,
           });
         },
+      );
+    },
+  };
+}
+
+export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
+  const prisma = prismaClient(databaseUrl);
+  const withDatabase = async <Result>(
+    operation: (database: BusinessDatabase) => Promise<Result>,
+  ) =>
+    await prisma.$transaction(
+      async (transaction) =>
+        await operation(createTransactionalBusinessDatabase(transaction)),
+      { maxWait: 15_000, timeout: 15_000 },
+    );
+
+  return {
+    async addOperator(context, userId) {
+      return await withDatabase((database) =>
+        database.addOperator(context, userId),
+      );
+    },
+    async assertRestrictedRuntime() {
+      await withDatabase((database) => database.assertRestrictedRuntime());
+    },
+    async close() {
+      await prisma.$disconnect();
+    },
+    async findStore(context, storeId) {
+      return await withDatabase((database) =>
+        database.findStore(context, storeId),
+      );
+    },
+    async listTeamMembers(context) {
+      return await withDatabase((database) =>
+        database.listTeamMembers(context),
+      );
+    },
+    async removeOperator(context, membershipId) {
+      return await withDatabase((database) =>
+        database.removeOperator(context, membershipId),
+      );
+    },
+    async resolveMembershipContext(userId) {
+      return await withDatabase((database) =>
+        database.resolveMembershipContext(userId),
+      );
+    },
+    async updateStoreName(context, storeId, name) {
+      return await withDatabase((database) =>
+        database.updateStoreName(context, storeId, name),
       );
     },
   };

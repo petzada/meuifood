@@ -7,7 +7,26 @@ const destructiveStatements = [
   },
   { label: "DELETE", pattern: /\bdelete\s+from\b/iu },
   { label: "TRUNCATE", pattern: /\btruncate(?:\s+table)?\b/iu },
+  { label: "DROP não autorizado", pattern: /\bdrop\s+(?!index\b)/iu },
+  {
+    label: "DISABLE ROW LEVEL SECURITY",
+    pattern: /\bdisable\s+row\s+level\s+security\b/iu,
+  },
+  {
+    label: "NO FORCE ROW LEVEL SECURITY",
+    pattern: /\bno\s+force\s+row\s+level\s+security\b/iu,
+  },
+  { label: "BYPASSRLS", pattern: /\bbypassrls\b/iu },
+  { label: "SUPERUSER", pattern: /\bsuperuser\b/iu },
+  { label: "SQL dinâmico EXECUTE", pattern: /\bexecute\b/iu },
 ];
+
+const transactionControl =
+  /^\s*(?:begin\b|start\s+transaction\b|commit\b|rollback\b|end\b)/iu;
+const allowedStatement =
+  /^\s*(?:create\s+(?:type|table|(?:unique\s+)?index|policy)\b|alter\s+(?:table|role)\b|grant\b|drop\s+index\b|do\b)/iu;
+const allowedGrant =
+  /^\s*grant\s+(?:(?:(?:usage|select|insert|update|delete)\s*,?\s*)+on\b[\s\S]*\bto\s+foode_business\b|foode_business\s+to\s+postgres\b)/iu;
 
 function stripCommentsAndLiterals(sql) {
   return sql
@@ -17,10 +36,23 @@ function stripCommentsAndLiterals(sql) {
     .replace(/"(?:""|[^"])*"/gu, '""');
 }
 
+function stripDollarQuotedBodies(sql) {
+  return sql
+    .replace(/\$\$[\s\S]*?\$\$/gu, " ")
+    .replace(/\$([a-z_][a-z0-9_]*)\$[\s\S]*?\$\1\$/giu, " ");
+}
+
 export function validateMigrationSql(name, sql) {
   const executableSql = stripCommentsAndLiterals(sql).trim();
   if (!executableSql) {
     throw new Error(`Migration ${name} não contém SQL executável.`);
+  }
+
+  const transactionSql = stripDollarQuotedBodies(executableSql);
+  if (transactionSql.split(";").some((statement) => transactionControl.test(statement))) {
+    throw new Error(
+      `Migration ${name} contém controle transacional não autorizado.`,
+    );
   }
 
   for (const sqlStatement of executableSql.split(";")) {
@@ -31,6 +63,18 @@ export function validateMigrationSql(name, sql) {
             "uma nova decisão explícita é obrigatória.",
         );
       }
+    }
+  }
+
+  for (const sqlStatement of transactionSql.split(";")) {
+    if (/^\s*grant\b/iu.test(sqlStatement) && !allowedGrant.test(sqlStatement)) {
+      throw new Error(`Migration ${name} contém GRANT não autorizado.`);
+    }
+    if (sqlStatement.trim() && !allowedStatement.test(sqlStatement)) {
+      throw new Error(
+        `Migration ${name} contém estrutura SQL não autorizada: ` +
+          `${sqlStatement.trim().split(/\s+/u).slice(0, 3).join(" ")}.`,
+      );
     }
   }
 }

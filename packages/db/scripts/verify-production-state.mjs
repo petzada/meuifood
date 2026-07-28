@@ -1,17 +1,16 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
 
+import { readCanonicalMigrations } from "./canonical-migrations.mjs";
 import { assertProductionState } from "./production-state.mjs";
 
 const { Client } = pg;
 const databasePackageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(databasePackageRoot, "../..");
-const prismaMigrations = resolve(databasePackageRoot, "prisma/migrations");
-const migrationDirectoryPattern = /^(\d{14})_[a-z0-9_]+$/u;
 
 function requiredSecret(source, name) {
   const line = source
@@ -61,12 +60,9 @@ async function productionDatabaseUrl() {
   return url.toString();
 }
 
-const entries = await readdir(prismaMigrations, { withFileTypes: true });
-const localVersions = entries
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => migrationDirectoryPattern.exec(entry.name)?.[1])
-  .filter(Boolean)
-  .sort();
+const localVersions = (await readCanonicalMigrations()).map(
+  (migration) => migration.version,
+);
 
 const client = new Client({ connectionString: await productionDatabaseUrl() });
 await client.connect();
@@ -82,6 +78,7 @@ try {
          from public.stores
         where slug like 'fixture-rls-%'
            or slug like 'fixture-rbac-%'
+           or slug like 'fixture-preflight-%'
      )
      select
        (select count(*)::integer from fixture_stores) as stores,
