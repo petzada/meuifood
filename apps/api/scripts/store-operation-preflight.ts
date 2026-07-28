@@ -12,6 +12,14 @@ function assertStatus(
   }
 }
 
+function periodSignature(
+  periods: Array<{ closesAt: string; opensAt: string; weekday: number }>,
+) {
+  return periods
+    .map(({ closesAt, opensAt, weekday }) => `${weekday}|${opensAt}|${closesAt}`)
+    .join(",");
+}
+
 export async function proveStoreOperationPreflight({
   app,
   setCurrentTime,
@@ -95,8 +103,8 @@ export async function proveStoreOperationPreflight({
   });
   assertStatus("horários válidos permanecem após rejeições", ownOperation, 200);
   if (
-    JSON.stringify(ownOperation.json().operation.periods) !==
-    JSON.stringify(expectedPeriods)
+    periodSignature(ownOperation.json().operation.periods) !==
+    periodSignature(expectedPeriods)
   ) {
     throw new Error("Rejeição temporal deixou persistência parcial.");
   }
@@ -147,8 +155,8 @@ export async function proveStoreOperationPreflight({
     publicPaused.json().storefront.operation.state !== "paused" ||
     publicPaused.json().storefront.operation.checkout.blockReason !==
       "paused" ||
-    JSON.stringify(pause.json().operation.periods) !==
-      JSON.stringify(expectedPeriods)
+    periodSignature(pause.json().operation.periods) !==
+      periodSignature(expectedPeriods)
   ) {
     throw new Error("Pausa alterou horários ou projeção pública.");
   }
