@@ -1,6 +1,6 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
-**Data:** jul/2026 · **Status:** em andamento · **Último:** #4 → [50](50-migracao-piloto-para-baas.md)  
+**Data:** jul/2026 · **Status:** em andamento · **Último:** #5 → [51](51-contato-informativo-asaas-piloto.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI
 
@@ -28,6 +28,7 @@ Entendimento compartilhado sobre:
 | 2 | [48](48-gatilho-piloto-validado-ltda.md) — Gatilho = julgamento founder (ponta a ponta); sem métrica mínima escrita |
 | 3 | [49](49-novos-clientes-so-apos-baas.md) — Só 1 comerciante-modelo até BaaS; próximos esperam + ativação manual |
 | 4 | [50](50-migracao-piloto-para-baas.md) — Piloto migra para subconta `baas`; novos já nascem em `baas` |
+| 5 | [51](51-contato-informativo-asaas-piloto.md) — Contato informativo no piloto; homologação só na LTDA |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -43,4 +44,4 @@ Entendimento compartilhado sobre:
 
 ## Próxima pergunta
 
-**#5** — Contato com gerente Asaas durante o piloto MEI (antes da LTDA).
+**#6** — Contingência se BaaS atrasar muito após a LTDA aberta / pedido formal.

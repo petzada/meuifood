@@ -19,5 +19,5 @@ Tese de produto e stack via pesquisa de mercado + grilling (jul/2026).
 - **Tese de produto:** concluída ([16](decisoes/16-tese-produto-fechada.md)); números comerciais vigentes em [31](decisoes/31-definicao-operacional-gmv.md) / [32](decisoes/32-taxas-e-assinatura-fixa-unica.md).
 - **Tese de stack + libs/ops:** concluída ([28](decisoes/28-tese-stack-mvp.md), [29](decisoes/29-libs-ops-acrescimos-mvp.md)).
 - **Grilling lacunas/contrapontos:** **fechado** ([30](decisoes/30-grilling-lacunas-e-contrapontos.md) · decisões [31](decisoes/31-definicao-operacional-gmv.md)–[45](decisoes/45-cupom-conta-e-fidelidade-pos-mvp.md)).
-- **Grilling homologação BaaS / MEI vs LTDA:** **em andamento** ([46](decisoes/46-grilling-homologacao-baas-mei-ltda.md) · [47](decisoes/47-tomadora-baas-ltda-apos-piloto.md)–[50](decisoes/50-migracao-piloto-para-baas.md)).
+- **Grilling homologação BaaS / MEI vs LTDA:** **em andamento** ([46](decisoes/46-grilling-homologacao-baas-mei-ltda.md) · [47](decisoes/47-tomadora-baas-ltda-apos-piloto.md)–[51](decisoes/51-contato-informativo-asaas-piloto.md)).
 - **Implementação:** ainda não iniciada — próximo quando o founder pedir bootstrap.
