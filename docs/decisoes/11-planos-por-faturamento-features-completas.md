@@ -53,6 +53,6 @@ Homologação BaaS deixa de ser “fase 2 vaga” e vira **pré-requisito antes 
 
 ## Precificação
 
-Ver [12-faixas-mensalidade-por-gmv.md](12-faixas-mensalidade-por-gmv.md).
+Ver [32-taxas-e-assinatura-fixa-unica.md](32-taxas-e-assinatura-fixa-unica.md) (R$ 179 fixo; faixas [12](12-faixas-mensalidade-por-gmv.md) revogadas).
 
-Taxas PIX/cartão **iguais** para todos (já definidas em [06](06-gateways-taxas-e-tiers.md)).
+Taxas PIX/crédito/débito/voucher — [32](32-taxas-e-assinatura-fixa-unica.md). GMV — [31](31-definicao-operacional-gmv.md).

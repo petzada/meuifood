@@ -1,6 +1,6 @@
 # Foode Delivery
 
-SaaS web mobile-first de canal próprio (cardápio + pedidos + gestão) para PME de delivery local. A loja traz o consumidor; a plataforma cobra mensalidade por GMV e taxas de pagamento (PIX/cartão), sem comissão de marketplace.
+SaaS web mobile-first de canal próprio (cardápio + pedidos + gestão) para PME de delivery local. A loja traz o consumidor; a plataforma cobra assinatura fixa (com teto de GMV online) e taxas de pagamento (PIX/cartão/débito/voucher), sem comissão de marketplace.
 
 ## Language
 
@@ -77,27 +77,35 @@ _Avoid_: Pickup (salvo código), balcão-only
 ### Pagamento e receita
 
 **GMV**:
-Faturamento da loja **na plataforma** no mês de referência — base da faixa de mensalidade. Definição operacional fina: ver grilling de lacunas (ainda em confirmação).
-_Avoid_: Receita da plataforma, faturamento do CNPJ fora do canal, GMV de marketplace
+Soma do total pago pelo consumidor em pedidos **Concluídos** no mês (itens + adicionais + taxa de delivery), só em meios **online** (PIX, crédito, débito, voucher). Exclui pagamento na entrega e cancelados. Usado para o teto da assinatura.
+_Avoid_: Receita da plataforma, faturamento do CNPJ fora do canal, GMV de marketplace, GMV com maquininha na entrega
 
 **Mensalidade**:
-Assinatura SaaS em três faixas por GMV (R$ 129 / 179 / 229); mesmas features em todas.
-_Avoid_: Plano por feature, comissão, take-rate de vitrine
+Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF) até R$ 15.000 de GMV; acima disso, negociação comercial. Mesmas features para quem assina.
+_Avoid_: Plano por feature, três faixas 129/179/229, comissão, take-rate de vitrine
 
 **Taxa de pagamento**:
-MDR cobrado do comerciante no PIX/cartão online (markup de gateway), distinto de mensalidade e de comissão de marketplace.
+MDR cobrado do comerciante no PIX/crédito/débito/voucher online (markup de gateway), distinto de mensalidade e de comissão de marketplace.
 _Avoid_: Comissão, take-rate (salvo conversa de marketplace)
 
 **PIX**:
-Pagamento online via Woovi; taxa ao lojista 1,29% D+0.
+Pagamento online via Woovi; taxa ao lojista **1,19%** D+1.
 _Avoid_: OpenPix (marca legacy), boleto
 
-**Cartão online**:
-Pagamento online via Asaas; Visa/Master e Elo/outros com tabelas distintas.
+**Crédito online**:
+Pagamento online via Asaas; **3,29% + R$ 0,79** D+33, qualquer bandeira à vista.
 _Avoid_: Maquininha (isso é na entrega)
 
+**Débito online**:
+Pagamento online via Asaas; **2,19% + R$ 0,55** D+4.
+_Avoid_: Débito na maquininha do lojista
+
+**Voucher online**:
+Pagamento online via Asaas (vale/voucher); **3,89%** D+16.
+_Avoid_: Cupom de fidelidade Foode (é outro conceito)
+
 **Pagamento na entrega**:
-Consumidor paga fora da plataforma (maquininha/dinheiro do lojista); sem take da Foode.
+Consumidor paga fora da plataforma (maquininha/dinheiro do lojista); sem take da Foode e **fora do GMV**.
 _Avoid_: COD genérico sem contexto
 
 **Modo de cobrança**:

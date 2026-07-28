@@ -1,19 +1,13 @@
 # Decisão: faixas de mensalidade por GMV
 
-**Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling #12
+**Data:** jul/2026 · **Status:** superseded por [32](32-taxas-e-assinatura-fixa-unica.md) · **Sessão:** grilling #12
 
-## Decisão
+## Histórico (revogado)
 
-Mensalidade conforme **faturamento (GMV) na plataforma** da loja (no MVP = 1 comerciante / 1 unidade — [20](20-tenant-mvp-sem-workspaces.md); regra operacional no mês de referência — tipicamente mês anterior).
+Três faixas R$ 129 / 179 / 229 por cortes R$ 3,5k / 9,5k — **não vigente**.
 
-| GMV mensal na plataforma | Mensalidade |
-| --- | --- |
-| Até **R$ 3.500,00** | **R$ 129,00** |
-| De **R$ 3.501,00** até **R$ 9.500,00** | **R$ 179,00** |
-| Acima de **R$ 9.501,00** | **R$ 229,00** |
+## Vigente
 
-## Notas
-
-- Features **iguais** em todas as faixas ([11](11-planos-por-faturamento-features-completas.md)).  
-- Âncora competitiva: comerciante-modelo em **R$ 200** → faixas 1 e 2 ficam abaixo; faixa 3 ainda sob Anota mid típico.  
-- Upgrade/downgrade de faixa: recalcular com base no GMV apurado (detalhe de cobrança/prorata na fase de billing/stack).
+- Assinatura **R$ 179/mês** (ou anual com 20% OFF) até **R$ 15.000** GMV — [32](32-taxas-e-assinatura-fixa-unica.md).  
+- Definição de GMV — [31](31-definicao-operacional-gmv.md).  
+- Features completas — [11](11-planos-por-faturamento-features-completas.md) (mantido).

@@ -1,18 +1,18 @@
 # Decisão: arquitetura de pagamentos (Woovi + Asaas)
 
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #7  
-**Produto (não reabrir):** [06](06-gateways-taxas-e-tiers.md) · **Pesquisa ops:** [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md)
+**Produto (números):** [32](32-taxas-e-assinatura-fixa-unica.md) · **Pesquisa ops:** [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md)
 
 ## Decisão
 
 ### Forma do código
 
-- Módulo **`payments`** na `api` com **providers** plugáveis: **`woovi`** (PIX) e **`asaas`** (cartão).
+- Módulo **`payments`** na `api` com **providers** plugáveis: **`woovi`** (PIX) e **`asaas`** (crédito, débito, voucher).
 - Cada loja tem **modo de cobrança** (enum/config), sem hardcode permanente do piloto no checkout:
 
 | Modo | Quando | Comportamento |
 | --- | --- | --- |
-| **`pilot_platform`** | **Só 1º cliente** | Credenciais **MEI do founder** (env/secrets); money-in na conta Foode; **ledger de repasse** (cartão D+32; PIX conforme Woovi) |
+| **`pilot_platform`** | **Só 1º cliente** | Credenciais **MEI do founder** (env/secrets); money-in na conta Foode; **ledger de repasse** (crédito ~D+33; débito D+4; voucher D+16; PIX D+1) |
 | **`baas`** | Pós-homologação | Subcontas/split Asaas (e segregação Woovi se necessário) |
 | **`merchant_own_account`** | Fallback se BaaS atrasar | API keys do lojista; Foode não custodia |
 

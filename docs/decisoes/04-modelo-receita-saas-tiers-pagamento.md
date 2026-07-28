@@ -1,29 +1,19 @@
 # Decisão: modelo de receita (SaaS + pagamento online)
 
-**Data:** jul/2026 · **Status:** decidido (estrutura + números) · **Sessão:** grilling #4–#6  
-**Detalhe numérico:** ver [06-gateways-taxas-e-tiers.md](06-gateways-taxas-e-tiers.md)
+**Data:** jul/2026 · **Status:** estrutura mantida · **números superseded** por [32](32-taxas-e-assinatura-fixa-unica.md) · **Sessão:** grilling #4–#6  
 
-## Decisão
+## Decisão (estrutura — vigente)
 
-### 1) Assinatura — SaaS fixo por **faixa de faturamento** (3 preços)
+### 1) Assinatura — SaaS (sem comissão % sobre pedido)
 
-- Mesmo produto completo em todos os planos (ver [11](11-planos-por-faturamento-features-completas.md)).  
-- Diferenciação = **quanto a loja fatura**, não o que o software libera.  
-- Valores R$ e cortes de GMV: **fechados** em [12](12-faixas-mensalidade-por-gmv.md) (R$ 129 / 179 / 229).
+- Mesmo produto completo ([11](11-planos-por-faturamento-features-completas.md)).  
+- **Números vigentes:** assinatura fixa **R$ 179**/mês até R$ 15k GMV (+ anual 20% OFF) — [32](32-taxas-e-assinatura-fixa-unica.md).  
+- Faixas 129/179/229 ([12](12-faixas-mensalidade-por-gmv.md)) — **revogadas**.
 
-Objetivo: preço agressivo vs Anota/Goomer + previsibilidade; **sem comissão % sobre pedido** como modelo de produto.
+### 2) Pagamento online — taxas transparentes (markup de gateway ≠ comissão de marketplace)
 
-### 2) Pagamento online — taxas pequenas, transparentes
-
-Detalhe vigente: [06](06-gateways-taxas-e-tiers.md).
-
-| Meio | Decisão |
-| --- | --- |
-| **PIX** | **Woovi**, plano **0,80%** (mín. R$ 0,50 / máx. R$ 5) → cobrir lojista **1,29%** D+0 |
-| **Cartão** | **Asaas** → Visa/Master **3,29%+R$0,69** · Elo/outros **4,49%+R$0,69** · piloto MEI / depois BaaS |
-| **Na entrega** | Fora do take da plataforma (maquininha do lojista) |
-
-Nota: markup de gateway **não** é comissão de marketplace; a mensalidade SaaS continua sem % sobre o pedido como modelo de produto.
+Detalhe vigente: [32](32-taxas-e-assinatura-fixa-unica.md) · GMV: [31](31-definicao-operacional-gmv.md).  
+Histórico: [06](06-gateways-taxas-e-tiers.md).
 
 ### 3) Explicitamente fora
 
@@ -31,8 +21,8 @@ Nota: markup de gateway **não** é comissão de marketplace; a mensalidade SaaS
 - Intermediar taxa da maquininha “pagamento na entrega”.
 - Mercado Pago como MDR principal de cartão.
 
-## Em aberto (não bloqueia tese — ciclo stack/ops)
+## Em aberto
 
-- Confirmar no contrato Asaas se Elo entra na mesma tabela de crédito à vista.  
+- Comportamento de produto acima de R$ 15k GMV (grilling).  
 - Homologação BaaS (execução).  
-- Checklist fino de permissões dono vs operador (ADR).
+- Checklist fino de permissões dono vs operador (grilling D).

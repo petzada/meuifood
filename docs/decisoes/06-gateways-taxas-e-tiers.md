@@ -1,6 +1,8 @@
 # Decisão: gateways, taxas ao lojista e tiers
 
-**Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling #6 (fechamento)
+**Data:** jul/2026 · **Status:** superseded por [32](32-taxas-e-assinatura-fixa-unica.md) · **Sessão:** grilling #6 (fechamento)  
+
+> **Números abaixo são históricos.** Vigente: PIX **1,19% D+1** · crédito **3,29%+R$0,79 D+33** · débito/voucher · assinatura **R$ 179** até R$ 15k GMV — ver [32](32-taxas-e-assinatura-fixa-unica.md) e GMV [31](31-definicao-operacional-gmv.md).
 
 ## 1) PIX — Woovi: plano escolhido
 

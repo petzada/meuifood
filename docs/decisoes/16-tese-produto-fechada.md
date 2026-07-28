@@ -1,10 +1,11 @@
 # Tese de produto — Foode Delivery (ciclo grilling concluído)
 
-**Data:** jul/2026 · **Status:** entendimento compartilhado · **Marca:** provisional
+**Data:** jul/2026 · **Status:** entendimento compartilhado · **Marca:** provisional  
+**Comercial vigente:** [31](31-definicao-operacional-gmv.md) · [32](32-taxas-e-assinatura-fixa-unica.md)
 
 ## Em uma frase
 
-SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para PME de delivery local: a loja traz o cliente; mensalidade por GMV; PIX/cartão com taxas abaixo do SaaS atual do comerciante-modelo; complementar ao iFood/Keeta.
+SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para PME de delivery local: a loja traz o cliente; assinatura fixa com teto de GMV online; PIX/crédito/débito/voucher com taxas Foode; complementar ao iFood/Keeta.
 
 ## Decisões (índice)
 
@@ -13,18 +14,20 @@ SaaS web **mobile-first** de canal próprio (cardápio + pedidos + gestão) para
 | 01 | [tipo produto](01-tipo-produto-saas-canal-proprio.md) | SaaS canal próprio, não marketplace |
 | 02 | [ICP](02-publico-icp-pme-delivery.md) | PME que já opera delivery |
 | 03 | [posicionamento](03-posicionamento-complementar-e-troca-saas.md) | Complementar marketplace + troca de SaaS |
-| 04 | [receita](04-modelo-receita-saas-tiers-pagamento.md) | Mensalidade + taxas de pagamento |
+| 04 | [receita](04-modelo-receita-saas-tiers-pagamento.md) | Estrutura SaaS + MDR (números → 32) |
 | 05 | [GTM](05-escopo-geografico-e-gtm-local.md) | Cidade/região, venda consultiva, ~10 lojas |
-| 06 | [gateways/taxas](06-gateways-taxas-e-tiers.md) | Woovi PIX · Asaas cartão · números |
+| 06 | [gateways/taxas](06-gateways-taxas-e-tiers.md) | Histórico — **superseded** por [32](32-taxas-e-assinatura-fixa-unica.md) |
 | 07 | [canal consumidor](07-canal-consumidor-web-mobile-first.md) | Link web; wa.me no MVP |
 | 08 | [fulfillment](08-fulfillment-delivery-e-retirada.md) | Delivery + retirada opcional |
 | 09 | [ciclo pedido](09-ciclo-pedido-status.md) | Status enxutos; iFood pós-MVP |
 | 10 | [checkout/conta](10-checkout-guest-e-conta.md) | Guest + conta + fidelidade opt-in |
-| 11 | [features + equipe](11-planos-por-faturamento-features-completas.md) | Tudo em todos os planos; dono/operador · workspaces **revogados no MVP** → [20](20-tenant-mvp-sem-workspaces.md) |
-| 12 | [faixas GMV](12-faixas-mensalidade-por-gmv.md) | R$ 129 / 179 / 229 |
+| 11 | [features + equipe](11-planos-por-faturamento-features-completas.md) | Features completas; dono/operador · workspaces → [20](20-tenant-mvp-sem-workspaces.md) |
+| 12 | [faixas GMV](12-faixas-mensalidade-por-gmv.md) | Histórico — **superseded** por [32](32-taxas-e-assinatura-fixa-unica.md) |
 | 13 | [cardápio](13-cardapio-mvp.md) | Essencial + complementos/adicionais |
 | 14 | [descoberta](14-descoberta-link-e-diretorio-parceiros.md) | Link/QR MVP; diretório parceiros depois |
 | 15 | [URL/marca](15-url-slug-e-marca-provisional.md) | `/loja/[slug]` · Foode Delivery |
+| 31 | [GMV operacional](31-definicao-operacional-gmv.md) | Só online; exclui na entrega e cancelados |
+| 32 | [taxas + assinatura](32-taxas-e-assinatura-fixa-unica.md) | Pacote comercial vigente |
 
 Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-stack-mvp.md).
 
@@ -32,28 +35,30 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 
 | Item | Valor |
 | --- | --- |
-| Mensalidade | Até R$ 3,5k GMV → **R$ 129** · R$ 3,5–9,5k → **R$ 179** · &gt; R$ 9,5k → **R$ 229** |
-| PIX ao lojista | **1,29%** D+0 (custo Woovi **0,80%** c/ piso/teto) |
-| Cartão Visa/Master | **3,29% + R$ 0,69** (Asaas; D+32) |
-| Cartão Elo/outros | **4,49% + R$ 0,69** |
+| Assinatura mensal | **R$ 179,00** (até R$ 15.000 GMV online; acima = negociar) |
+| Assinatura anual | **R$ 1.718,40** (20% OFF) |
+| PIX | **1,19%** D+1 (Woovi) |
+| Crédito à vista | **3,29% + R$ 0,79** D+33 (Asaas, qualquer bandeira) |
+| Débito | **2,19% + R$ 0,55** D+4 (Asaas) |
+| Voucher | **3,89%** D+16 (Asaas) |
 | URL loja | `https://foodedelivery.com.br/loja/[slug]` |
 
 ## Piloto vs escala (pagamentos cartão)
 
-- **1º cliente:** Asaas no MEI do founder + repasse manual D+32.  
+- **1º cliente:** Asaas no MEI do founder + repasse manual conforme settlement (crédito ~D+33).  
 - **Novos clientes:** só após **BaaS** (ou fallback conta Asaas por lojista).
 
-## Fora deste ciclo (ainda abertos / execução)
+## Fora deste ciclo / grilling aberto
 
+- Comportamento de produto acima de R$ 15k GMV.  
 - Checklist fino de permissões dono vs operador.  
-- Prorata/billing automático das faixas GMV.  
 - Homologação BaaS (execução).  
-- Confirmar tabela Elo no contrato Asaas.
+- Lacunas [30](30-grilling-lacunas-e-contrapontos.md).
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
 
-**Grilling de lacunas / contrapontos (pós-tese):** [30](30-grilling-lacunas-e-contrapontos.md) · glossário [`CONTEXT.md`](../../CONTEXT.md) · ADRs [`docs/adr/`](../adr/).
+**Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **ADRs:** [`docs/adr/`](../adr/).
 
 ## Pesquisa de mercado
 
-Em `../pesquisa/` — benchmarks; propostas antigas (ex. PIX 1,19% / tiers por feature) foram **superseded** pelas decisões acima.
+Em `../pesquisa/` — benchmarks; pacotes antigos (PIX 1,29% D+0, faixas 129/179/229, Elo 4,49%) foram **superseded** por [31](31-definicao-operacional-gmv.md) e [32](32-taxas-e-assinatura-fixa-unica.md).

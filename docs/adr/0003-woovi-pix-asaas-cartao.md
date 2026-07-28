@@ -1,7 +1,8 @@
-# Woovi para PIX e Asaas para cartão
+# Dual gateway: Woovi (PIX) + Asaas (cartão/débito/voucher)
 
-Dois providers no módulo `payments`: **Woovi (PIX)** e **Asaas (cartão)** — não um PSP único.
+Dois providers no módulo `payments`: **Woovi (PIX)** e **Asaas (crédito, débito, voucher)** — não um PSP único.
 
-Motivo de negócio: bater o MDR do comerciante-modelo (PIX 1,29% D+0 vs 1,40% D+1; cartão abaixo de 3,50%+R$0,99). Woovi vence no mix de ticket delivery no plano 0,80%; Asaas cobre cartão/MEI/caminho BaaS. Mercado Pago foi rejeitado como MDR principal de cartão. Trade-off: dois webhooks, duas contas, duas falhas — aceito porque um único PSP não batia o pacote de taxas.
+Motivo de negócio: bater MDR competitivo no mix delivery brasileiro. Taxas cobradas do comerciante vigentes em [32](../decisoes/32-taxas-e-assinatura-fixa-unica.md). Mercado Pago rejeitado como MDR principal. Trade-off: dois webhooks e duas contas — aceito porque um único PSP não cobria o pacote.
 
-Ver decisão de produto [06](../decisoes/06-gateways-taxas-e-tiers.md) e arquitetura [24](../decisoes/24-arquitetura-pagamentos.md).
+Ver arquitetura [24](../decisoes/24-arquitetura-pagamentos.md).
+

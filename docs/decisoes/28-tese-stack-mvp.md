@@ -44,7 +44,7 @@ Railway Cron                  → reconciliação (exit)
 
 ## Âncoras de produto que a stack respeita
 
-- Canal próprio web `/loja/[slug]` · guest + conta · dono/operador · PIX Woovi 1,29% · cartão Asaas · piloto MEI D+32 · features por GMV · sem workspaces no MVP · WhatsApp só `wa.me`.
+- Canal próprio web `/loja/[slug]` · guest + conta · dono/operador · PIX/crédito/débito/voucher ([32](32-taxas-e-assinatura-fixa-unica.md)) · piloto MEI · assinatura R$ 179 · sem workspaces no MVP · WhatsApp só `wa.me`.
 
 ## Próximo passo
 
