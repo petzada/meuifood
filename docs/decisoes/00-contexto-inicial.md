@@ -16,10 +16,10 @@
 - Complementar ao marketplace; concorrente de Anota/Goomer/InstaDelivery em preço + MDR + gestão.
 - GTM: uma cidade/região, onboarding consultivo, validação ~10 lojas; arquitetura sem hardcode de cidade.
 
-## Adiado para ciclo de stack / build
+## Adiado / em grilling de lacunas
 
-- Auth (magic link / provedor).
-- Checklist fino dono vs operador.
-- Detalhe de billing/prorata das faixas GMV.
-- Execução da homologação BaaS Asaas.
-- Confirmar Elo no contrato Asaas.
+- Auth (magic link / provedor) → **fechado** em [22](22-auth-lojista-e-consumidor.md).
+- Checklist fino dono vs operador, GMV operacional, cancelamento/estorno, design tokens, frete, guest→conta → [30](30-grilling-lacunas-e-contrapontos.md).
+- Detalhe de billing/prorata das faixas GMV (manual no MVP ok).
+- Execução da homologação BaaS Asaas (paralelo comercial).
+- Confirmar Elo no contrato Asaas (comercial).

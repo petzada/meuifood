@@ -48,4 +48,6 @@ Railway Cron                  → reconciliação (exit)
 
 ## Próximo passo
 
-Entendimento compartilhado **confirmado**. Gate libs/ops **fechado** ([29](29-libs-ops-acrescimos-mvp.md), pesquisa [14](../pesquisa/14-viabilidade-stack-e-libs-mvp.md)). Pronto para bootstrap de código quando o founder pedir.
+Entendimento compartilhado **confirmado**. Gate libs/ops **fechado** ([29](29-libs-ops-acrescimos-mvp.md), pesquisa [14](../pesquisa/14-viabilidade-stack-e-libs-mvp.md)).
+
+Antes do bootstrap: fechar lacunas/contrapontos em [30](30-grilling-lacunas-e-contrapontos.md) (GMV operacional, RBAC fino, cancelamento/estorno, tokens Foode vs Airbnb, frete, guest→conta). Glossário: [`CONTEXT.md`](../../CONTEXT.md). ADRs load-bearing: [`docs/adr/`](../adr/).

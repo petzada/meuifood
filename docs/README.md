@@ -1,15 +1,21 @@
 # Documentação — Foode Delivery (meuifood)
 
-Tese de produto via pesquisa de mercado + grilling (jul/2026).
+Tese de produto e stack via pesquisa de mercado + grilling (jul/2026).
 
 ## Estrutura
 
-| Pasta | Conteúdo |
+| Pasta / arquivo | Conteúdo |
 | --- | --- |
-| `pesquisa/` | Benchmarks e trade-offs (não são decisões). |
-| `decisoes/` | Decisões de produto. **Comece por** [`decisoes/16-tese-produto-fechada.md`](decisoes/16-tese-produto-fechada.md). |
+| [`CONTEXT.md`](../CONTEXT.md) | Glossário (linguagem ubíqua) — comece aqui para vocabulário. |
+| `decisoes/` | Decisões de produto e stack. Índices: [`16` tese produto](decisoes/16-tese-produto-fechada.md), [`28` tese stack](decisoes/28-tese-stack-mvp.md). |
+| `decisoes/30-…` | Grilling de **lacunas e contrapontos** (rodada aberta). |
+| `adr/` | ADRs técnicos load-bearing (por que surpreende). |
+| `pesquisa/` | Benchmarks e trade-offs (**não** são decisões). |
+| `DESIGN.md` | Referência visual (Airbnb) — ver contraponto em [30](decisoes/30-grilling-lacunas-e-contrapontos.md) e [29](decisoes/29-libs-ops-acrescimos-mvp.md). |
 
 ## Status
 
-- **Tese de produto (negócio + MVP):** concluída.
-- **Próximo ciclo:** stack, ADRs técnicos, implementação.
+- **Tese de produto:** concluída ([16](decisoes/16-tese-produto-fechada.md)).
+- **Tese de stack + libs/ops:** concluída ([28](decisoes/28-tese-stack-mvp.md), [29](decisoes/29-libs-ops-acrescimos-mvp.md)).
+- **Grilling lacunas/contrapontos:** em andamento ([30](decisoes/30-grilling-lacunas-e-contrapontos.md)) — fecha GMV, RBAC fino, cancelamento, design tokens, frete, etc. antes do bootstrap.
+- **Implementação:** ainda não iniciada.

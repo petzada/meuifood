@@ -51,6 +51,9 @@ Stack / implementação: índice canônico → [28 — tese stack MVP](28-tese-s
 - Confirmar tabela Elo no contrato Asaas.
 
 Auth (magic link / provedor) → **fechado** na stack: [22](22-auth-lojista-e-consumidor.md).
+
+**Grilling de lacunas / contrapontos (pós-tese):** [30](30-grilling-lacunas-e-contrapontos.md) · glossário [`CONTEXT.md`](../../CONTEXT.md) · ADRs [`docs/adr/`](../adr/).
+
 ## Pesquisa de mercado
 
 Em `../pesquisa/` — benchmarks; propostas antigas (ex. PIX 1,19% / tiers por feature) foram **superseded** pelas decisões acima.
