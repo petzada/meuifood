@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 — Gerenciar e publicar o Cardápio da Loja.
 
-**Status:** needs-review
+**Status:** done
 
 - [x] Dono configura períodos válidos por dia e dias fechados.
 - [x] Pausa tem efeito imediato sem alterar ou apagar horários.
@@ -35,4 +35,9 @@
   `quality` (Node 24), `migrate` (migration + preflight transacional) e
   `integration` (HTTP + Postgres/RLS/RBAC no Supabase de produção) passaram.
   Os quatro aceites pendentes foram marcados somente após essa evidência.
+- 2026-07-28 — PR #16 mergeada em
+  `bc8adff327c90fc3fbc55e218cdc8ab4d32692a6` após Composer 2.5 `PASS` no
+  HEAD `94b70f6`; run final `30408225275` verde (`quality`, `migrate`,
+  `integration`). Aceite humano registrado; Tickets 06 e 07 estão concluídos e
+  desbloqueiam o Ticket 08.
 
