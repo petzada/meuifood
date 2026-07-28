@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-28T16:45:16.293Z",
+  "updatedAt": "2026-07-28T18:17:39.230Z",
   "meta": {
-    "busySkips": 1
+    "busySkips": 0
   },
   "tickets": {
     "01": {
@@ -112,6 +112,36 @@
       "lastVerifiedAt": "2026-07-28T15:58:46.979Z",
       "runs": 1,
       "note": "CI 30373345419 e 30374025911 conferidas via gh run view; excecao de CI contida; 1 nota de glossario em nome de migration"
+    },
+    "04": {
+      "slug": "ci-migrations-producao",
+      "verdict": "pass",
+      "openFindings": 0,
+      "blockers": 0,
+      "report": ".scratch/mvp-foode-delivery/verification/reports/04-ci-migrations-producao.md",
+      "footprint": [
+        "packages/db/scripts/migration-policy.mjs",
+        "packages/db/scripts/migration-policy.test.mjs",
+        "packages/db/scripts/validate-migrations.mjs",
+        "packages/db/scripts/production-database-url.mjs",
+        "packages/db/scripts/verify-production-state.mjs",
+        "packages/db/scripts/sync-supabase-migrations.mjs",
+        "apps/api/scripts/preflight-production-migrations.ts",
+        "apps/api/scripts/migration-preflight-policy.mjs",
+        ".github/workflows/ci.yml"
+      ],
+      "footprintFiles": 9,
+      "verificationKey": "f09d8608c1e9564ec4213bde9a3335eba184f459fadf6a6bd885805e8638adde",
+      "parts": {
+        "ticket": "563680a5801621ac29e8bdf3a62efc6cf6e9b2b7d3dfbce3f9f70c10cb009ccd",
+        "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
+        "docs": "875b407d60fae4f86f300515339a8deb44b27cf7bcc90a9ab4e810eb2a598da3",
+        "scoped": "640cf1be36054ed9f32bcdbed3f98ab30c2b46679f1bdf50f44ceb7240bdfc36"
+      },
+      "headSha": "2c561c71fe27aee5187f5715cc2769c97a92cf14",
+      "lastVerifiedAt": "2026-07-28T18:17:39.230Z",
+      "runs": 1,
+      "note": "verificado em f80718d: politica fail-closed; 1 alto + 1 medio + 1 nota CORRIGIDOS pelo orquestrador em dd803ab — correcoes SEM verificacao independente; gates 1 e 2 fechados"
     }
   }
 }
