@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-28T18:17:39.230Z",
+  "updatedAt": "2026-07-28T18:34:57.543Z",
   "meta": {
     "busySkips": 0
   },
@@ -35,17 +35,17 @@
         "eslint.config.mjs"
       ],
       "footprintFiles": 21,
-      "verificationKey": "731558b29d978c8bf610875c814dd66253cd4350df95907ec6f9d42f94d382ed",
+      "verificationKey": "65a5df3b16ba0270d4efb3da0e168c24f8f3a44863c087d65bc10a2381294a80",
       "parts": {
         "ticket": "e56024273f1f9db3f8a73b1759ccd91ad065949ccac8bb547627e2306d83d76e",
         "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
-        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
-        "scoped": "ca1af2eb5b083adaccddbc33108d796437342442be1ca256dca8e20f03f9598c"
+        "docs": "875b407d60fae4f86f300515339a8deb44b27cf7bcc90a9ab4e810eb2a598da3",
+        "scoped": "a0a101aff9c3f4a93eb496544cdb234f2e986234deddaf940028ad3c5140b0c5"
       },
-      "headSha": "783d01a9721bf0e8ad5e4d234e431d7d18ed8122",
-      "lastVerifiedAt": "2026-07-28T16:13:45.929Z",
-      "runs": 5,
-      "note": "rodada 4: sem regressao apos ticket 03"
+      "headSha": "aa1a5c2527f87c8e02a252c70a61565f56261232",
+      "lastVerifiedAt": "2026-07-28T18:34:56.584Z",
+      "runs": 6,
+      "note": "rodada 5: sem regressao apos ticket 04"
     },
     "02": {
       "slug": "loja-store-id-rls",
@@ -59,23 +59,23 @@
         "packages/db/src/index.ts",
         "packages/db/src/seed.ts",
         "packages/db/prisma/seed.ts",
-        "packages/db/scripts/sync-supabase-migrations.mjs",
+        "packages/db/scripts",
         "apps/api/src/server.ts",
         "apps/api/src/store-routes.test.ts",
         ".github/workflows/ci.yml"
       ],
-      "footprintFiles": 13,
-      "verificationKey": "b0d3a3964149e211b030a1ac911e4fc0d68c64bc22c6095f08ff443793c0e3cb",
+      "footprintFiles": 22,
+      "verificationKey": "b695ab04c2b70aa997894028721e1fcd4ffb94ce23eff5ac15a953d018dec2be",
       "parts": {
         "ticket": "cf99bd387b1e4f8fd7cd662c933e39175b352ffeac56f92882bf1dad061ef38a",
         "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
-        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
-        "scoped": "11a0752ca83f1d5ffdae09b45464d29928ef0e2be63814c92826680c5f0374fb"
+        "docs": "875b407d60fae4f86f300515339a8deb44b27cf7bcc90a9ab4e810eb2a598da3",
+        "scoped": "bcd12afd87b3e13d48c8339c284c51e50215affdde54c752c90b9f22866aee37"
       },
-      "headSha": "783d01a9721bf0e8ad5e4d234e431d7d18ed8122",
-      "lastVerifiedAt": "2026-07-28T16:13:46.264Z",
-      "runs": 3,
-      "note": "rodada 3: isolamento fortalecido; 3 notas anteriores resolvidas"
+      "headSha": "aa1a5c2527f87c8e02a252c70a61565f56261232",
+      "lastVerifiedAt": "2026-07-28T18:34:57.074Z",
+      "runs": 4,
+      "note": "rodada 4: isolamento mantido apos ticket 04"
     },
     "03": {
       "slug": "auth-rbac-dono-operador",
@@ -101,17 +101,17 @@
         ".github/workflows/ci.yml"
       ],
       "footprintFiles": 21,
-      "verificationKey": "c963d673b85ee25f30437095b578a1cf1361e919d1666b43c9f03f781e293423",
+      "verificationKey": "d1208130c3f8f69bae1db20aa04b39edcdc2ccf6f143e44863b3105ab05f6ca3",
       "parts": {
-        "ticket": "4c82ace33802e3b69e6b4f1f4bd355ebd396c908e430b65d6e11d574a168048f",
+        "ticket": "2badefcbaa9f4a8ec0a0b07a6b955aaa36f93f6b789370e490978f9ba3d76072",
         "spec": "a57487c3324b678b53e8a91f7a63b80b4d4799aedc90face6b08aee3abacf768",
-        "docs": "cfba831459d32b376be99518f9efac08e57c0d55ecf136e43474859280e81ed3",
-        "scoped": "c30cb43ddc7f077fa342e3873236ab71edc93f118f62492dc890f07a8b203ad6"
+        "docs": "875b407d60fae4f86f300515339a8deb44b27cf7bcc90a9ab4e810eb2a598da3",
+        "scoped": "63806276d311db2cb123a0dfdb24d8c7b60390913019f0fe07be347d84915625"
       },
-      "headSha": "96410b95a68004f22346a6b1d2c4b48344454fe0",
-      "lastVerifiedAt": "2026-07-28T15:58:46.979Z",
-      "runs": 1,
-      "note": "CI 30373345419 e 30374025911 conferidas via gh run view; excecao de CI contida; 1 nota de glossario em nome de migration"
+      "headSha": "aa1a5c2527f87c8e02a252c70a61565f56261232",
+      "lastVerifiedAt": "2026-07-28T18:34:57.542Z",
+      "runs": 2,
+      "note": "rodada 2: sem regressao apos ticket 04"
     },
     "04": {
       "slug": "ci-migrations-producao",

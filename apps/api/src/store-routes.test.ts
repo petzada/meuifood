@@ -74,7 +74,10 @@ function syntheticTaxId() {
 }
 
 describe("isolamento de Loja pela API e RLS no Supabase de produção", { timeout: 15_000 }, () => {
-  const runId = randomBytes(8).toString("hex");
+  // Em CI, CI_RUN_ID identifica a run inteira, permitindo que a checagem de
+  // resíduo global (verify-production-state.mjs) só acuse fixtures desta
+  // execução. Fora de CI, cai para um valor aleatório.
+  const runId = process.env.CI_RUN_ID ?? randomBytes(8).toString("hex");
   const createdStoreIds: string[] = [];
   let administrativeDatabase: ReturnType<typeof createAdministrativeDatabase>;
   let businessDatabase: BusinessDatabase;
