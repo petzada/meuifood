@@ -19,6 +19,28 @@ const destructiveStatements = [
   { label: "BYPASSRLS", pattern: /\bbypassrls\b/iu },
   { label: "SUPERUSER", pattern: /\bsuperuser\b/iu },
   { label: "SQL dinâmico EXECUTE", pattern: /\bexecute\b/iu },
+  {
+    // `USING` com cast trunca ou perde dado sem apagar linha nenhuma.
+    label: "ALTER COLUMN TYPE",
+    pattern:
+      /\balter\s+table\b[\s\S]*?\balter\s+(?:column\s+)?(?:""|[a-z_][a-z0-9_]*)\s+(?:set\s+data\s+)?type\b/iu,
+  },
+  {
+    // Renomear preserva o dado, mas quebra quem lê pelo nome antigo — e a versão
+    // anterior da aplicação continua no ar durante o deploy.
+    label: "RENAME",
+    pattern: /\balter\b[\s\S]*?\brename\b/iu,
+  },
+];
+
+// Não são destrutivos: são incompatíveis com o preflight, que roda tudo em uma
+// transação e faz rollback. Sem isto o erro só aparece cru, vindo do Postgres.
+const unsupportedStatements = [
+  {
+    label: "CONCURRENTLY",
+    reason: "não pode rodar dentro do preflight transacional",
+    pattern: /\bconcurrently\b/iu,
+  },
 ];
 
 const transactionControl =
@@ -83,6 +105,14 @@ export function validateMigrationSql(name, sql) {
         throw new Error(
           `Migration ${name} contém comando destrutivo ${statement.label}; ` +
             "uma nova decisão explícita é obrigatória.",
+        );
+      }
+    }
+
+    for (const statement of unsupportedStatements) {
+      if (statement.pattern.test(sqlStatement)) {
+        throw new Error(
+          `Migration ${name} usa ${statement.label}, que ${statement.reason}.`,
         );
       }
     }

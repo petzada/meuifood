@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Autenticar Dono e Operador e aplicar RBAC.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] O workflow instala pelo lockfile e executa lint, typecheck, testes e build dos workspaces relevantes.
 - [ ] O CI sobe Postgres descartável, aplica todas as migrations do zero e roda as provas RLS/RBAC com role não privilegiada.
@@ -45,6 +45,38 @@
   banco 30/30 e API 25/25 passaram, e o verificador independente novamente
   encontrou zero fixtures sintéticas residuais. Os dois gates externos acima
   permanecem abertos; por isso o status continua `ready-for-agent`.
+- 2026-07-28 — **Gate externo 1 resolvido, com correção.** Consulta à API da
+  Railway (projeto `sparkling-embrace`) confirmou os três serviços `@foode/web`,
+  `@foode/api` e `@foode/admin` com trigger `github petzada/meuifood`,
+  `branch=master`, `env=production` e **pre-deploy `null`** — nenhum app aplica
+  migration, como a `55` e a `25` exigem. Porém **"Wait for CI" (`checkSuites`)
+  estava `false` nos três**: o deploy não esperava o CI, o que contraria a
+  premissa do ticket ("gate GitHub Actions antes dos três deploys Railway").
+  Corrigido via `deploymentTriggerUpdate` e reconferido: `checkSuites=true` nos
+  três. O banco nunca esteve exposto por isso (o job `migrate` depende de
+  `quality`), mas código reprovado podia chegar a produção.
+- 2026-07-28 — **Gate externo 2 resolvido pelo founder:** sem upgrade para GitHub
+  Pro/Team. A exceção foi formalizada em
+  `docs/decisoes/56-excecao-master-sem-branch-protection.md`, com o risco real
+  delimitado (o DAG já impede migration com `quality` vermelho; o que a exceção
+  expõe é push direto alterando o próprio `ci.yml`) e gatilhos de reabertura.
+  A `25` foi anotada reciprocamente.
+- 2026-07-28 — **Verificação externa Claude/Sonnet** (HEAD `f80718d`): política
+  confirmada **fail-closed**. Escapes testados e rejeitados: `DO` com
+  `PERFORM`/`CALL`/`UPDATE`/tag customizada, `EXECUTE`/`format()`, `CREATE
+  FUNCTION`/`PROCEDURE`/`TRIGGER` destrutivo, `DROP CONSTRAINT`/`POLICY`/
+  `SCHEMA`/`TYPE`/`OWNED`, `DISABLE RLS`/`BYPASSRLS`/`SUPERUSER`, `UPDATE` sem
+  `WHERE` e `DELETE` em CTE. Três lacunas encontradas e **corrigidas neste
+  commit**:
+  - `ALTER COLUMN ... TYPE` com cast passava sem checagem (perda silenciosa de
+    dado, sem apagar linha) — agora exige decisão explícita.
+  - `ALTER TABLE ... RENAME` passava sem checagem — agora exige decisão
+    explícita, porque a versão anterior da aplicação segue no ar durante o
+    deploy.
+  - `CONCURRENTLY` passava a validação estática e só falhava com erro cru do
+    Postgres dentro do preflight — agora é rejeitado cedo, com mensagem própria.
+  Seis casos de teste novos em `packages/db/scripts/migration-policy.test.mjs`
+  (36/36 verdes). Nenhuma migration do histórico é afetada pelas regras novas.
 - 2026-07-28 — A releitura corretiva encontrou um escape adicional em blocos
   `DO`. TDD reproduziu o caso com `PERFORM`/`CALL`/`UPDATE`; a política agora só
   aceita o bloco canônico de criação da role `foode_business` sem privilégios.

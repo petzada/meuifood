@@ -143,6 +143,32 @@ describe("política de migrations de produção", () => {
     ).not.toThrow();
   });
 
+  it.each([
+    [
+      "ALTER COLUMN TYPE",
+      'alter table "orders" alter column "total" type integer using "total"::integer;',
+    ],
+    [
+      "ALTER COLUMN TYPE",
+      'alter table "orders" alter "total" set data type numeric(10,2);',
+    ],
+    ["RENAME", 'alter table "orders" rename to "pedidos";'],
+    ["RENAME", 'alter table "orders" rename column "total" to "amount";'],
+  ])("rejeita perda silenciosa de dado ou de referência: %s", (command, sql) => {
+    expect(() =>
+      validateMigrationSql("20260728191000_silent_loss", sql),
+    ).toThrow(`comando destrutivo ${command}`);
+  });
+
+  it.each([
+    'create index concurrently "orders_store_id_idx" on "orders" ("store_id");',
+    'drop index concurrently "orders_store_id_idx";',
+  ])("rejeita cedo o que o preflight transacional não suporta: %s", (sql) => {
+    expect(() =>
+      validateMigrationSql("20260728192000_concurrently", sql),
+    ).toThrow("CONCURRENTLY, que não pode rodar dentro do preflight transacional");
+  });
+
   it("rejeita migration vazia", () => {
     expect(() =>
       validateMigrationSql("20260728200000_empty", " -- apenas comentário\n"),

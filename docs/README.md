@@ -21,4 +21,5 @@ Tese de produto e stack via pesquisa de mercado + grilling (jul/2026).
 - **Grilling lacunas/contrapontos:** **fechado** ([30](decisoes/30-grilling-lacunas-e-contrapontos.md) · decisões [31](decisoes/31-definicao-operacional-gmv.md)–[45](decisoes/45-cupom-conta-e-fidelidade-pos-mvp.md)).
 - **Grilling homologação BaaS / MEI vs LTDA:** **fechado** (confirmado) — [46](decisoes/46-grilling-homologacao-baas-mei-ltda.md) · [47](decisoes/47-tomadora-baas-ltda-apos-piloto.md)–[54](decisoes/54-implicacoes-minimas-modo-baas.md).
 - **Banco e migrations:** aplicação automática no Supabase de produção após CI verde, com migrations **não-destrutivas** — [55](decisoes/55-migrations-supabase-producao-ci.md) (supersede a linha de migrations de [44](decisoes/44-producao-only-sandbox-migrations-ci.md)).
+- **Gate de `master`:** sem branch protection (indisponível no plano) — exceção temporária autorizada em [56](decisoes/56-excecao-master-sem-branch-protection.md), com gatilhos de reabertura.
 - **Implementação:** ainda não iniciada — próximo quando o founder pedir bootstrap.

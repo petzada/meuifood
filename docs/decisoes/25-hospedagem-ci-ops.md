@@ -13,7 +13,7 @@
 | Dados / Auth | **Projeto Supabase novo** (Postgres + Auth + RLS) |
 | Secrets | **Só** Railway variables + Supabase dashboard — nada no git |
 | Envs | **Sem** `development` / `preview` / staging no MVP — fluxo: PR → CI verde → **produção** ([44](44-producao-only-sandbox-migrations-ci.md)) |
-| CI | **GitHub Actions** em PR e `push` de `master` (lint / typecheck / testes / build / **validação e aplicação de migrations Prisma**) — [55](55-migrations-supabase-producao-ci.md) |
+| CI | **GitHub Actions** em PR e `push` de `master` (lint / typecheck / testes / build / **validação e aplicação de migrations Prisma**) — [55](55-migrations-supabase-producao-ci.md). O gate de `master` é convenção, não branch protection — exceção autorizada em [56](56-excecao-master-sem-branch-protection.md) |
 | Deploy | Integração **Railway** após CI ok, com **Wait for CI** habilitado nos três serviços |
 | Gateways em dev | **Sandbox** Woovi/Asaas — [44](44-producao-only-sandbox-migrations-ci.md) |
 
