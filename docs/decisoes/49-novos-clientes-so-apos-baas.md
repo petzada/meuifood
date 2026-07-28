@@ -23,4 +23,4 @@
 
 ## Nota
 
-O enum `merchant_own_account` em [24](24-arquitetura-pagamentos.md) permanece no desenho de código como **escape hatch técnico**; **não** é o plano comercial desta sequência. Contingência se BaaS atrasar indefinidamente = pergunta em aberto do grilling (se necessário).
+O enum `merchant_own_account` em [24](24-arquitetura-pagamentos.md) permanece no desenho de código; **política comercial** = espera sem limite até BaaS — [52](52-espera-sem-limite-ate-baas.md).

@@ -29,6 +29,7 @@ Entendimento compartilhado sobre:
 | 3 | [49](49-novos-clientes-so-apos-baas.md) — Só 1 comerciante-modelo até BaaS; próximos esperam + ativação manual |
 | 4 | [50](50-migracao-piloto-para-baas.md) — Piloto migra para subconta `baas`; novos já nascem em `baas` |
 | 5 | [51](51-contato-informativo-asaas-piloto.md) — Contato informativo no piloto; homologação só na LTDA |
+| 6 | [52](52-espera-sem-limite-ate-baas.md) — Zero novos até BaaS; sem contingência comercial `merchant_own_account` |
 
 ## Fatos Asaas/Bacen (pré-grilling, docs oficiais)
 
@@ -44,4 +45,4 @@ Entendimento compartilhado sobre:
 
 ## Próxima pergunta
 
-**#6** — Contingência se BaaS atrasar muito após a LTDA aberta / pedido formal.
+**#7** — Confirmar checklist de evidências / sequência de homologação.
