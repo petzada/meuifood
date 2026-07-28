@@ -132,6 +132,10 @@ _Avoid_: “Ativar subcontas” sem homologação, sandbox como equivalente
 Julgamento manual do founder de que o comerciante-modelo opera a plataforma de ponta a ponta; gatilho para abrir a LTDA. Sem métrica mínima escrita (GMV/N pedidos).
 _Avoid_: Go/no-go automático, “4 semanas = validado” como regra
 
+**Comerciante-modelo**:
+Único comerciante do piloto (`pilot_platform`); próximos só após homologação BaaS, com ativação manual.
+_Avoid_: “Primeiro cliente” ambíguo, beta multi-loja
+
 **Ledger de repasse**:
 Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.
 _Avoid_: Extrato bancário, settlement genérico
