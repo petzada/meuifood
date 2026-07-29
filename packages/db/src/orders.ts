@@ -1,10 +1,11 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import {
   recalculateGuestPickupOrder,
   type CartLineContract,
 } from "@foode/shared";
 
+import { checkoutBlockReason } from "./checkout-gate.js";
 import type { Prisma } from "./generated/prisma/client.js";
 import type {
   FulfillmentType,
@@ -38,7 +39,6 @@ export type OrderLineView = {
 };
 
 export type OrderDetailView = {
-  accessToken: string;
   createdAt: string;
   deliveryFeeCents: number;
   fulfillmentType: FulfillmentType;
@@ -71,20 +71,38 @@ export type CreateGuestPickupOrderInput = {
   guestPhoneE164: string;
   idempotencyKey: string;
   lines: CartLineContract[];
+  /** Instant Temporal/ISO da requisição — revalidado dentro da transação. */
+  nowIso: string;
   payloadHash: string;
   storeSlug: string;
 };
 
 export type CreateGuestPickupOrderResult =
-  | { kind: "created"; order: OrderDetailView }
+  | { kind: "created"; accessToken: string; order: OrderDetailView }
   | { kind: "replay"; order: OrderDetailView }
   | { kind: "conflict" }
   | { kind: "store_not_found" }
   | { kind: "pickup_disabled" }
+  | { kind: "store_paused" }
+  | { kind: "store_outside_hours" }
   | { kind: "recalculation_failed"; error: string };
 
-function newAccessToken() {
+export type TransitionOrderResult =
+  | { kind: "updated"; order: OrderDetailView }
+  | { kind: "not_found" }
+  | { kind: "conflict" };
+
+/**
+ * Capability token: 256 bits opacos (base64url).
+ * Persistência: somente SHA-256 hex em `orders.access_token` (lookup por hash).
+ * O token bruto nunca é armazenado.
+ */
+export function mintOrderAccessToken(): string {
   return randomBytes(32).toString("base64url");
+}
+
+export function hashOrderAccessToken(rawToken: string): string {
+  return createHash("sha256").update(rawToken, "utf8").digest("hex");
 }
 
 function newPublicCode() {
@@ -137,7 +155,6 @@ const orderLineSelect = {
 } satisfies Prisma.OrderLineSelect;
 
 const orderDetailSelect = {
-  accessToken: true,
   createdAt: true,
   deliveryFeeCents: true,
   fulfillmentType: true,
@@ -158,7 +175,6 @@ const orderDetailSelect = {
 } satisfies Prisma.OrderSelect;
 
 function mapOrderDetail(order: {
-  accessToken: string;
   createdAt: Date;
   deliveryFeeCents: number;
   fulfillmentType: FulfillmentType;
@@ -185,7 +201,6 @@ function mapOrderDetail(order: {
   updatedAt: Date;
 }): OrderDetailView {
   return {
-    accessToken: order.accessToken,
     createdAt: order.createdAt.toISOString(),
     deliveryFeeCents: order.deliveryFeeCents,
     fulfillmentType: order.fulfillmentType,
@@ -226,15 +241,51 @@ export async function createGuestPickupOrderRecord(
     SELECT set_config('app.current_store_id', '', true)
   `;
 
-  const store = await transaction.store.findFirst({
+  // Lookup público (SELECT). FOR UPDATE sob RLS exige policy de UPDATE —
+  // por isso o lock vem depois de setar app.current_store_id.
+  const storeRef = await transaction.store.findFirst({
     where: { slug: input.storeSlug },
-    select: { id: true, pickupEnabled: true },
+    select: { id: true },
   });
+  if (!storeRef) return { kind: "store_not_found" };
+
+  await transaction.$executeRaw`
+    SELECT set_config('app.current_store_id', ${storeRef.id}, true)
+  `;
+
+  // Lock de linha da Loja: serializa com atualização de Pausa (UPDATE stores).
+  const lockedStores = await transaction.$queryRaw<
+    Array<{ id: string; paused: boolean; pickupEnabled: boolean }>
+  >`
+    SELECT
+      id,
+      paused,
+      pickup_enabled AS "pickupEnabled"
+    FROM stores
+    WHERE id = ${storeRef.id}::uuid
+    FOR UPDATE
+  `;
+  const store = lockedStores[0];
   if (!store) return { kind: "store_not_found" };
   if (!store.pickupEnabled) return { kind: "pickup_disabled" };
 
+  const periods = await transaction.storeOperatingPeriod.findMany({
+    orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
+    select: { closesAt: true, opensAt: true, weekday: true },
+  });
+  const block = checkoutBlockReason({
+    nowIso: input.nowIso,
+    paused: store.paused,
+    periods,
+  });
+  if (block === "paused") return { kind: "store_paused" };
+  if (block === "outside_hours") return { kind: "store_outside_hours" };
+
+  // Serializa (store_id, idempotency_key) sem abortar a transação em P2002.
   await transaction.$executeRaw`
-    SELECT set_config('app.current_store_id', ${store.id}, true)
+    SELECT pg_advisory_xact_lock(
+      hashtext(${`foode:order-idem:${store.id}:${input.idempotencyKey}`})
+    )
   `;
 
   const existing = await transaction.order.findFirst({
@@ -273,73 +324,52 @@ export async function createGuestPickupOrderRecord(
   const deliveryFeeCents = 0;
   const totalCents = recalculated.itemsTotalCents + deliveryFeeCents;
   const now = new Date();
+  const rawAccessToken = mintOrderAccessToken();
+  const accessTokenHash = hashOrderAccessToken(rawAccessToken);
 
-  try {
-    const created = await transaction.order.create({
-      data: {
-        accessToken: newAccessToken(),
-        createdAt: now,
-        deliveryFeeCents,
-        fulfillmentType: "pickup",
-        guestName: input.guestName,
-        guestPhoneE164: input.guestPhoneE164,
-        idempotencyKey: input.idempotencyKey,
-        idempotencyPayloadHash: input.payloadHash,
-        itemsTotalCents: recalculated.itemsTotalCents,
-        paymentMethod: "on_delivery",
-        publicCode: newPublicCode(),
-        status: "received",
-        storeId: store.id,
-        totalCents,
-        updatedAt: now,
-      },
-      select: { id: true },
-    });
+  const created = await transaction.order.create({
+    data: {
+      accessToken: accessTokenHash,
+      createdAt: now,
+      deliveryFeeCents,
+      fulfillmentType: "pickup",
+      guestName: input.guestName,
+      guestPhoneE164: input.guestPhoneE164,
+      idempotencyKey: input.idempotencyKey,
+      idempotencyPayloadHash: input.payloadHash,
+      itemsTotalCents: recalculated.itemsTotalCents,
+      paymentMethod: "on_delivery",
+      publicCode: newPublicCode(),
+      status: "received",
+      storeId: store.id,
+      totalCents,
+      updatedAt: now,
+    },
+    select: { id: true },
+  });
 
-    await transaction.orderLine.createMany({
-      data: recalculated.lines.map((line, index) => ({
-        additionalSnapshots: line.additionalSnapshots,
-        complementSnapshots: line.complementSnapshots,
-        createdAt: now,
-        itemName: line.itemName,
-        lineTotalCents: line.lineTotalCents,
-        menuItemId: line.menuItemId,
-        orderId: created.id,
-        quantity: line.quantity,
-        sortOrder: index,
-        storeId: store.id,
-        unitPriceCents: line.unitPriceCents,
-        updatedAt: now,
-      })),
-    });
+  await transaction.orderLine.createMany({
+    data: recalculated.lines.map((line, index) => ({
+      additionalSnapshots: line.additionalSnapshots,
+      complementSnapshots: line.complementSnapshots,
+      createdAt: now,
+      itemName: line.itemName,
+      lineTotalCents: line.lineTotalCents,
+      menuItemId: line.menuItemId,
+      orderId: created.id,
+      quantity: line.quantity,
+      sortOrder: index,
+      storeId: store.id,
+      unitPriceCents: line.unitPriceCents,
+      updatedAt: now,
+    })),
+  });
 
-    const detail = await loadOrderDetail(transaction, created.id);
-    if (!detail) {
-      throw new Error("order_persist_failed");
-    }
-    return { kind: "created", order: detail };
-  } catch (error) {
-    const code =
-      error && typeof error === "object" && "code" in error
-        ? String((error as { code: unknown }).code)
-        : "";
-    if (code !== "P2002") throw error;
-
-    const raced = await transaction.order.findFirst({
-      where: {
-        storeId: store.id,
-        idempotencyKey: input.idempotencyKey,
-      },
-      select: { id: true, idempotencyPayloadHash: true },
-    });
-    if (!raced) throw error;
-    if (raced.idempotencyPayloadHash !== input.payloadHash) {
-      return { kind: "conflict" };
-    }
-    const replay = await loadOrderDetail(transaction, raced.id);
-    if (!replay) throw error;
-    return { kind: "replay", order: replay };
+  const detail = await loadOrderDetail(transaction, created.id);
+  if (!detail) {
+    throw new Error("order_persist_failed");
   }
+  return { kind: "created", accessToken: rawAccessToken, order: detail };
 }
 
 export async function findOrderByAccessToken(
@@ -361,16 +391,18 @@ export async function findPublicOrderTracking(
   transaction: Prisma.TransactionClient,
   accessToken: string,
 ): Promise<PublicOrderTrackingView | null> {
+  const accessTokenHash = hashOrderAccessToken(accessToken);
+
   await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
   await transaction.$executeRaw`
-    SELECT set_config('app.public_order_access_token', ${accessToken}, true)
+    SELECT set_config('app.public_order_access_token', ${accessTokenHash}, true)
   `;
   await transaction.$executeRaw`
     SELECT set_config('app.current_store_id', '', true)
   `;
 
   const order = await transaction.order.findFirst({
-    where: { accessToken },
+    where: { accessToken: accessTokenHash },
     select: { id: true, storeId: true },
   });
   if (!order) return null;
@@ -445,14 +477,22 @@ export async function transitionStoreOrder(
   transaction: Prisma.TransactionClient,
   storeId: string,
   orderId: string,
+  expectedStatus: OrderStatus,
   toStatus: OrderStatus,
-): Promise<OrderDetailView | null> {
+): Promise<TransitionOrderResult> {
   const updated = await transaction.order.updateMany({
-    where: { id: orderId, storeId },
+    where: { id: orderId, storeId, status: expectedStatus },
     data: { status: toStatus },
   });
-  if (updated.count === 0) return null;
-  return await findStoreOrderDetail(transaction, storeId, orderId);
+  if (updated.count === 1) {
+    const order = await findStoreOrderDetail(transaction, storeId, orderId);
+    if (!order) return { kind: "not_found" };
+    return { kind: "updated", order };
+  }
+
+  const current = await findStoreOrderDetail(transaction, storeId, orderId);
+  if (!current) return { kind: "not_found" };
+  return { kind: "conflict" };
 }
 
 export async function loadCatalogItemsForOrder(

@@ -32,6 +32,7 @@ import {
   type OrderDetailView,
   type OrderListItemView,
   type PublicOrderTrackingView,
+  type TransitionOrderResult,
 } from "./orders.js";
 
 export type {
@@ -49,9 +50,15 @@ export type {
   CreateGuestPickupOrderInput,
   CreateGuestPickupOrderResult,
   OrderDetailView,
+  TransitionOrderResult,
   OrderLineView,
   OrderListItemView,
   PublicOrderTrackingView,
+} from "./orders.js";
+
+export {
+  hashOrderAccessToken,
+  mintOrderAccessToken,
 } from "./orders.js";
 
 export type StoreContext = {
@@ -242,8 +249,9 @@ export type BusinessDatabase = {
   transitionOrder(
     context: StoreContext,
     orderId: string,
+    expectedStatus: OrderDetailView["status"],
     toStatus: OrderDetailView["status"],
-  ): Promise<OrderDetailView | null>;
+  ): Promise<TransitionOrderResult>;
   updateAdditional(
     context: StoreContext,
     additionalId: string,
@@ -601,12 +609,13 @@ export function createTransactionalBusinessDatabase(
         listStoreOrders(storeTransaction, context.storeId),
       );
     },
-    async transitionOrder(context, orderId, toStatus) {
+    async transitionOrder(context, orderId, expectedStatus, toStatus) {
       return await inStoreContext(transaction, context, async (storeTransaction) =>
         transitionStoreOrder(
           storeTransaction,
           context.storeId,
           orderId,
+          expectedStatus,
           toStatus,
         ),
       );
@@ -1073,9 +1082,9 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.setStorePaused(context, paused),
       );
     },
-    async transitionOrder(context, orderId, toStatus) {
+    async transitionOrder(context, orderId, expectedStatus, toStatus) {
       return await withDatabase((database) =>
-        database.transitionOrder(context, orderId, toStatus),
+        database.transitionOrder(context, orderId, expectedStatus, toStatus),
       );
     },
     async updateAdditional(context, additionalId, input) {

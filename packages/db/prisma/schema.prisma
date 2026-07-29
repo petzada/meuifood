@@ -195,6 +195,7 @@ model Order {
   id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   storeId                String          @map("store_id") @db.Uuid
   publicCode             String          @map("public_code")
+  /// SHA-256 hex (64 chars) do capability token opaco; token bruto nunca é persistido.
   accessToken            String          @unique @map("access_token")
   status                 OrderStatus     @default(received)
   fulfillmentType        FulfillmentType @map("fulfillment_type")

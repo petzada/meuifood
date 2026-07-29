@@ -36,3 +36,20 @@
   Loja pausada/Retirada inativa/cross-item, Dono/Operador + snapshots imutáveis
   + isolamento cross-store) no Supabase de produção. Checklist completo com
   evidência; `Status: needs-review` para aceite humano.
+- 2026-07-28 — Correção cirúrgica pós-review Composer (mesma PR #17):
+  1. Gate de Pausa/horário/`pickup_enabled` revalidado dentro da mesma
+     transação de criação, com `SELECT … FOR UPDATE` na Loja (após setar
+     `app.current_store_id`, exigido pelo RLS) para serializar com Pausa.
+  2. Idempotência concorrente via `pg_advisory_xact_lock(hashtext(…))` —
+     sem catch de P2002 em transação abortada; testes `Promise.all` same/
+     divergent payload.
+  3. Capability token: SHA-256 hex em `orders.access_token` (semântica da
+     coluna existente; sem migration nova); bruto só na criação 201; logger
+     mascara `/public/orders/:token` em path e `msg`.
+  4. Transições atômicas `UPDATE … WHERE status = expected`; teste
+     concorrente preparing×cancelled.
+  5. 500 Guest genérico (`order_create_failed`) sem `error.message`.
+  6. Cross-store usa item real da Loja B.
+  Evidência local: lint/typecheck/test:quality/build/migrations:validate +
+  `order-routes.test.ts` (8/8) no Supabase de produção. Sem alteração de CI
+  nem reescrita de migration já aplicada. `Status: needs-review`.

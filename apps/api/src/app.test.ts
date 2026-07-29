@@ -50,4 +50,27 @@ describe("GET /health", () => {
     expect(logs).not.toContain("cookie-do-teste");
     expect(logs).not.toContain("chave-do-teste");
   });
+
+  it("mascara capability token em /public/orders/:accessToken", async () => {
+    const logLines: string[] = [];
+    const loggerDestination = new Writable({
+      write(chunk, _encoding, callback) {
+        logLines.push(String(chunk));
+        callback();
+      },
+    });
+    const app = buildApp({ loggerDestination });
+    apps.push(app);
+
+    const rawToken =
+      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUV";
+    await app.inject({
+      method: "GET",
+      url: `/public/orders/${rawToken}`,
+    });
+
+    const logs = logLines.join("");
+    expect(logs).toContain('"/public/orders/[Redacted]"');
+    expect(logs).not.toContain(rawToken);
+  });
 });

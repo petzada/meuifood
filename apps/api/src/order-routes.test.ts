@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { Writable } from "node:stream";
 
 import { Temporal } from "@js-temporal/polyfill";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -8,10 +9,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   createAdministrativeDatabase,
   createBusinessDatabase,
+  hashOrderAccessToken,
   type BusinessDatabase,
 } from "@foode/db";
 
 import { buildApp } from "./app.js";
+import { fingerprintIdempotentPayload } from "./order-idempotency.js";
 
 function requiredSecret(source: string, name: string) {
   const line = source
@@ -101,8 +104,8 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
   let ownerBUserId: string;
   let storeAId: string;
   let storeASlug: string;
-  let storeBId: string;
   let itemId: string;
+  let itemBId: string;
   let groupId: string;
   let optionId: string;
   let additionalId: string;
@@ -153,15 +156,15 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
       data: {
         billingMode: "merchant_own_account",
         name: `Fixture Order B ${runId}`,
+        pickupEnabled: true,
         slug: `fixture-order-b-${runId}`,
         taxId: syntheticTaxId(),
       },
     });
     createdStoreIds.push(storeB.id);
-    storeBId = storeB.id;
     ownerBUserId = randomUUID();
     await administrativeDatabase.storeMember.create({
-      data: { role: "owner", storeId: storeBId, userId: ownerBUserId },
+      data: { role: "owner", storeId: storeB.id, userId: ownerBUserId },
     });
 
     const app = appForOrders();
@@ -222,6 +225,29 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
       expect(additional.statusCode).toBe(201);
       additionalId = (additional.json() as { additional: { id: string } })
         .additional.id;
+
+      const categoryB = await app.inject({
+        headers: { authorization: "Bearer owner-b" },
+        method: "POST",
+        payload: { name: "Outros" },
+        url: "/menu/categories",
+      });
+      expect(categoryB.statusCode).toBe(201);
+      const categoryBId = (categoryB.json() as { category: { id: string } })
+        .category.id;
+      const itemB = await app.inject({
+        headers: { authorization: "Bearer owner-b" },
+        method: "POST",
+        payload: {
+          available: true,
+          categoryId: categoryBId,
+          name: "Item Loja B",
+          priceCents: 1500,
+        },
+        url: "/menu/items",
+      });
+      expect(itemB.statusCode).toBe(201);
+      itemBId = (itemB.json() as { item: { id: string } }).item.id;
     } finally {
       await app.close();
     }
@@ -244,10 +270,12 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
     }
   });
 
-  function appForOrders() {
+  function appForOrders(overrides: { loggerDestination?: Writable } = {}) {
     return buildApp({
       businessDatabase,
-      logger: false,
+      ...(overrides.loggerDestination
+        ? { loggerDestination: overrides.loggerDestination }
+        : { logger: false as const }),
       now: () => fixedNow ?? Temporal.Now.instant(),
       verifyAccessToken: async (token) => {
         if (token === "owner-a") return { userId: ownerAUserId };
@@ -297,17 +325,27 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
       expect(body.order.totalCents).toBe(5600);
       expect(body.order.accessToken.length).toBeGreaterThanOrEqual(32);
 
+      const stored = await administrativeDatabase.order.findFirst({
+        where: { storeId: storeAId, publicCode: body.order.publicCode },
+        select: { accessToken: true },
+      });
+      expect(stored?.accessToken).toBe(hashOrderAccessToken(body.order.accessToken));
+      expect(stored?.accessToken).not.toBe(body.order.accessToken);
+      expect(stored?.accessToken).toMatch(/^[a-f0-9]{64}$/u);
+
       const track = await app.inject({
         method: "GET",
         url: `/public/orders/${body.order.accessToken}`,
       });
       expect(track.statusCode).toBe(200);
       const trackBody = track.json() as {
-        order: { publicCode: string };
+        order: { accessToken?: string; publicCode: string };
         whatsappUrl: string | null;
       };
       expect(trackBody.order.publicCode).toBe(body.order.publicCode);
+      expect(trackBody.order.accessToken).toBeUndefined();
       expect(trackBody.whatsappUrl).toContain("wa.me/5511988887777");
+      expect(JSON.stringify(trackBody)).not.toContain(body.order.accessToken);
     } finally {
       await app.close();
     }
@@ -324,8 +362,9 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         url: `/public/stores/${storeASlug}/orders`,
       });
       expect(first.statusCode, first.body).toBe(201);
-      const firstOrder = (first.json() as { order: { accessToken: string } })
-        .order;
+      const firstOrder = (
+        first.json() as { order: { accessToken: string; publicCode: string } }
+      ).order;
 
       const replay = await app.inject({
         headers: { "idempotency-key": key },
@@ -334,9 +373,11 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         url: `/public/stores/${storeASlug}/orders`,
       });
       expect(replay.statusCode).toBe(200);
-      expect(
-        (replay.json() as { order: { accessToken: string } }).order.accessToken,
-      ).toBe(firstOrder.accessToken);
+      const replayOrder = (
+        replay.json() as { order: { accessToken?: string; publicCode: string } }
+      ).order;
+      expect(replayOrder.publicCode).toBe(firstOrder.publicCode);
+      expect(replayOrder.accessToken).toBeUndefined();
 
       const conflict = await app.inject({
         headers: { "idempotency-key": key },
@@ -355,7 +396,120 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
     }
   });
 
-  it("rejeita Loja pausada, Retirada inativa e item de outra Loja", async () => {
+  it("idempotência concorrente: mesmo payload replay; divergente conflita sem 500", async () => {
+    const app = appForOrders();
+    const sameKey = `key-conc-same-${runId}`;
+    const divergeKey = `key-conc-div-${runId}`;
+    try {
+      const [left, right] = await Promise.all([
+        app.inject({
+          headers: { "idempotency-key": sameKey },
+          method: "POST",
+          payload: validPayload({
+            guest: { name: "Concurrent Same", phone: "11955554444" },
+          }),
+          url: `/public/stores/${storeASlug}/orders`,
+        }),
+        app.inject({
+          headers: { "idempotency-key": sameKey },
+          method: "POST",
+          payload: validPayload({
+            guest: { name: "Concurrent Same", phone: "11955554444" },
+          }),
+          url: `/public/stores/${storeASlug}/orders`,
+        }),
+      ]);
+      const sameStatuses = [left.statusCode, right.statusCode].sort();
+      expect(sameStatuses).toEqual([200, 201]);
+      expect([left.statusCode, right.statusCode]).not.toContain(500);
+      const sameCount = await administrativeDatabase.order.count({
+        where: { storeId: storeAId, idempotencyKey: sameKey },
+      });
+      expect(sameCount).toBe(1);
+
+      const [firstDiv, secondDiv] = await Promise.all([
+        app.inject({
+          headers: { "idempotency-key": divergeKey },
+          method: "POST",
+          payload: validPayload({
+            guest: { name: "Concurrent A", phone: "11944443333" },
+          }),
+          url: `/public/stores/${storeASlug}/orders`,
+        }),
+        app.inject({
+          headers: { "idempotency-key": divergeKey },
+          method: "POST",
+          payload: validPayload({
+            guest: { name: "Concurrent B", phone: "11944443333" },
+          }),
+          url: `/public/stores/${storeASlug}/orders`,
+        }),
+      ]);
+      const divergeStatuses = [firstDiv.statusCode, secondDiv.statusCode].sort();
+      expect(divergeStatuses).toEqual([201, 409]);
+      expect([firstDiv.statusCode, secondDiv.statusCode]).not.toContain(500);
+      const divergeCount = await administrativeDatabase.order.count({
+        where: { storeId: storeAId, idempotencyKey: divergeKey },
+      });
+      expect(divergeCount).toBe(1);
+      const conflictBody = [firstDiv, secondDiv].find(
+        (response) => response.statusCode === 409,
+      );
+      expect((conflictBody!.json() as { error: string }).error).toBe(
+        "idempotency_key_conflict",
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("Pausa entre precheck e persistência não cria Pedido", async () => {
+    const key = `key-pause-race-${runId}`;
+    const payload = validPayload({
+      guest: { name: "Pause Race", phone: "11933332222" },
+    });
+    const payloadHash = fingerprintIdempotentPayload({
+      fulfillmentType: "pickup",
+      guest: { name: "Pause Race", phone: "5511933332222" },
+      lines: payload.lines,
+      paymentMethod: "on_delivery",
+      storeSlug: storeASlug,
+    });
+
+    // Soft precheck passaria (Loja aberta).
+    const before = await businessDatabase.findPublicStoreOperationBySlug(
+      storeASlug,
+    );
+    expect(before?.paused).toBe(false);
+
+    await administrativeDatabase.store.update({
+      data: { paused: true },
+      where: { id: storeAId },
+    });
+
+    const result = await businessDatabase.createGuestPickupOrder({
+      guestName: "Pause Race",
+      guestPhoneE164: "5511933332222",
+      idempotencyKey: key,
+      lines: payload.lines as never,
+      nowIso: fixedNow.toString(),
+      payloadHash,
+      storeSlug: storeASlug,
+    });
+    expect(result.kind).toBe("store_paused");
+
+    const createdCount = await administrativeDatabase.order.count({
+      where: { storeId: storeAId, idempotencyKey: key },
+    });
+    expect(createdCount).toBe(0);
+
+    await administrativeDatabase.store.update({
+      data: { paused: false },
+      where: { id: storeAId },
+    });
+  });
+
+  it("rejeita Loja pausada, Retirada inativa e item real de outra Loja", async () => {
     const app = appForOrders();
     try {
       await administrativeDatabase.store.update({
@@ -402,7 +556,7 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
             {
               additionalIds: [],
               complementSelections: {},
-              itemId: randomUUID(),
+              itemId: itemBId,
               quantity: 1,
             },
           ],
@@ -413,6 +567,7 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
       expect((foreignItem.json() as { error: string }).error).toBe(
         "item_not_found",
       );
+      expect(itemBId).not.toBe(itemId);
     } finally {
       await app.close();
     }
@@ -430,6 +585,9 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         url: `/public/stores/${storeASlug}/orders`,
       });
       expect(created.statusCode, created.body).toBe(201);
+      const createdToken = (
+        created.json() as { order: { accessToken: string } }
+      ).order.accessToken;
 
       const listOwner = await app.inject({
         headers: { authorization: "Bearer owner-a" },
@@ -467,6 +625,9 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         url: `/orders/${orderId}/transitions`,
       });
       expect(prepare.statusCode).toBe(200);
+      expect(
+        JSON.stringify(prepare.json()),
+      ).not.toContain(createdToken);
 
       const invalid = await app.inject({
         headers: { authorization: "Bearer operator-a" },
@@ -496,13 +657,103 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
       expect(detail.statusCode).toBe(200);
       const detailBody = detail.json() as {
         order: {
+          accessToken?: string;
           lines: Array<{ itemName: string; unitPriceCents: number }>;
           totalCents: number;
         };
       };
+      expect(detailBody.order.accessToken).toBeUndefined();
       expect(detailBody.order.lines[0]?.itemName).toBe("Burger");
       expect(detailBody.order.lines[0]?.unitPriceCents).toBe(2800);
       expect(detailBody.order.totalCents).toBe(5600);
+      expect(JSON.stringify(detailBody)).not.toContain(createdToken);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("transições concorrentes não sobrescrevem estado terminal", async () => {
+    const app = appForOrders();
+    try {
+      const created = await app.inject({
+        headers: { "idempotency-key": `key-toctou-${runId}` },
+        method: "POST",
+        payload: validPayload({
+          guest: { name: "Toctou", phone: "11922221111" },
+        }),
+        url: `/public/stores/${storeASlug}/orders`,
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const list = await app.inject({
+        headers: { authorization: "Bearer owner-a" },
+        method: "GET",
+        url: "/orders",
+      });
+      const orderId = (
+        list.json() as { orders: Array<{ id: string; guestName: string }> }
+      ).orders.find((order) => order.guestName === "Toctou")!.id;
+
+      const [toPreparing, toCancelled] = await Promise.all([
+        app.inject({
+          headers: { authorization: "Bearer operator-a" },
+          method: "POST",
+          payload: { to: "preparing" },
+          url: `/orders/${orderId}/transitions`,
+        }),
+        app.inject({
+          headers: { authorization: "Bearer owner-a" },
+          method: "POST",
+          payload: { to: "cancelled" },
+          url: `/orders/${orderId}/transitions`,
+        }),
+      ]);
+      const statuses = [toPreparing.statusCode, toCancelled.statusCode].sort();
+      expect(statuses).toEqual([200, 409]);
+
+      const detail = await app.inject({
+        headers: { authorization: "Bearer owner-a" },
+        method: "GET",
+        url: `/orders/${orderId}`,
+      });
+      const finalStatus = (detail.json() as { order: { status: string } }).order
+        .status;
+      expect(["preparing", "cancelled"]).toContain(finalStatus);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("logger não registra capability token bruto na URL de tracking", async () => {
+    const logLines: string[] = [];
+    const loggerDestination = new Writable({
+      write(chunk, _encoding, callback) {
+        logLines.push(String(chunk));
+        callback();
+      },
+    });
+    const app = appForOrders({ loggerDestination });
+    try {
+      const created = await app.inject({
+        headers: { "idempotency-key": `key-log-token-${runId}` },
+        method: "POST",
+        payload: validPayload({
+          guest: { name: "Log Token", phone: "11911110000" },
+        }),
+        url: `/public/stores/${storeASlug}/orders`,
+      });
+      expect(created.statusCode).toBe(201);
+      const token = (
+        created.json() as { order: { accessToken: string } }
+      ).order.accessToken;
+
+      await app.inject({
+        method: "GET",
+        url: `/public/orders/${token}`,
+      });
+
+      const logs = logLines.join("");
+      expect(logs).toContain('"/public/orders/[Redacted]"');
+      expect(logs).not.toContain(token);
     } finally {
       await app.close();
     }

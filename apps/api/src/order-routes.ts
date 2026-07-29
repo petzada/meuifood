@@ -50,7 +50,6 @@ type RegisterOrderRoutesOptions = {
 
 function publicConsumerOrder(order: OrderDetailView) {
   return {
-    accessToken: order.accessToken,
     createdAt: order.createdAt,
     deliveryFeeCents: order.deliveryFeeCents,
     fulfillmentType: order.fulfillmentType,
@@ -111,6 +110,7 @@ export function registerPublicOrderRoutes(
         return reply.code(400).send({ error: "invalid_phone" });
       }
 
+      const requestNow = now();
       const operationConfig =
         await businessDatabase.findPublicStoreOperationBySlug(slug);
       if (!operationConfig) {
@@ -118,7 +118,7 @@ export function registerPublicOrderRoutes(
       }
       const operation = calculateStoreOperation({
         ...operationConfig,
-        now: now(),
+        now: requestNow,
       });
       if (!operation.checkout.allowed) {
         return reply.code(409).send({
@@ -146,13 +146,13 @@ export function registerPublicOrderRoutes(
           guestPhoneE164: phone.e164,
           idempotencyKey,
           lines: body.data.lines,
+          nowIso: requestNow.toString(),
           payloadHash,
           storeSlug: slug,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "order_create_failed";
-        return reply.code(500).send({ error: "order_create_failed", message });
+        request.log.error({ err: error }, "order_create_failed");
+        return reply.code(500).send({ error: "order_create_failed" });
       }
 
       if (result.kind === "store_not_found") {
@@ -161,6 +161,12 @@ export function registerPublicOrderRoutes(
       if (result.kind === "pickup_disabled") {
         return reply.code(409).send({ error: "pickup_disabled" });
       }
+      if (result.kind === "store_paused") {
+        return reply.code(409).send({ error: "store_paused" });
+      }
+      if (result.kind === "store_outside_hours") {
+        return reply.code(409).send({ error: "store_outside_hours" });
+      }
       if (result.kind === "conflict") {
         return reply.code(409).send({ error: "idempotency_key_conflict" });
       }
@@ -168,10 +174,16 @@ export function registerPublicOrderRoutes(
         return reply.code(409).send({ error: result.error });
       }
 
-      const status = result.kind === "created" ? 201 : 200;
-      return reply
-        .code(status)
-        .send({ order: publicConsumerOrder(result.order) });
+      if (result.kind === "created") {
+        return reply.code(201).send({
+          order: {
+            ...publicConsumerOrder(result.order),
+            accessToken: result.accessToken,
+          },
+        });
+      }
+
+      return reply.code(200).send({ order: publicConsumerOrder(result.order) });
     },
   );
 
@@ -281,12 +293,16 @@ export function registerStaffOrderRoutes(
       const updated = await businessDatabase.transitionOrder(
         context,
         orderId.data,
+        current.status,
         body.data.to,
       );
-      if (!updated) {
+      if (updated.kind === "not_found") {
         return reply.code(404).send({ error: "order_not_found" });
       }
-      return reply.code(200).send({ order: staffOrder(updated) });
+      if (updated.kind === "conflict") {
+        return reply.code(409).send({ error: "invalid_transition" });
+      }
+      return reply.code(200).send({ order: staffOrder(updated.order) });
     },
   );
 }
