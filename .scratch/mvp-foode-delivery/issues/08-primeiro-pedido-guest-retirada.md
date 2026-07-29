@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 — Configurar Complementos e montar o carrinho; 07 — Aplicar horários e Pausa no Canal próprio.
 
-**Status:** needs-review
+**Status:** done
 
 - [x] Guest informa nome e telefone, não precisa de e-mail ou conta e não informa endereço para Retirada.
 - [x] A Loja precisa ter Retirada ativa e estar aberta e sem Pausa no momento da criação.
@@ -55,3 +55,9 @@
   `30412754349` no HEAD `a4c3207`: quality/migrate/integration verdes.
   Sem alteração de CI nem reescrita de migration já aplicada.
   `Status: needs-review`.
+- 2026-07-29 — PR #17 mergeada em
+  `613038e4a6ac6abafdc4a9eb95c8887a0b9cf4ab` após revalidação Composer 2.5
+  `PASS` no HEAD `6ef74bc`; run final `30413076849` verde (`quality`,
+  `migrate`, `integration`). Aceite humano registrado. Dívida não bloqueadora:
+  replay idempotente HTTP 200 sem o token one-shot deve receber mensagem
+  específica no Storefront, sem reemitir a capability.
