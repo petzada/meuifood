@@ -12,7 +12,8 @@ import {
   type CatalogItemForCart,
 } from "@foode/shared";
 import { OutlineContainer } from "@foode/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 export type PublicAdditional = {
   id: string;
@@ -274,16 +275,232 @@ function ItemCustomizer({
   );
 }
 
-function CartPreview({
+function checkoutErrorMessage(error: string | undefined) {
+  switch (error) {
+    case "invalid_phone":
+      return "Informe um telefone celular válido com DDD.";
+    case "store_paused":
+      return "A Loja está em Pausa. Tente novamente mais tarde.";
+    case "store_outside_hours":
+      return "A Loja está fora do horário de funcionamento.";
+    case "pickup_disabled":
+      return "Retirada não está disponível nesta Loja.";
+    case "idempotency_key_conflict":
+      return "Esta tentativa conflitou com outro Pedido. Atualize e tente de novo.";
+    case "item_unavailable":
+    case "item_not_found":
+    case "additional_unavailable":
+    case "invalid_additional":
+    case "invalid_complement_option":
+    case "missing_required_complement":
+    case "quantity_invalid":
+    case "empty_cart":
+      return "Revise o carrinho: algum item ou escolha ficou indisponível.";
+    default:
+      return "Não foi possível concluir o Pedido. Tente novamente.";
+  }
+}
+
+function GuestCheckoutForm({
+  apiUrl,
   cart,
+  checkoutAllowed,
+  onSuccess,
+  pickupEnabled,
+  storeSlug,
+}: {
+  apiUrl: string;
+  cart: CartContract;
+  checkoutAllowed: boolean;
+  onSuccess: () => void;
+  pickupEnabled: boolean;
+  storeSlug: string;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const idempotencyKeyRef = useRef<string | null>(null);
+  const attemptFingerprintRef = useRef<string | null>(null);
+
+  if (!pickupEnabled) {
+    return (
+      <OutlineContainer className="mt-4 p-5">
+        <h3 className="text-lg font-bold text-[var(--color-ink)]">Checkout</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-body)]">
+          Retirada não está disponível nesta Loja no momento.
+        </p>
+      </OutlineContainer>
+    );
+  }
+
+  if (!checkoutAllowed) {
+    return (
+      <OutlineContainer className="mt-4 p-5">
+        <h3 className="text-lg font-bold text-[var(--color-ink)]">Checkout</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-body)]">
+          O checkout está bloqueado. A Loja precisa estar aberta e sem Pausa para
+          concluir o Pedido.
+        </p>
+      </OutlineContainer>
+    );
+  }
+
+  async function submitCheckout(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedName || !trimmedPhone) {
+      setError("Informe nome e telefone para continuar.");
+      return;
+    }
+
+    const fingerprint = JSON.stringify({
+      lines: cart.lines,
+      name: trimmedName,
+      phone: trimmedPhone,
+    });
+    if (attemptFingerprintRef.current !== fingerprint) {
+      idempotencyKeyRef.current = crypto.randomUUID();
+      attemptFingerprintRef.current = fingerprint;
+    }
+    const idempotencyKey = idempotencyKeyRef.current;
+    if (!idempotencyKey) {
+      setError("Não foi possível iniciar o Pedido. Tente novamente.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        new URL(
+          `/public/stores/${encodeURIComponent(storeSlug)}/orders`,
+          apiUrl,
+        ),
+        {
+          body: JSON.stringify({
+            fulfillmentType: "pickup",
+            guest: { name: trimmedName, phone: trimmedPhone },
+            lines: cart.lines,
+            paymentMethod: "on_delivery",
+          }),
+          headers: {
+            "content-type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          method: "POST",
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        order?: { accessToken?: string };
+      };
+      if (!response.ok || !payload.order?.accessToken) {
+        setError(checkoutErrorMessage(payload.error));
+        return;
+      }
+      onSuccess();
+      router.push(
+        `/loja/${encodeURIComponent(storeSlug)}/pedido/${encodeURIComponent(payload.order.accessToken)}`,
+      );
+    } catch {
+      setError("Não foi possível concluir o Pedido. Tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <OutlineContainer className="mt-4 p-5">
+      <h3 className="text-lg font-bold text-[var(--color-ink)]">
+        Finalizar Pedido
+      </h3>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">
+        Guest checkout — sem conta e sem endereço.
+      </p>
+
+      <dl className="mt-4 grid gap-2 text-sm">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
+          <dt className="text-[var(--color-muted)]">Modalidade</dt>
+          <dd className="font-bold text-[var(--color-ink)]">Retirada</dd>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
+          <dt className="text-[var(--color-muted)]">Pagamento</dt>
+          <dd className="font-bold text-[var(--color-ink)]">Pagamento na entrega</dd>
+        </div>
+      </dl>
+
+      <form className="mt-5 grid gap-4" onSubmit={submitCheckout}>
+        <label className="block text-sm font-bold text-[var(--color-ink)]">
+          Nome
+          <input
+            autoComplete="name"
+            className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+            onChange={(event) => {
+              setName(event.target.value);
+              setError(null);
+            }}
+            placeholder="Seu nome"
+            required
+            value={name}
+          />
+        </label>
+        <label className="block text-sm font-bold text-[var(--color-ink)]">
+          Telefone
+          <input
+            autoComplete="tel"
+            className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+            inputMode="tel"
+            onChange={(event) => {
+              setPhone(event.target.value);
+              setError(null);
+            }}
+            placeholder="(11) 99999-9999"
+            required
+            value={phone}
+          />
+        </label>
+
+        {error ? (
+          <p className="text-sm font-bold text-[var(--color-error)]" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <button
+          className="min-h-12 w-full rounded-full bg-[var(--color-primary)] px-5 font-bold text-white active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={submitting || cart.lines.length === 0}
+          type="submit"
+        >
+          {submitting ? "Enviando Pedido…" : "Confirmar Pedido"}
+        </button>
+      </form>
+    </OutlineContainer>
+  );
+}
+
+function CartPreview({
+  apiUrl,
+  cart,
+  checkoutAllowed,
   itemsById,
+  onClearCart,
   onRemove,
   onQuantityChange,
+  pickupEnabled,
+  storeSlug,
 }: {
+  apiUrl: string;
   cart: CartContract;
+  checkoutAllowed: boolean;
   itemsById: Map<string, PublicMenuItem>;
+  onClearCart: () => void;
   onQuantityChange: (lineIndex: number, quantity: number) => void;
   onRemove: (lineIndex: number) => void;
+  pickupEnabled: boolean;
+  storeSlug: string;
 }) {
   const calculationItems = useMemo(
     () =>
@@ -388,15 +605,31 @@ function CartPreview({
           </div>
         )}
       </OutlineContainer>
+      {cart.lines.length > 0 ? (
+        <GuestCheckoutForm
+          apiUrl={apiUrl}
+          cart={cart}
+          checkoutAllowed={checkoutAllowed}
+          onSuccess={onClearCart}
+          pickupEnabled={pickupEnabled}
+          storeSlug={storeSlug}
+        />
+      ) : null}
     </aside>
   );
 }
 
 export function StorefrontCatalog({
+  apiUrl,
   categories,
+  checkoutAllowed,
+  pickupEnabled,
   storeSlug,
 }: {
+  apiUrl: string;
   categories: PublicMenuCategory[];
+  checkoutAllowed: boolean;
+  pickupEnabled: boolean;
   storeSlug: string;
 }) {
   const [cart, setCart] = useState<CartContract>(() => createEmptyCart(storeSlug));
@@ -513,10 +746,18 @@ export function StorefrontCatalog({
       ) : null}
       {belongsToAnotherStore ? null : (
         <CartPreview
+          apiUrl={apiUrl}
           cart={cart}
+          checkoutAllowed={checkoutAllowed}
           itemsById={itemsById}
+          onClearCart={() => {
+            setCart(createEmptyCart(storeSlug));
+            setCartError(null);
+          }}
           onQuantityChange={changeQuantity}
           onRemove={removeLine}
+          pickupEnabled={pickupEnabled}
+          storeSlug={storeSlug}
         />
       )}
     </>

@@ -20,6 +20,20 @@ import {
   type PublicAdditionalView,
   type PublicComplementGroupView,
 } from "./menu-customization.js";
+import {
+  createGuestPickupOrderRecord,
+  findOrderByAccessToken,
+  findPublicOrderTracking,
+  findStoreOrderDetail,
+  listStoreOrders,
+  transitionStoreOrder,
+  type CreateGuestPickupOrderInput,
+  type CreateGuestPickupOrderResult,
+  type OrderDetailView,
+  type OrderListItemView,
+  type PublicOrderTrackingView,
+  type TransitionOrderResult,
+} from "./orders.js";
 
 export type {
   AdditionalView,
@@ -29,6 +43,23 @@ export type {
   PublicComplementGroupView,
   PublicComplementOptionView,
 } from "./menu-customization.js";
+
+export type {
+  AdditionalSnapshotRecord,
+  ComplementSnapshotRecord,
+  CreateGuestPickupOrderInput,
+  CreateGuestPickupOrderResult,
+  OrderDetailView,
+  TransitionOrderResult,
+  OrderLineView,
+  OrderListItemView,
+  PublicOrderTrackingView,
+} from "./orders.js";
+
+export {
+  hashOrderAccessToken,
+  mintOrderAccessToken,
+} from "./orders.js";
 
 export type StoreContext = {
   storeId: string;
@@ -94,7 +125,9 @@ export type PublicMenuCategoryView = {
 
 export type PublicStorefrontView = {
   categories: PublicMenuCategoryView[];
+  contactPhoneE164: string | null;
   name: string;
+  pickupEnabled: boolean;
   slug: string;
 };
 
@@ -146,6 +179,9 @@ export type BusinessDatabase = {
       priceCents: number;
     },
   ): Promise<MenuItemView | null>;
+  createGuestPickupOrder(
+    input: CreateGuestPickupOrderInput,
+  ): Promise<CreateGuestPickupOrderResult>;
   deleteAdditional(context: StoreContext, additionalId: string): Promise<boolean>;
   deleteComplementGroup(context: StoreContext, groupId: string): Promise<boolean>;
   deleteMenuCategory(
@@ -153,7 +189,15 @@ export type BusinessDatabase = {
     categoryId: string,
   ): Promise<"deleted" | "not_found" | "has_items">;
   deleteMenuItem(context: StoreContext, itemId: string): Promise<MenuItemView | null>;
+  findOrderByAccessToken(accessToken: string): Promise<OrderDetailView | null>;
+  findPublicOrderTracking(
+    accessToken: string,
+  ): Promise<PublicOrderTrackingView | null>;
   findStore(context: StoreContext, storeId: string): Promise<StoreView | null>;
+  findStoreOrder(
+    context: StoreContext,
+    orderId: string,
+  ): Promise<OrderDetailView | null>;
   findPublicStorefrontBySlug(
     slug: string,
     publicImageUrl: (objectKey: string) => string | null,
@@ -167,6 +211,7 @@ export type BusinessDatabase = {
     itemId: string,
   ): Promise<MenuItemView | null>;
   listMenuCatalog(context: StoreContext): Promise<MenuCatalogView>;
+  listOrders(context: StoreContext): Promise<OrderListItemView[]>;
   listTeamMembers(context: MembershipContext): Promise<TeamMemberView[]>;
   removeOperator(context: MembershipContext, membershipId: string): Promise<boolean>;
   reorderAdditionals(
@@ -201,6 +246,12 @@ export type BusinessDatabase = {
     context: StoreContext,
     paused: boolean,
   ): Promise<StoreOperationConfigView>;
+  transitionOrder(
+    context: StoreContext,
+    orderId: string,
+    expectedStatus: OrderDetailView["status"],
+    toStatus: OrderDetailView["status"],
+  ): Promise<TransitionOrderResult>;
   updateAdditional(
     context: StoreContext,
     additionalId: string,
@@ -233,7 +284,6 @@ export type BusinessDatabase = {
     name: string,
   ): Promise<StoreView | null>;
 };
-
 const storeViewSelect = {
   billingMode: true,
   id: true,
@@ -450,7 +500,13 @@ export function createTransactionalBusinessDatabase(
 
       const store = await transaction.store.findFirst({
         where: { slug },
-        select: { id: true, name: true, slug: true },
+        select: {
+          contactPhoneE164: true,
+          id: true,
+          name: true,
+          pickupEnabled: true,
+          slug: true,
+        },
       });
       if (!store) return null;
 
@@ -497,7 +553,9 @@ export function createTransactionalBusinessDatabase(
       }
 
       return {
+        contactPhoneE164: store.contactPhoneE164,
         name: store.name,
+        pickupEnabled: store.pickupEnabled,
         slug: store.slug,
         categories: categories
           .filter((category) => category.items.length > 0)
@@ -531,6 +589,36 @@ export function createTransactionalBusinessDatabase(
             })),
           })),
       };
+    },
+    async findOrderByAccessToken(accessToken) {
+      return await findOrderByAccessToken(transaction, accessToken);
+    },
+    async findPublicOrderTracking(accessToken) {
+      return await findPublicOrderTracking(transaction, accessToken);
+    },
+    async findStoreOrder(context, orderId) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        findStoreOrderDetail(storeTransaction, context.storeId, orderId),
+      );
+    },
+    async createGuestPickupOrder(input) {
+      return await createGuestPickupOrderRecord(transaction, input);
+    },
+    async listOrders(context) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        listStoreOrders(storeTransaction, context.storeId),
+      );
+    },
+    async transitionOrder(context, orderId, expectedStatus, toStatus) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        transitionStoreOrder(
+          storeTransaction,
+          context.storeId,
+          orderId,
+          expectedStatus,
+          toStatus,
+        ),
+      );
     },
     async findPublicStoreOperationBySlug(slug) {
       await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
@@ -876,6 +964,11 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.createMenuItem(context, input),
       );
     },
+    async createGuestPickupOrder(input) {
+      return await withDatabase((database) =>
+        database.createGuestPickupOrder(input),
+      );
+    },
     async deleteAdditional(context, additionalId) {
       return await withDatabase((database) =>
         database.deleteAdditional(context, additionalId),
@@ -896,9 +989,24 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.deleteMenuItem(context, itemId),
       );
     },
+    async findOrderByAccessToken(accessToken) {
+      return await withDatabase((database) =>
+        database.findOrderByAccessToken(accessToken),
+      );
+    },
+    async findPublicOrderTracking(accessToken) {
+      return await withDatabase((database) =>
+        database.findPublicOrderTracking(accessToken),
+      );
+    },
     async findStore(context, storeId) {
       return await withDatabase((database) =>
         database.findStore(context, storeId),
+      );
+    },
+    async findStoreOrder(context, orderId) {
+      return await withDatabase((database) =>
+        database.findStoreOrder(context, orderId),
       );
     },
     async findPublicStorefrontBySlug(slug, publicImageUrl) {
@@ -925,6 +1033,9 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
       return await withDatabase((database) =>
         database.listMenuCatalog(context),
       );
+    },
+    async listOrders(context) {
+      return await withDatabase((database) => database.listOrders(context));
     },
     async listTeamMembers(context) {
       return await withDatabase((database) =>
@@ -969,6 +1080,11 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
     async setStorePaused(context, paused) {
       return await withDatabase((database) =>
         database.setStorePaused(context, paused),
+      );
+    },
+    async transitionOrder(context, orderId, expectedStatus, toStatus) {
+      return await withDatabase((database) =>
+        database.transitionOrder(context, orderId, expectedStatus, toStatus),
       );
     },
     async updateAdditional(context, additionalId, input) {

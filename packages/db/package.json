@@ -27,6 +27,8 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@foode/shared": "workspace:*",
+    "@js-temporal/polyfill": "^0.5.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "pg": "^8.22.0"

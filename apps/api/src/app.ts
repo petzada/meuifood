@@ -24,6 +24,10 @@ import {
   registerErrorObservability,
 } from "./observability.js";
 import { registerMenuCustomizationRoutes } from "./menu-customization-routes.js";
+import {
+  registerPublicOrderRoutes,
+  registerStaffOrderRoutes,
+} from "./order-routes.js";
 import { calculateStoreOperation } from "./store-operation.js";
 import { registerStoreOperationRoutes } from "./store-operation-routes.js";
 
@@ -180,6 +184,11 @@ export function buildApp(options: BuildAppOptions = {}) {
         });
       },
     );
+
+    registerPublicOrderRoutes(app, {
+      businessDatabase,
+      now,
+    });
   }
 
   if (businessDatabase && verifyAccessToken) {
@@ -218,6 +227,11 @@ export function buildApp(options: BuildAppOptions = {}) {
       }
       return context;
     };
+
+    registerStaffOrderRoutes(app, {
+      businessDatabase,
+      requireMembership,
+    });
 
     app.get("/team/context", async (request, reply) => {
       const context = await requireMembership(request, reply);

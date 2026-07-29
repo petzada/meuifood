@@ -23,6 +23,7 @@ import {
   type OperationFeedback,
   type StoreOperationConfig,
 } from "./operation/operation-panel";
+import { OrdersQueue } from "./orders/orders-queue";
 import { inviteOperator, removeOperator } from "./team/actions";
 import { SubmitButton } from "./team/submit-button";
 
@@ -49,11 +50,13 @@ const feedbackMessages: Record<TeamFeedback, string> = {
 export function PanelShell({
   menu,
   operation,
+  orders,
   role,
   team,
 }: {
   menu?: ReactNode;
   operation?: ReactNode;
+  orders?: ReactNode;
   role: MembershipRole;
   team?: ReactNode;
 }) {
@@ -97,12 +100,14 @@ export function PanelShell({
               : "Acompanhe os Pedidos e atualize o andamento da operação."}
           </p>
 
-          <OutlineContainer className="mt-8 p-6 md:p-8">
-            <h2 className="text-xl font-bold text-[var(--color-ink)]">Pedidos</h2>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Nenhum Pedido em andamento.
-            </p>
-          </OutlineContainer>
+          {orders ?? (
+            <OutlineContainer className="mt-8 p-6 md:p-8">
+              <h2 className="text-xl font-bold text-[var(--color-ink)]">Pedidos</h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Nenhum Pedido em andamento.
+              </p>
+            </OutlineContainer>
+          )}
         </section>
         {menu}
         {operation}
@@ -324,6 +329,12 @@ export default async function AdminHome({
     <PanelShell
       menu={menu}
       operation={operation}
+      orders={
+        <OrdersQueue
+          accessToken={data.session.access_token}
+          apiUrl={apiUrl()}
+        />
+      }
       role={role.data}
       team={team}
     />

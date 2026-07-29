@@ -34,6 +34,7 @@ try {
            or slug like 'fixture-rbac-%'
            or slug like 'fixture-preflight-%'
            or slug like 'fixture-menu-%'
+           or slug like 'fixture-order-%'
      )
      select
        (select count(*)::integer from fixture_stores) as stores,

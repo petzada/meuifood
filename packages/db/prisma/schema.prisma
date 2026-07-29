@@ -38,6 +38,8 @@ model Store {
   slug               String                 @unique
   billingMode        BillingMode            @map("billing_mode")
   paused             Boolean                @default(false)
+  pickupEnabled      Boolean                @default(true) @map("pickup_enabled")
+  contactPhoneE164   String?                @map("contact_phone_e164")
   createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   members            StoreMember[]
@@ -47,6 +49,8 @@ model Store {
   complementOptions  MenuComplementOption[]
   additionals        MenuAdditional[]
   operatingPeriods   StoreOperatingPeriod[]
+  orders             Order[]
+  orderLines         OrderLine[]
 
   @@map("stores")
 }
@@ -163,4 +167,78 @@ model MenuAdditional {
 
   @@index([storeId, itemId, sortOrder])
   @@map("menu_additionals")
+}
+
+enum OrderStatus {
+  received
+  preparing
+  ready_for_pickup
+  completed
+  cancelled
+
+  @@map("order_status")
+}
+
+enum FulfillmentType {
+  pickup
+
+  @@map("fulfillment_type")
+}
+
+enum PaymentMethod {
+  on_delivery
+
+  @@map("payment_method")
+}
+
+model Order {
+  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId                String          @map("store_id") @db.Uuid
+  publicCode             String          @map("public_code")
+  /// SHA-256 hex (64 chars) do capability token opaco; token bruto nunca é persistido.
+  accessToken            String          @unique @map("access_token")
+  status                 OrderStatus     @default(received)
+  fulfillmentType        FulfillmentType @map("fulfillment_type")
+  paymentMethod          PaymentMethod   @map("payment_method")
+  guestName              String          @map("guest_name")
+  guestPhoneE164         String          @map("guest_phone_e164")
+  customerUserId         String?         @map("customer_user_id") @db.Uuid
+  itemsTotalCents        Int             @map("items_total_cents")
+  deliveryFeeCents       Int             @default(0) @map("delivery_fee_cents")
+  totalCents             Int             @map("total_cents")
+  idempotencyKey         String          @map("idempotency_key")
+  idempotencyPayloadHash String          @map("idempotency_payload_hash")
+  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store                  Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lines                  OrderLine[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, idempotencyKey])
+  @@unique([storeId, publicCode])
+  @@index([storeId, createdAt(sort: Desc)])
+  @@index([storeId, status, createdAt(sort: Desc)])
+  @@map("orders")
+}
+
+model OrderLine {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId              String   @map("store_id") @db.Uuid
+  orderId              String   @map("order_id") @db.Uuid
+  sortOrder            Int      @map("sort_order")
+  menuItemId           String?  @map("menu_item_id") @db.Uuid
+  itemName             String   @map("item_name")
+  unitPriceCents       Int      @map("unit_price_cents")
+  quantity             Int
+  lineTotalCents       Int      @map("line_total_cents")
+  complementSnapshots  Json     @map("complement_snapshots")
+  additionalSnapshots  Json     @map("additional_snapshots")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store                Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order                Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([storeId, orderId, sortOrder])
+  @@index([orderId])
+  @@map("order_lines")
 }

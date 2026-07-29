@@ -8,7 +8,7 @@
     "migrations:preflight": "tsx scripts/preflight-production-migrations.ts",
     "lint": "eslint src scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test:quality": "vitest run src/app.test.ts src/menu-images.test.ts src/store-operation.test.ts scripts/migration-preflight-policy.test.mjs",
+    "test:quality": "vitest run src/app.test.ts src/menu-images.test.ts src/store-operation.test.ts src/order-idempotency.test.ts scripts/migration-preflight-policy.test.mjs",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js"
