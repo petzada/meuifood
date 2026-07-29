@@ -45,3 +45,8 @@
 - Evidência local: `pnpm lint`, `pnpm typecheck`, `pnpm test:quality`,
   `pnpm build` e `db:migrations:validate` verdes. Provas HTTP/Postgres/RLS
   reais e migrate ficam a cargo do CI (Decisão 55) no Supabase de produção.
+- 2026-07-29 — CI da PR #18 (`30485647423`) verde no commit `9d2f65f`:
+  `quality` passou; `migrate` aplicou as migrations do Ticket 09 pelo fluxo
+  da Decisão 55; `integration` passou com `delivery-routes.test.ts` e
+  regressão `order-routes.test.ts` no Supabase de produção. Checklist
+  completo com evidência; `Status: needs-review` para aceite humano.
