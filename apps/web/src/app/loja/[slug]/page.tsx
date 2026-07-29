@@ -14,6 +14,7 @@ type PublicStorefront = {
   categories: PublicMenuCategory[];
   name: string;
   operation: PublicStoreOperation;
+  pickupEnabled?: boolean;
   slug: string;
 };
 
@@ -53,6 +54,9 @@ export default async function StorefrontPage({
   const storefront = await loadStorefront(normalized);
   if (!storefront) notFound();
 
+  const pickupEnabled = storefront.pickupEnabled ?? true;
+  const checkoutAllowed = storefront.operation.checkout.allowed;
+
   return (
     <main className="min-h-[100dvh] bg-[var(--color-canvas)]">
       <header className="border-b border-[var(--color-hairline)] px-4 py-5 md:px-8">
@@ -78,7 +82,10 @@ export default async function StorefrontPage({
           </OutlineContainer>
         ) : (
           <StorefrontCatalog
+            apiUrl={apiUrl()}
             categories={storefront.categories}
+            checkoutAllowed={checkoutAllowed}
+            pickupEnabled={pickupEnabled}
             storeSlug={storefront.slug}
           />
         )}
