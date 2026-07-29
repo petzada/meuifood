@@ -46,7 +46,7 @@ const unsupportedStatements = [
 const transactionControl =
   /^\s*(?:begin\b|start\s+transaction\b|commit\b|rollback\b|end\b)/iu;
 const allowedStatement =
-  /^\s*(?:create\s+(?:type|table|(?:unique\s+)?index|policy)\b|alter\s+(?:table|role)\b|grant\b|drop\s+index\b|do\b)/iu;
+  /^\s*(?:create\s+(?:type|table|(?:unique\s+)?index|policy)\b|alter\s+(?:table|role|type)\b|grant\b|drop\s+index\b|do\b)/iu;
 const allowedGrant =
   /^\s*grant\s+(?:(?:(?:usage|select|insert|update|delete)\s*,?\s*)+on\b[\s\S]*\bto\s+foode_business\b|foode_business\s+to\s+postgres\b)/iu;
 const allowedDoBody =

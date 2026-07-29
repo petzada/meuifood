@@ -36,7 +36,11 @@ export {
 } from "./phone-br.js";
 
 export {
+  allowedDeliveryTransitions,
+  allowedOrderTransitions,
   allowedPickupTransitions,
+  canTransitionDelivery,
+  canTransitionOrder,
   canTransitionPickup,
   fulfillmentTypeSchema,
   orderStatusLabelPt,
@@ -64,3 +68,19 @@ export {
   type OrderRecalculationResult,
   type RecalculatedOrderLine,
 } from "./order-recalculate.js";
+
+export {
+  normalizeNeighborhoodKey,
+  sanitizeNeighborhoodDisplayName,
+} from "./neighborhood.js";
+
+export {
+  previewDeliveryFeeCents,
+  resolveDeliveryFeeCents,
+  sanitizeDeliveryAddress,
+  type DeliveryAddressInput,
+  type DeliveryFeeMode,
+  type DeliveryNeighborhoodFee,
+  type ResolvedDeliveryFee,
+  type StoreDeliveryFeeConfig,
+} from "./delivery-fee.js";

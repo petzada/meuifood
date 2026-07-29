@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import {
   StorefrontCatalog,
+  type PublicDeliveryConfig,
   type PublicMenuCategory,
 } from "./storefront-cart";
 import {
@@ -12,6 +13,7 @@ import {
 
 type PublicStorefront = {
   categories: PublicMenuCategory[];
+  delivery?: PublicDeliveryConfig;
   name: string;
   operation: PublicStoreOperation;
   pickupEnabled?: boolean;
@@ -22,6 +24,17 @@ function apiUrl() {
   const value = process.env.API_URL?.trim();
   if (!value) throw new Error("API_URL_is_required");
   return value;
+}
+
+function resolveDelivery(storefront: PublicStorefront): PublicDeliveryConfig {
+  if (storefront.delivery) return storefront.delivery;
+  return {
+    deliveryAvailable: false,
+    fixedDeliveryFeeCents: null,
+    mode: null,
+    neighborhoods: [],
+    pickupEnabled: storefront.pickupEnabled ?? true,
+  };
 }
 
 async function loadStorefront(slug: string): Promise<PublicStorefront | null> {
@@ -54,7 +67,7 @@ export default async function StorefrontPage({
   const storefront = await loadStorefront(normalized);
   if (!storefront) notFound();
 
-  const pickupEnabled = storefront.pickupEnabled ?? true;
+  const delivery = resolveDelivery(storefront);
   const checkoutAllowed = storefront.operation.checkout.allowed;
 
   return (
@@ -85,7 +98,7 @@ export default async function StorefrontPage({
             apiUrl={apiUrl()}
             categories={storefront.categories}
             checkoutAllowed={checkoutAllowed}
-            pickupEnabled={pickupEnabled}
+            delivery={delivery}
             storeSlug={storefront.slug}
           />
         )}

@@ -16,6 +16,14 @@ type PublicOrderLine = {
 
 type PublicOrderTracking = {
   order: {
+    deliveryAddress?: {
+      complement: string | null;
+      neighborhood: string;
+      reference: string | null;
+      streetLine: string;
+    } | null;
+    deliveryFeeCents?: number;
+    fulfillmentType?: "pickup" | "delivery";
     lines: PublicOrderLine[];
     publicCode: string;
     status: OrderStatus;
@@ -69,6 +77,11 @@ async function loadOrderTracking(
 
   return {
     order: {
+      deliveryAddress: payload.order.deliveryAddress ?? null,
+      ...(typeof payload.order.deliveryFeeCents === "number"
+        ? { deliveryFeeCents: payload.order.deliveryFeeCents }
+        : {}),
+      fulfillmentType: payload.order.fulfillmentType ?? "pickup",
       lines: payload.order.lines,
       publicCode: payload.order.publicCode,
       status: status.data,
@@ -121,8 +134,25 @@ export default async function PublicOrderTrackingPage({
             {orderStatusLabelPt(tracking.order.status)}
           </h2>
           <p className="mt-2 text-sm text-[var(--color-muted)]">
-            Modalidade: Retirada · Pagamento na entrega
+            Modalidade:{" "}
+            {tracking.order.fulfillmentType === "delivery"
+              ? "Delivery"
+              : "Retirada"}{" "}
+            · Pagamento na entrega
           </p>
+
+          {tracking.order.deliveryAddress ? (
+            <div className="mt-4 rounded-xl border border-[var(--color-hairline)] px-3 py-3 text-sm text-[var(--color-body)]">
+              <p className="font-bold text-[var(--color-ink)]">Entrega</p>
+              <p className="mt-1">{tracking.order.deliveryAddress.streetLine}</p>
+              <p>{tracking.order.deliveryAddress.neighborhood}</p>
+              {typeof tracking.order.deliveryFeeCents === "number" ? (
+                <p className="mt-2">
+                  Taxa: {formatPrice(tracking.order.deliveryFeeCents)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mt-6 grid gap-4">
             {tracking.order.lines.map((line, index) => (

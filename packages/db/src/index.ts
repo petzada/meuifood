@@ -21,12 +21,15 @@ import {
   type PublicComplementGroupView,
 } from "./menu-customization.js";
 import {
+  createGuestOrderRecord,
   createGuestPickupOrderRecord,
   findOrderByAccessToken,
   findPublicOrderTracking,
   findStoreOrderDetail,
   listStoreOrders,
   transitionStoreOrder,
+  type CreateGuestOrderInput,
+  type CreateGuestOrderResult,
   type CreateGuestPickupOrderInput,
   type CreateGuestPickupOrderResult,
   type OrderDetailView,
@@ -34,6 +37,20 @@ import {
   type PublicOrderTrackingView,
   type TransitionOrderResult,
 } from "./orders.js";
+import {
+  createDeliveryNeighborhood,
+  deleteDeliveryNeighborhood,
+  getStoreDeliveryConfig,
+  reorderDeliveryNeighborhoods,
+  setStoreDeliveryFeeMode,
+  setStorePickupEnabled,
+  toPublicDeliveryConfig,
+  updateDeliveryNeighborhood,
+  type DeliveryNeighborhoodView,
+  type PublicDeliveryConfigView,
+  type StoreDeliveryConfigView,
+  type UpsertNeighborhoodResult,
+} from "./delivery-config.js";
 
 export type {
   AdditionalView,
@@ -47,14 +64,24 @@ export type {
 export type {
   AdditionalSnapshotRecord,
   ComplementSnapshotRecord,
+  CreateGuestOrderInput,
+  CreateGuestOrderResult,
   CreateGuestPickupOrderInput,
   CreateGuestPickupOrderResult,
+  OrderDeliveryAddressView,
   OrderDetailView,
   TransitionOrderResult,
   OrderLineView,
   OrderListItemView,
   PublicOrderTrackingView,
 } from "./orders.js";
+
+export type {
+  DeliveryNeighborhoodView,
+  PublicDeliveryConfigView,
+  StoreDeliveryConfigView,
+  UpsertNeighborhoodResult,
+} from "./delivery-config.js";
 
 export {
   hashOrderAccessToken,
@@ -126,6 +153,7 @@ export type PublicMenuCategoryView = {
 export type PublicStorefrontView = {
   categories: PublicMenuCategoryView[];
   contactPhoneE164: string | null;
+  delivery: PublicDeliveryConfigView;
   name: string;
   pickupEnabled: boolean;
   slug: string;
@@ -179,9 +207,20 @@ export type BusinessDatabase = {
       priceCents: number;
     },
   ): Promise<MenuItemView | null>;
+  createGuestOrder(
+    input: CreateGuestOrderInput,
+  ): Promise<CreateGuestOrderResult>;
   createGuestPickupOrder(
     input: CreateGuestPickupOrderInput,
   ): Promise<CreateGuestPickupOrderResult>;
+  createDeliveryNeighborhood(
+    context: StoreContext,
+    input: { feeCents: number; name: string },
+  ): Promise<UpsertNeighborhoodResult>;
+  deleteDeliveryNeighborhood(
+    context: StoreContext,
+    neighborhoodId: string,
+  ): Promise<boolean>;
   deleteAdditional(context: StoreContext, additionalId: string): Promise<boolean>;
   deleteComplementGroup(context: StoreContext, groupId: string): Promise<boolean>;
   deleteMenuCategory(
@@ -205,6 +244,7 @@ export type BusinessDatabase = {
   findPublicStoreOperationBySlug(
     slug: string,
   ): Promise<StoreOperationConfigView | null>;
+  getStoreDeliveryConfig(context: StoreContext): Promise<StoreDeliveryConfigView>;
   getStoreOperation(context: StoreContext): Promise<StoreOperationConfigView>;
   getMenuItem(
     context: StoreContext,
@@ -224,6 +264,10 @@ export type BusinessDatabase = {
     itemId: string,
     orderedGroupIds: string[],
   ): Promise<ComplementGroupView[] | null>;
+  reorderDeliveryNeighborhoods(
+    context: StoreContext,
+    orderedIds: string[],
+  ): Promise<DeliveryNeighborhoodView[] | null>;
   reorderMenuCategories(
     context: StoreContext,
     orderedCategoryIds: string[],
@@ -242,10 +286,26 @@ export type BusinessDatabase = {
     context: StoreContext,
     periods: OperatingPeriodView[],
   ): Promise<OperatingPeriodView[]>;
+  setStoreDeliveryFeeMode(
+    context: StoreContext,
+    input:
+      | { mode: "fixed"; fixedDeliveryFeeCents: number }
+      | { mode: "neighborhood" }
+      | { mode: null },
+  ): Promise<StoreDeliveryConfigView>;
+  setStorePickupEnabled(
+    context: StoreContext,
+    pickupEnabled: boolean,
+  ): Promise<StoreDeliveryConfigView>;
   setStorePaused(
     context: StoreContext,
     paused: boolean,
   ): Promise<StoreOperationConfigView>;
+  updateDeliveryNeighborhood(
+    context: StoreContext,
+    neighborhoodId: string,
+    input: { feeCents?: number; name?: string },
+  ): Promise<UpsertNeighborhoodResult>;
   transitionOrder(
     context: StoreContext,
     orderId: string,
@@ -502,6 +562,8 @@ export function createTransactionalBusinessDatabase(
         where: { slug },
         select: {
           contactPhoneE164: true,
+          deliveryFeeMode: true,
+          fixedDeliveryFeeCents: true,
           id: true,
           name: true,
           pickupEnabled: true,
@@ -514,6 +576,7 @@ export function createTransactionalBusinessDatabase(
         SELECT set_config('app.current_store_id', ${store.id}, true)
       `;
 
+      const deliveryConfig = await getStoreDeliveryConfig(transaction, store.id);
       const categories = await transaction.menuCategory.findMany({
         where: { storeId: store.id },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -554,6 +617,7 @@ export function createTransactionalBusinessDatabase(
 
       return {
         contactPhoneE164: store.contactPhoneE164,
+        delivery: toPublicDeliveryConfig(deliveryConfig),
         name: store.name,
         pickupEnabled: store.pickupEnabled,
         slug: store.slug,
@@ -601,8 +665,59 @@ export function createTransactionalBusinessDatabase(
         findStoreOrderDetail(storeTransaction, context.storeId, orderId),
       );
     },
+    async createGuestOrder(input) {
+      return await createGuestOrderRecord(transaction, input);
+    },
     async createGuestPickupOrder(input) {
       return await createGuestPickupOrderRecord(transaction, input);
+    },
+    async getStoreDeliveryConfig(context) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        getStoreDeliveryConfig(storeTransaction, context.storeId),
+      );
+    },
+    async setStorePickupEnabled(context, pickupEnabled) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        setStorePickupEnabled(storeTransaction, context.storeId, pickupEnabled),
+      );
+    },
+    async setStoreDeliveryFeeMode(context, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        setStoreDeliveryFeeMode(storeTransaction, context.storeId, input),
+      );
+    },
+    async createDeliveryNeighborhood(context, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        createDeliveryNeighborhood(storeTransaction, context.storeId, input),
+      );
+    },
+    async updateDeliveryNeighborhood(context, neighborhoodId, input) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        updateDeliveryNeighborhood(
+          storeTransaction,
+          context.storeId,
+          neighborhoodId,
+          input,
+        ),
+      );
+    },
+    async deleteDeliveryNeighborhood(context, neighborhoodId) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        deleteDeliveryNeighborhood(
+          storeTransaction,
+          context.storeId,
+          neighborhoodId,
+        ),
+      );
+    },
+    async reorderDeliveryNeighborhoods(context, orderedIds) {
+      return await inStoreContext(transaction, context, async (storeTransaction) =>
+        reorderDeliveryNeighborhoods(
+          storeTransaction,
+          context.storeId,
+          orderedIds,
+        ),
+      );
     },
     async listOrders(context) {
       return await inStoreContext(transaction, context, async (storeTransaction) =>
@@ -964,9 +1079,47 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
         database.createMenuItem(context, input),
       );
     },
+    async createGuestOrder(input) {
+      return await withDatabase((database) => database.createGuestOrder(input));
+    },
     async createGuestPickupOrder(input) {
       return await withDatabase((database) =>
         database.createGuestPickupOrder(input),
+      );
+    },
+    async createDeliveryNeighborhood(context, input) {
+      return await withDatabase((database) =>
+        database.createDeliveryNeighborhood(context, input),
+      );
+    },
+    async deleteDeliveryNeighborhood(context, neighborhoodId) {
+      return await withDatabase((database) =>
+        database.deleteDeliveryNeighborhood(context, neighborhoodId),
+      );
+    },
+    async getStoreDeliveryConfig(context) {
+      return await withDatabase((database) =>
+        database.getStoreDeliveryConfig(context),
+      );
+    },
+    async reorderDeliveryNeighborhoods(context, orderedIds) {
+      return await withDatabase((database) =>
+        database.reorderDeliveryNeighborhoods(context, orderedIds),
+      );
+    },
+    async setStoreDeliveryFeeMode(context, input) {
+      return await withDatabase((database) =>
+        database.setStoreDeliveryFeeMode(context, input),
+      );
+    },
+    async setStorePickupEnabled(context, pickupEnabled) {
+      return await withDatabase((database) =>
+        database.setStorePickupEnabled(context, pickupEnabled),
+      );
+    },
+    async updateDeliveryNeighborhood(context, neighborhoodId, input) {
+      return await withDatabase((database) =>
+        database.updateDeliveryNeighborhood(context, neighborhoodId, input),
       );
     },
     async deleteAdditional(context, additionalId) {

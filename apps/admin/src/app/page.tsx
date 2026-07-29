@@ -23,6 +23,12 @@ import {
   type OperationFeedback,
   type StoreOperationConfig,
 } from "./operation/operation-panel";
+import {
+  DeliveryPanel,
+  deliveryFeedbackMessages,
+  type DeliveryFeedback,
+  type StoreDeliveryConfig,
+} from "./delivery/delivery-panel";
 import { OrdersQueue } from "./orders/orders-queue";
 import { inviteOperator, removeOperator } from "./team/actions";
 import { SubmitButton } from "./team/submit-button";
@@ -48,12 +54,14 @@ const feedbackMessages: Record<TeamFeedback, string> = {
 };
 
 export function PanelShell({
+  delivery,
   menu,
   operation,
   orders,
   role,
   team,
 }: {
+  delivery?: ReactNode;
   menu?: ReactNode;
   operation?: ReactNode;
   orders?: ReactNode;
@@ -82,7 +90,7 @@ export function PanelShell({
               <a className="min-h-11 rounded-full px-5 py-3" href="#cardapio">Cardápio</a>
               <a className="min-h-11 rounded-full px-5 py-3" href="#funcionamento">Funcionamento</a>
               <a className="min-h-11 rounded-full px-5 py-3" href="#equipe">Equipe</a>
-              <a className="min-h-11 rounded-full px-5 py-3" href="#configuracoes">Configurações</a>
+              <a className="min-h-11 rounded-full px-5 py-3" href="#configuracoes">Delivery</a>
             </div>
           ) : null}
         </nav>
@@ -112,6 +120,7 @@ export function PanelShell({
         {menu}
         {operation}
         {team}
+        {delivery}
       </div>
     </main>
   );
@@ -214,6 +223,7 @@ export default async function AdminHome({
 }: {
   searchParams: Promise<{
     cardapio?: string;
+    entrega?: string;
     equipe?: string;
     funcionamento?: string;
   }>;
@@ -242,11 +252,12 @@ export default async function AdminHome({
     throw new Error("membership_context_response_invalid");
   }
 
+  let delivery: ReactNode = undefined;
   let menu: ReactNode = undefined;
   let operation: ReactNode = undefined;
   let team: ReactNode = undefined;
   if (role.data === "owner") {
-    const { cardapio, equipe, funcionamento } = await searchParams;
+    const { cardapio, entrega, equipe, funcionamento } = await searchParams;
     const menuResponse = await fetch(new URL("/menu", apiUrl()), {
       cache: "no-store",
       headers,
@@ -323,10 +334,38 @@ export default async function AdminHome({
       ? (equipe as TeamFeedback)
       : undefined;
     team = <TeamPanel feedback={feedback} members={membersPayload.members} />;
+
+    const deliveryResponse = await fetch(new URL("/delivery", apiUrl()), {
+      cache: "no-store",
+      headers,
+    });
+    if (!deliveryResponse.ok) throw new Error("delivery_request_failed");
+    const deliveryPayload = (await deliveryResponse.json()) as {
+      delivery?: StoreDeliveryConfig;
+    };
+    if (
+      typeof deliveryPayload.delivery?.pickupEnabled !== "boolean" ||
+      !Array.isArray(deliveryPayload.delivery.neighborhoods)
+    ) {
+      throw new Error("delivery_response_invalid");
+    }
+    const deliveryFeedback = Object.hasOwn(
+      deliveryFeedbackMessages,
+      entrega ?? "",
+    )
+      ? (entrega as DeliveryFeedback)
+      : undefined;
+    delivery = (
+      <DeliveryPanel
+        delivery={deliveryPayload.delivery}
+        {...(deliveryFeedback ? { feedback: deliveryFeedback } : {})}
+      />
+    );
   }
 
   return (
     <PanelShell
+      delivery={delivery}
       menu={menu}
       operation={operation}
       orders={

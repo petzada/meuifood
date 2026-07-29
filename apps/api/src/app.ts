@@ -28,6 +28,7 @@ import {
   registerPublicOrderRoutes,
   registerStaffOrderRoutes,
 } from "./order-routes.js";
+import { registerDeliveryConfigRoutes } from "./delivery-config-routes.js";
 import { calculateStoreOperation } from "./store-operation.js";
 import { registerStoreOperationRoutes } from "./store-operation-routes.js";
 
@@ -243,6 +244,11 @@ export function buildApp(options: BuildAppOptions = {}) {
     });
 
     registerStoreOperationRoutes(app, {
+      businessDatabase,
+      requireMembership,
+    });
+
+    registerDeliveryConfigRoutes(app, {
       businessDatabase,
       requireMembership,
     });
