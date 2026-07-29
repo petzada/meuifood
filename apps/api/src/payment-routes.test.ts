@@ -351,7 +351,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
       payload: {
         fulfillmentType: "pickup",
         guest: { name: `PIX Guest ${runId}`, phone: "11987654321" },
-        lines: [{ additionalIds: [], complementOptionIds: [], itemId, quantity: 1 }],
+        lines: [{ additionalIds: [], complementSelections: {}, itemId, quantity: 1 }],
         paymentMethod: "pix",
       },
     });
@@ -381,7 +381,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
         lines: [
           {
             additionalIds: [],
-            complementOptionIds: [],
+            complementSelections: {},
             itemId: deniedItemId,
             quantity: 1,
           },
@@ -401,7 +401,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
     const payload = {
       fulfillmentType: "pickup" as const,
       guest: { name: `PIX Guest ${runId}`, phone: "11987654321" },
-      lines: [{ additionalIds: [], complementOptionIds: [], itemId, quantity: 1 }],
+      lines: [{ additionalIds: [], complementSelections: {}, itemId, quantity: 1 }],
       paymentMethod: "pix" as const,
     };
     const [a, b] = await Promise.all([
@@ -441,7 +441,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
       payload: {
         fulfillmentType: "pickup",
         guest: { name: `PIX Guest ${runId}`, phone: "11987654321" },
-        lines: [{ additionalIds: [], complementOptionIds: [], itemId, quantity: 1 }],
+        lines: [{ additionalIds: [], complementSelections: {}, itemId, quantity: 1 }],
         paymentMethod: "pix",
       },
     });
@@ -572,7 +572,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
       payload: {
         fulfillmentType: "pickup",
         guest: { name: `PIX Guest ${runId}`, phone: "11987654321" },
-        lines: [{ additionalIds: [], complementOptionIds: [], itemId, quantity: 1 }],
+        lines: [{ additionalIds: [], complementSelections: {}, itemId, quantity: 1 }],
         paymentMethod: "on_delivery",
       },
     });
