@@ -15,8 +15,31 @@ export type OrderStatus = z.infer<typeof orderStatusSchema>;
 export const fulfillmentTypeSchema = z.enum(["pickup", "delivery"]);
 export type FulfillmentType = z.infer<typeof fulfillmentTypeSchema>;
 
-export const paymentMethodSchema = z.enum(["on_delivery"]);
+/** Checkout MVP: PIX + na entrega (crédito = Ticket 11). */
+export const paymentMethodSchema = z.enum(["pix", "on_delivery"]);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
+
+/** Estado canônico de pagamento do Pedido — monotônico para online. */
+export const paymentStatusSchema = z.enum([
+  "not_required",
+  "awaiting_payment",
+  "paid",
+]);
+export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
+
+const paymentStatusRank: Record<PaymentStatus, number> = {
+  not_required: 0,
+  awaiting_payment: 1,
+  paid: 2,
+};
+
+export function canAdvancePaymentStatus(
+  from: PaymentStatus,
+  to: PaymentStatus,
+): boolean {
+  if (from === "not_required") return to === "not_required";
+  return paymentStatusRank[to] >= paymentStatusRank[from];
+}
 
 const pickupTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
   received: ["preparing", "cancelled"],

@@ -7,6 +7,10 @@ import {
 } from "./auth.js";
 import { createSupabaseMemberInvitationService } from "./member-invitations.js";
 import { menuImageStorageFromEnvironment } from "./menu-image-storage.js";
+import {
+  createWooviPaymentAdapter,
+  createWooviSdkClient,
+} from "./woovi-adapter.js";
 
 function requiredEnvironment(name: string) {
   const value = process.env[name]?.trim();
@@ -21,6 +25,12 @@ const businessDatabase = createBusinessDatabase(
 const supabaseUrl = requiredEnvironment("SUPABASE_URL");
 const menuImageStorage = menuImageStorageFromEnvironment();
 const menuImagePublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim();
+const wooviAppId = process.env.WOOVI_APP_ID?.trim();
+const wooviClient = wooviAppId ? createWooviSdkClient(wooviAppId) : undefined;
+const wooviAdapter = wooviClient
+  ? createWooviPaymentAdapter(wooviClient)
+  : undefined;
+const opsApiToken = process.env.FOODE_OPS_API_TOKEN?.trim();
 const app = buildApp({
   businessDatabase,
   memberInvitationService: createSupabaseMemberInvitationService({
@@ -30,6 +40,9 @@ const app = buildApp({
   }),
   ...(menuImagePublicBaseUrl ? { menuImagePublicBaseUrl } : {}),
   ...(menuImageStorage ? { menuImageStorage } : {}),
+  ...(opsApiToken ? { opsApiToken } : {}),
+  ...(wooviAdapter ? { wooviAdapter } : {}),
+  ...(wooviClient ? { wooviClient } : {}),
   verifyAccessToken: createSupabaseAccessTokenVerifier(
     supabaseAuthConfiguration(supabaseUrl),
   ),

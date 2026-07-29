@@ -25,6 +25,13 @@ type PublicOrderTracking = {
     deliveryFeeCents?: number;
     fulfillmentType?: "pickup" | "delivery";
     lines: PublicOrderLine[];
+    paymentMethod?: "pix" | "on_delivery";
+    paymentStatus?: "not_required" | "awaiting_payment" | "paid";
+    pix?: {
+      brCode: string;
+      qrCodeImage: string;
+      status: string;
+    } | null;
     publicCode: string;
     status: OrderStatus;
     totalCents: number;
@@ -83,6 +90,13 @@ async function loadOrderTracking(
         : {}),
       fulfillmentType: payload.order.fulfillmentType ?? "pickup",
       lines: payload.order.lines,
+      ...(payload.order.paymentMethod
+        ? { paymentMethod: payload.order.paymentMethod }
+        : {}),
+      ...(payload.order.paymentStatus
+        ? { paymentStatus: payload.order.paymentStatus }
+        : {}),
+      ...(payload.order.pix ? { pix: payload.order.pix } : {}),
       publicCode: payload.order.publicCode,
       status: status.data,
       totalCents: payload.order.totalCents,
@@ -138,8 +152,38 @@ export default async function PublicOrderTrackingPage({
             {tracking.order.fulfillmentType === "delivery"
               ? "Delivery"
               : "Retirada"}{" "}
-            · Pagamento na entrega
+            ·{" "}
+            {tracking.order.paymentMethod === "pix"
+              ? tracking.order.paymentStatus === "paid"
+                ? "PIX pago"
+                : "PIX"
+              : "Pagamento na entrega"}
           </p>
+
+          {tracking.order.paymentMethod === "pix" &&
+          tracking.order.pix &&
+          tracking.order.paymentStatus !== "paid" ? (
+            <div className="mt-4 rounded-xl border border-[var(--color-hairline)] px-3 py-4">
+              <p className="text-sm font-bold text-[var(--color-ink)]">
+                Pague com PIX
+              </p>
+              <img
+                alt="QR Code PIX"
+                className="mx-auto mt-3 h-48 w-48 rounded-xl border border-[var(--color-hairline)]"
+                height={192}
+                src={tracking.order.pix.qrCodeImage}
+                width={192}
+              />
+              <label className="mt-4 block text-sm font-bold text-[var(--color-ink)]">
+                Copia e cola
+                <textarea
+                  className="mt-2 min-h-24 w-full rounded-xl border border-[var(--color-hairline)] px-3 py-2 font-mono text-xs text-[var(--color-body)]"
+                  readOnly
+                  value={tracking.order.pix.brCode}
+                />
+              </label>
+            </div>
+          ) : null}
 
           {tracking.order.deliveryAddress ? (
             <div className="mt-4 rounded-xl border border-[var(--color-hairline)] px-3 py-3 text-sm text-[var(--color-body)]">

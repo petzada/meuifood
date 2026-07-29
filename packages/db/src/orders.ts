@@ -14,6 +14,7 @@ import type {
   FulfillmentType,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
 } from "./generated/prisma/enums.js";
 
 export type ComplementSnapshotRecord = {
@@ -60,6 +61,7 @@ export type OrderDetailView = {
   itemsTotalCents: number;
   lines: OrderLineView[];
   paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   publicCode: string;
   status: OrderStatus;
   storeId: string;
@@ -73,6 +75,7 @@ export type OrderListItemView = {
   guestName: string;
   id: string;
   paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   publicCode: string;
   status: OrderStatus;
   totalCents: number;
@@ -93,15 +96,17 @@ export type CreateGuestOrderInput = {
   /** Instant Temporal/ISO da requisição — revalidado dentro da transação. */
   nowIso: string;
   payloadHash: string;
+  paymentMethod: PaymentMethod;
   storeSlug: string;
 };
 
 /** @deprecated use CreateGuestOrderInput */
 export type CreateGuestPickupOrderInput = Omit<
   CreateGuestOrderInput,
-  "address" | "fulfillmentType"
+  "address" | "fulfillmentType" | "paymentMethod"
 > & {
   fulfillmentType?: "pickup";
+  paymentMethod?: PaymentMethod;
 };
 
 export type CreateGuestOrderResult =
@@ -115,6 +120,7 @@ export type CreateGuestOrderResult =
   | { kind: "invalid_address" }
   | { kind: "store_paused" }
   | { kind: "store_outside_hours" }
+  | { kind: "billing_mode_not_allowed" }
   | { kind: "recalculation_failed"; error: string };
 
 export type CreateGuestPickupOrderResult = CreateGuestOrderResult;
@@ -200,6 +206,7 @@ const orderDetailSelect = {
   id: true,
   itemsTotalCents: true,
   paymentMethod: true,
+  paymentStatus: true,
   publicCode: true,
   status: true,
   storeId: true,
@@ -258,6 +265,7 @@ function mapOrderDetail(order: {
     unitPriceCents: number;
   }>;
   paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   publicCode: string;
   status: OrderStatus;
   storeId: string;
@@ -276,6 +284,7 @@ function mapOrderDetail(order: {
     itemsTotalCents: order.itemsTotalCents,
     lines: order.lines.map(mapOrderLine),
     paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
     publicCode: order.publicCode,
     status: order.status,
     storeId: order.storeId,
@@ -319,6 +328,7 @@ export async function createGuestOrderRecord(
 
   const lockedStores = await transaction.$queryRaw<
     Array<{
+      billingMode: "pilot_platform" | "baas" | "merchant_own_account";
       deliveryFeeMode: DeliveryFeeMode | null;
       fixedDeliveryFeeCents: number | null;
       id: string;
@@ -331,13 +341,18 @@ export async function createGuestOrderRecord(
       paused,
       pickup_enabled AS "pickupEnabled",
       delivery_fee_mode AS "deliveryFeeMode",
-      fixed_delivery_fee_cents AS "fixedDeliveryFeeCents"
+      fixed_delivery_fee_cents AS "fixedDeliveryFeeCents",
+      billing_mode AS "billingMode"
     FROM stores
     WHERE id = ${storeRef.id}::uuid
     FOR UPDATE
   `;
   const store = lockedStores[0];
   if (!store) return { kind: "store_not_found" };
+
+  if (input.paymentMethod === "pix" && store.billingMode !== "pilot_platform") {
+    return { kind: "billing_mode_not_allowed" };
+  }
 
   if (input.fulfillmentType === "pickup" && !store.pickupEnabled) {
     return { kind: "pickup_disabled" };
@@ -442,6 +457,8 @@ export async function createGuestOrderRecord(
   const now = new Date();
   const rawAccessToken = mintOrderAccessToken();
   const accessTokenHash = hashOrderAccessToken(rawAccessToken);
+  const paymentStatus: PaymentStatus =
+    input.paymentMethod === "pix" ? "awaiting_payment" : "not_required";
 
   const created = await transaction.order.create({
     data: {
@@ -459,7 +476,8 @@ export async function createGuestOrderRecord(
       idempotencyKey: input.idempotencyKey,
       idempotencyPayloadHash: input.payloadHash,
       itemsTotalCents: recalculated.itemsTotalCents,
-      paymentMethod: "on_delivery",
+      paymentMethod: input.paymentMethod,
+      paymentStatus,
       publicCode: newPublicCode(),
       status: "received",
       storeId: store.id,
@@ -468,6 +486,21 @@ export async function createGuestOrderRecord(
     },
     select: { id: true },
   });
+
+  if (input.paymentMethod === "pix") {
+    await transaction.paymentCharge.create({
+      data: {
+        amountCents: totalCents,
+        correlationId: `foode-order-${created.id}`,
+        createdAt: now,
+        orderId: created.id,
+        provider: "woovi",
+        status: "pending",
+        storeId: store.id,
+        updatedAt: now,
+      },
+    });
+  }
 
   await transaction.orderLine.createMany({
     data: recalculated.lines.map((line, index) => ({
@@ -502,6 +535,7 @@ export async function createGuestPickupOrderRecord(
     ...input,
     address: null,
     fulfillmentType: "pickup",
+    paymentMethod: input.paymentMethod ?? "on_delivery",
   });
 }
 
@@ -577,6 +611,7 @@ export async function listStoreOrders(
       guestName: true,
       id: true,
       paymentMethod: true,
+      paymentStatus: true,
       publicCode: true,
       status: true,
       totalCents: true,
@@ -588,6 +623,7 @@ export async function listStoreOrders(
     guestName: order.guestName,
     id: order.id,
     paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
     publicCode: order.publicCode,
     status: order.status,
     totalCents: order.totalCents,

@@ -7,7 +7,11 @@ import Fastify, {
 import pino, { type DestinationStream } from "pino";
 import { z } from "zod";
 
-import type { BusinessDatabase, MembershipContext } from "@foode/db";
+import type {
+  BusinessDatabase,
+  MembershipContext,
+  WooviPaymentAdapter,
+} from "@foode/db";
 import { healthResponseSchema, type MembershipRole } from "@foode/shared";
 
 import { safeLoggerOptions } from "./logger.js";
@@ -29,8 +33,13 @@ import {
   registerStaffOrderRoutes,
 } from "./order-routes.js";
 import { registerDeliveryConfigRoutes } from "./delivery-config-routes.js";
+import {
+  registerOpsLedgerRoutes,
+  registerWooviWebhookRoutes,
+} from "./payment-routes.js";
 import { calculateStoreOperation } from "./store-operation.js";
 import { registerStoreOperationRoutes } from "./store-operation-routes.js";
+import type { WooviClientLike } from "./woovi-adapter.js";
 
 type BuildAppOptions = {
   businessDatabase?: BusinessDatabase;
@@ -40,7 +49,10 @@ type BuildAppOptions = {
   menuImagePublicBaseUrl?: string;
   menuImageStorage?: MenuImageStorage;
   now?: () => Temporal.Instant;
+  opsApiToken?: string;
   verifyAccessToken?: (token: string) => Promise<{ userId: string }>;
+  wooviAdapter?: WooviPaymentAdapter;
+  wooviClient?: WooviClientLike;
 };
 
 const storeUpdateSchema = z.object({
@@ -148,10 +160,47 @@ export function buildApp(options: BuildAppOptions = {}) {
     menuImagePublicBaseUrl,
     menuImageStorage,
     now = () => Temporal.Now.instant(),
+    opsApiToken,
     verifyAccessToken,
+    wooviAdapter,
+    wooviClient,
   } = options;
 
+  // Preserva raw body para verificação RSA do webhook Woovi (x-webhook-signature).
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "string" },
+    (request, body, done) => {
+      const raw = typeof body === "string" ? body : String(body);
+      (request as { rawBody?: string }).rawBody = raw;
+      if (!raw) {
+        done(null, {});
+        return;
+      }
+      try {
+        done(null, JSON.parse(raw) as unknown);
+      } catch (error) {
+        done(error as Error, undefined);
+      }
+    },
+  );
+
+  if (businessDatabase && wooviClient) {
+    registerWooviWebhookRoutes(app, {
+      businessDatabase,
+      now,
+      wooviClient,
+    });
+  }
+
   if (businessDatabase) {
+    registerOpsLedgerRoutes(app, {
+      businessDatabase,
+      now,
+      ...(opsApiToken ? { opsApiToken } : {}),
+      ...(verifyAccessToken ? { verifyAccessToken } : {}),
+    });
+
     app.get<{ Params: { slug: string } }>(
       "/public/stores/:slug/menu",
       async (request, reply) => {
@@ -189,6 +238,7 @@ export function buildApp(options: BuildAppOptions = {}) {
     registerPublicOrderRoutes(app, {
       businessDatabase,
       now,
+      ...(wooviAdapter ? { wooviAdapter } : {}),
     });
   }
 

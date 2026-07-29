@@ -10,6 +10,8 @@ import type {
   BusinessDatabase,
   MembershipContext,
   OrderDetailView,
+  PublicPixChargeView,
+  WooviPaymentAdapter,
 } from "@foode/db";
 import {
   buildWhatsAppMeUrl,
@@ -18,6 +20,7 @@ import {
   fulfillmentTypeSchema,
   normalizeBrazilianMobilePhone,
   orderStatusSchema,
+  paymentMethodSchema,
   type MembershipRole,
   type OrderStatus,
 } from "@foode/shared";
@@ -43,7 +46,7 @@ const createGuestOrderSchema = z
       phone: z.string().trim().min(8).max(40),
     }),
     lines: z.array(cartLineContractSchema).min(1).max(40),
-    paymentMethod: z.literal("on_delivery"),
+    paymentMethod: paymentMethodSchema,
     /** Preview-only; servidor recalcula. */
     totalCents: z.number().int().min(0).optional(),
   })
@@ -77,9 +80,23 @@ type RegisterOrderRoutesOptions = {
     reply: FastifyReply,
     requiredRole?: MembershipRole,
   ) => Promise<MembershipContext | undefined>;
+  wooviAdapter?: WooviPaymentAdapter;
 };
 
-function publicConsumerOrder(order: OrderDetailView) {
+function publicPixCharge(charge: PublicPixChargeView) {
+  return {
+    brCode: charge.brCode,
+    correlationId: charge.correlationId,
+    expiresAt: charge.expiresAt,
+    qrCodeImage: charge.qrCodeImage,
+    status: charge.status,
+  };
+}
+
+function publicConsumerOrder(
+  order: OrderDetailView,
+  pix?: PublicPixChargeView | null,
+) {
   return {
     createdAt: order.createdAt,
     deliveryAddress: order.deliveryAddress,
@@ -97,6 +114,8 @@ function publicConsumerOrder(order: OrderDetailView) {
       unitPriceCents: line.unitPriceCents,
     })),
     paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    ...(pix ? { pix: publicPixCharge(pix) } : {}),
     publicCode: order.publicCode,
     status: order.status,
     totalCents: order.totalCents,
@@ -114,9 +133,12 @@ function staffOrder(order: OrderDetailView) {
 
 export function registerPublicOrderRoutes(
   app: FastifyInstance,
-  options: Pick<RegisterOrderRoutesOptions, "businessDatabase" | "now">,
+  options: Pick<
+    RegisterOrderRoutesOptions,
+    "businessDatabase" | "now" | "wooviAdapter"
+  >,
 ) {
-  const { businessDatabase, now } = options;
+  const { businessDatabase, now, wooviAdapter } = options;
 
   app.post<{ Body: unknown; Params: { slug: string } }>(
     "/public/stores/:slug/orders",
@@ -192,6 +214,7 @@ export function registerPublicOrderRoutes(
           lines: body.data.lines,
           nowIso: requestNow.toString(),
           payloadHash,
+          paymentMethod: body.data.paymentMethod,
           storeSlug: slug,
         });
       } catch (error) {
@@ -220,6 +243,9 @@ export function registerPublicOrderRoutes(
       if (result.kind === "store_outside_hours") {
         return reply.code(409).send({ error: "store_outside_hours" });
       }
+      if (result.kind === "billing_mode_not_allowed") {
+        return reply.code(409).send({ error: "billing_mode_not_allowed" });
+      }
       if (result.kind === "conflict") {
         return reply.code(409).send({ error: "idempotency_key_conflict" });
       }
@@ -227,16 +253,40 @@ export function registerPublicOrderRoutes(
         return reply.code(409).send({ error: result.error });
       }
 
+      let pix: PublicPixChargeView | null = null;
+      if (
+        body.data.paymentMethod === "pix" &&
+        (result.kind === "created" || result.kind === "replay")
+      ) {
+        if (!wooviAdapter) {
+          return reply.code(503).send({ error: "pix_provider_unavailable" });
+        }
+        const activated = await businessDatabase.activatePixCharge({
+          adapter: wooviAdapter,
+          orderId: result.order.id,
+          storeId: result.order.storeId,
+        });
+        if (activated.kind === "provider_error") {
+          return reply.code(502).send({ error: "pix_provider_error" });
+        }
+        if (activated.kind !== "ready") {
+          return reply.code(502).send({ error: "pix_charge_unavailable" });
+        }
+        pix = activated.charge;
+      }
+
       if (result.kind === "created") {
         return reply.code(201).send({
           order: {
-            ...publicConsumerOrder(result.order),
+            ...publicConsumerOrder(result.order, pix),
             accessToken: result.accessToken,
           },
         });
       }
 
-      return reply.code(200).send({ order: publicConsumerOrder(result.order) });
+      return reply
+        .code(200)
+        .send({ order: publicConsumerOrder(result.order, pix) });
     },
   );
 
@@ -254,6 +304,14 @@ export function registerPublicOrderRoutes(
         return reply.code(404).send({ error: "order_not_found" });
       }
 
+      const pix =
+        tracking.order.paymentMethod === "pix"
+          ? await businessDatabase.findPublicPixCharge({
+              orderId: tracking.order.id,
+              storeId: tracking.order.storeId,
+            })
+          : null;
+
       const whatsappUrl = tracking.contactPhoneE164
         ? buildWhatsAppMeUrl(
             tracking.contactPhoneE164,
@@ -262,7 +320,7 @@ export function registerPublicOrderRoutes(
         : null;
 
       return reply.code(200).send({
-        order: publicConsumerOrder(tracking.order),
+        order: publicConsumerOrder(tracking.order, pix),
         store: {
           contactPhoneE164: tracking.contactPhoneE164,
           name: tracking.storeName,
