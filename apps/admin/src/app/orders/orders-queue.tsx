@@ -2,12 +2,14 @@
 
 import {
   ORDER_POLL_INTERVAL_MS,
-  allowedPickupTransitions,
-  canTransitionPickup,
+  allowedOrderTransitions,
+  canTransitionOrder,
   createEmptyPollSoundState,
+  fulfillmentTypeSchema,
   orderStatusLabelPt,
   orderStatusSchema,
   stepOrderPollSound,
+  type FulfillmentType,
   type OrderStatus,
   type PollSoundState,
 } from "@foode/shared";
@@ -15,6 +17,7 @@ import { OutlineContainer } from "@foode/ui";
 import { useEffect, useRef, useState } from "react";
 
 type OrderListItem = {
+  fulfillmentType?: FulfillmentType;
   guestName: string;
   id: string;
   publicCode: string;
@@ -31,6 +34,13 @@ type OrderLineDetail = {
 };
 
 type OrderDetail = OrderListItem & {
+  deliveryAddress?: {
+    complement: string | null;
+    neighborhood: string;
+    reference: string | null;
+    streetLine: string;
+  } | null;
+  deliveryFeeCents?: number;
   guestPhoneE164?: string;
   lines: OrderLineDetail[];
 };
@@ -114,7 +124,17 @@ export function OrdersQueue({
         const nextOrders = payload.orders.flatMap((order) => {
           const status = orderStatusSchema.safeParse(order.status);
           if (!status.success) return [];
-          return [{ ...order, status: status.data }];
+          const fulfillment = fulfillmentTypeSchema.safeParse(
+            order.fulfillmentType ?? "pickup",
+          );
+          if (!fulfillment.success) return [];
+          return [
+            {
+              ...order,
+              fulfillmentType: fulfillment.data,
+              status: status.data,
+            },
+          ];
         });
         const soundStep = stepOrderPollSound(
           pollSoundRef.current,
@@ -196,7 +216,8 @@ export function OrdersQueue({
 
   async function transitionTo(to: OrderStatus) {
     if (!detail) return;
-    if (!canTransitionPickup(detail.status, to)) {
+    const fulfillment = detail.fulfillmentType ?? "pickup";
+    if (!canTransitionOrder(fulfillment, detail.status, to)) {
       setDetailError("Transição não permitida para este Pedido.");
       return;
     }
@@ -233,6 +254,7 @@ export function OrdersQueue({
         current.map((order) =>
           order.id === next.id
             ? {
+                fulfillmentType: next.fulfillmentType ?? "pickup",
                 guestName: next.guestName,
                 id: next.id,
                 publicCode: next.publicCode,
@@ -274,7 +296,8 @@ export function OrdersQueue({
         <ul className="mt-5 grid gap-3">
           {orders.map((order) => {
             const expanded = expandedId === order.id;
-            const transitions = allowedPickupTransitions(order.status);
+            const fulfillment = order.fulfillmentType ?? "pickup";
+            const transitions = allowedOrderTransitions(fulfillment, order.status);
             return (
               <li key={order.id}>
                 <button
@@ -289,7 +312,8 @@ export function OrdersQueue({
                       #{order.publicCode} · {order.guestName}
                     </span>
                     <span className="mt-1 block text-sm text-[var(--color-muted)]">
-                      {orderStatusLabelPt(order.status)}
+                      {orderStatusLabelPt(order.status)} ·{" "}
+                      {fulfillment === "delivery" ? "Delivery" : "Retirada"}
                     </span>
                   </span>
                   <strong className="shrink-0 text-[var(--color-primary-active)]">
@@ -314,6 +338,31 @@ export function OrdersQueue({
                     ) : null}
                     {detail && detail.id === order.id ? (
                       <div className="grid gap-4">
+                        {detail.guestPhoneE164 ? (
+                          <p className="text-sm text-[var(--color-body)]">
+                            Telefone: {detail.guestPhoneE164}
+                          </p>
+                        ) : null}
+                        {detail.deliveryAddress ? (
+                          <div className="rounded-xl border border-[var(--color-hairline)] px-3 py-3 text-sm text-[var(--color-body)]">
+                            <p className="font-bold text-[var(--color-ink)]">
+                              Endereço
+                            </p>
+                            <p className="mt-1">{detail.deliveryAddress.streetLine}</p>
+                            <p>{detail.deliveryAddress.neighborhood}</p>
+                            {detail.deliveryAddress.complement ? (
+                              <p>{detail.deliveryAddress.complement}</p>
+                            ) : null}
+                            {detail.deliveryAddress.reference ? (
+                              <p>Ref.: {detail.deliveryAddress.reference}</p>
+                            ) : null}
+                            {typeof detail.deliveryFeeCents === "number" ? (
+                              <p className="mt-2">
+                                Taxa: {formatPrice(detail.deliveryFeeCents)}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                         <div className="grid gap-3">
                           {detail.lines.map((line, index) => (
                             <div

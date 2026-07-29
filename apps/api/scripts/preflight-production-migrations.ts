@@ -119,7 +119,10 @@ try {
               'menu_complement_groups',
               'menu_complement_options',
               'menu_additionals',
-              'store_operating_periods'
+              'store_operating_periods',
+              'delivery_neighborhoods',
+              'orders',
+              'order_lines'
             )
         `;
         assertIsolationCatalog({ role, tables });

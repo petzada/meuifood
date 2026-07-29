@@ -13,8 +13,9 @@ import type {
 } from "@foode/db";
 import {
   buildWhatsAppMeUrl,
-  canTransitionPickup,
+  canTransitionOrder,
   cartLineContractSchema,
+  fulfillmentTypeSchema,
   normalizeBrazilianMobilePhone,
   orderStatusSchema,
   type MembershipRole,
@@ -24,15 +25,45 @@ import {
 import { fingerprintIdempotentPayload } from "./order-idempotency.js";
 import { calculateStoreOperation } from "./store-operation.js";
 
-const createGuestOrderSchema = z.object({
-  fulfillmentType: z.literal("pickup"),
-  guest: z.object({
-    name: z.string().trim().min(1).max(120),
-    phone: z.string().trim().min(8).max(40),
-  }),
-  lines: z.array(cartLineContractSchema).min(1).max(40),
-  paymentMethod: z.literal("on_delivery"),
+const deliveryAddressSchema = z.object({
+  complement: z.string().trim().max(120).optional().nullable(),
+  neighborhood: z.string().trim().min(1).max(120),
+  reference: z.string().trim().max(160).optional().nullable(),
+  streetLine: z.string().trim().min(1).max(200),
 });
+
+const createGuestOrderSchema = z
+  .object({
+    address: deliveryAddressSchema.optional().nullable(),
+    /** Preview-only; servidor recalcula e ignora se divergir. */
+    deliveryFeeCents: z.number().int().min(0).optional(),
+    fulfillmentType: fulfillmentTypeSchema,
+    guest: z.object({
+      name: z.string().trim().min(1).max(120),
+      phone: z.string().trim().min(8).max(40),
+    }),
+    lines: z.array(cartLineContractSchema).min(1).max(40),
+    paymentMethod: z.literal("on_delivery"),
+    /** Preview-only; servidor recalcula. */
+    totalCents: z.number().int().min(0).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.fulfillmentType === "delivery") {
+      if (!value.address) {
+        ctx.addIssue({
+          code: "custom",
+          message: "address_required",
+          path: ["address"],
+        });
+      }
+    } else if (value.address != null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "address_not_allowed",
+        path: ["address"],
+      });
+    }
+  });
 
 const transitionSchema = z.object({
   to: orderStatusSchema,
@@ -51,7 +82,9 @@ type RegisterOrderRoutesOptions = {
 function publicConsumerOrder(order: OrderDetailView) {
   return {
     createdAt: order.createdAt,
+    deliveryAddress: order.deliveryAddress,
     deliveryFeeCents: order.deliveryFeeCents,
+    deliveryFeeModeSnapshot: order.deliveryFeeModeSnapshot,
     fulfillmentType: order.fulfillmentType,
     guestName: order.guestName,
     itemsTotalCents: order.itemsTotalCents,
@@ -129,7 +162,18 @@ export function registerPublicOrderRoutes(
         });
       }
 
+      const address =
+        body.data.fulfillmentType === "delivery" && body.data.address
+          ? {
+              complement: body.data.address.complement ?? null,
+              neighborhood: body.data.address.neighborhood,
+              reference: body.data.address.reference ?? null,
+              streetLine: body.data.address.streetLine,
+            }
+          : null;
+
       const payloadHash = fingerprintIdempotentPayload({
+        address,
         fulfillmentType: body.data.fulfillmentType,
         guest: { name: body.data.guest.name, phone: phone.e164 },
         lines: body.data.lines,
@@ -137,11 +181,11 @@ export function registerPublicOrderRoutes(
         storeSlug: slug,
       });
 
-      let result: Awaited<
-        ReturnType<BusinessDatabase["createGuestPickupOrder"]>
-      >;
+      let result: Awaited<ReturnType<BusinessDatabase["createGuestOrder"]>>;
       try {
-        result = await businessDatabase.createGuestPickupOrder({
+        result = await businessDatabase.createGuestOrder({
+          address,
+          fulfillmentType: body.data.fulfillmentType,
           guestName: body.data.guest.name,
           guestPhoneE164: phone.e164,
           idempotencyKey,
@@ -160,6 +204,15 @@ export function registerPublicOrderRoutes(
       }
       if (result.kind === "pickup_disabled") {
         return reply.code(409).send({ error: "pickup_disabled" });
+      }
+      if (result.kind === "delivery_not_configured") {
+        return reply.code(409).send({ error: "delivery_not_configured" });
+      }
+      if (result.kind === "neighborhood_not_served") {
+        return reply.code(409).send({ error: "neighborhood_not_served" });
+      }
+      if (result.kind === "invalid_address") {
+        return reply.code(400).send({ error: "invalid_address" });
       }
       if (result.kind === "store_paused") {
         return reply.code(409).send({ error: "store_paused" });
@@ -283,10 +336,13 @@ export function registerStaffOrderRoutes(
       if (!current) {
         return reply.code(404).send({ error: "order_not_found" });
       }
-      if (current.fulfillmentType !== "pickup") {
-        return reply.code(409).send({ error: "invalid_transition" });
-      }
-      if (!canTransitionPickup(current.status, body.data.to as OrderStatus)) {
+      if (
+        !canTransitionOrder(
+          current.fulfillmentType,
+          current.status,
+          body.data.to as OrderStatus,
+        )
+      ) {
         return reply.code(409).send({ error: "invalid_transition" });
       }
 

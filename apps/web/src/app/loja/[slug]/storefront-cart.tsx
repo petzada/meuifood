@@ -285,6 +285,12 @@ function checkoutErrorMessage(error: string | undefined) {
       return "A Loja está fora do horário de funcionamento.";
     case "pickup_disabled":
       return "Retirada não está disponível nesta Loja.";
+    case "delivery_not_configured":
+      return "Delivery não está disponível nesta Loja.";
+    case "neighborhood_not_served":
+      return "Este bairro não é atendido no Delivery. Escolha Retirada se estiver disponível.";
+    case "invalid_address":
+      return "Informe endereço e bairro válidos para o Delivery.";
     case "idempotency_key_conflict":
       return "Esta tentativa conflitou com outro Pedido. Atualize e tente de novo.";
     case "item_unavailable":
@@ -301,35 +307,77 @@ function checkoutErrorMessage(error: string | undefined) {
   }
 }
 
+export type PublicDeliveryConfig = {
+  deliveryAvailable: boolean;
+  fixedDeliveryFeeCents: number | null;
+  mode: "fixed" | "neighborhood" | null;
+  neighborhoods: Array<{ feeCents: number; name: string }>;
+  pickupEnabled: boolean;
+};
+
 function GuestCheckoutForm({
   apiUrl,
   cart,
   checkoutAllowed,
+  delivery,
+  itemsTotalCents,
   onSuccess,
-  pickupEnabled,
   storeSlug,
 }: {
   apiUrl: string;
   cart: CartContract;
   checkoutAllowed: boolean;
+  delivery: PublicDeliveryConfig;
+  itemsTotalCents: number | null;
   onSuccess: () => void;
-  pickupEnabled: boolean;
   storeSlug: string;
 }) {
   const router = useRouter();
+  const pickupEnabled = delivery.pickupEnabled;
+  const deliveryAvailable = delivery.deliveryAvailable;
+  const defaultFulfillment =
+    deliveryAvailable ? "delivery" : pickupEnabled ? "pickup" : null;
+  const [fulfillmentType, setFulfillmentType] = useState<
+    "pickup" | "delivery" | null
+  >(defaultFulfillment);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [streetLine, setStreetLine] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [complement, setComplement] = useState("");
+  const [reference, setReference] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const idempotencyKeyRef = useRef<string | null>(null);
   const attemptFingerprintRef = useRef<string | null>(null);
 
-  if (!pickupEnabled) {
+  const feePreview = useMemo(() => {
+    if (fulfillmentType !== "delivery") return 0;
+    if (delivery.mode === "fixed") return delivery.fixedDeliveryFeeCents ?? 0;
+    if (delivery.mode === "neighborhood") {
+      const key = neighborhood.trim().toLocaleLowerCase("pt-BR");
+      const match = delivery.neighborhoods.find(
+        (entry) =>
+          entry.name.trim().toLocaleLowerCase("pt-BR") === key ||
+          entry.name.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR") ===
+            neighborhood
+              .normalize("NFKD")
+              .replace(/\p{M}/gu, "")
+              .trim()
+              .replace(/\s+/gu, " ")
+              .toLocaleLowerCase("pt-BR"),
+      );
+      return match?.feeCents ?? null;
+    }
+    return null;
+  }, [delivery, fulfillmentType, neighborhood]);
+
+  if (!pickupEnabled && !deliveryAvailable) {
     return (
       <OutlineContainer className="mt-4 p-5">
         <h3 className="text-lg font-bold text-[var(--color-ink)]">Checkout</h3>
         <p className="mt-2 text-sm leading-relaxed text-[var(--color-body)]">
-          Retirada não está disponível nesta Loja no momento.
+          Nenhum modo de Fulfillment está disponível nesta Loja no momento.
         </p>
       </OutlineContainer>
     );
@@ -349,14 +397,44 @@ function GuestCheckoutForm({
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!fulfillmentType) {
+      setError("Escolha Delivery ou Retirada.");
+      return;
+    }
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
     if (!trimmedName || !trimmedPhone) {
       setError("Informe nome e telefone para continuar.");
       return;
     }
+    if (fulfillmentType === "delivery") {
+      if (!streetLine.trim() || !neighborhood.trim()) {
+        setError("Informe endereço e bairro para o Delivery.");
+        return;
+      }
+      if (feePreview === null) {
+        setError(
+          pickupEnabled
+            ? "Este bairro não é atendido. Você pode escolher Retirada."
+            : "Este bairro não é atendido no Delivery.",
+        );
+        return;
+      }
+    }
+
+    const address =
+      fulfillmentType === "delivery"
+        ? {
+            complement: complement.trim() || null,
+            neighborhood: neighborhood.trim(),
+            reference: reference.trim() || null,
+            streetLine: streetLine.trim(),
+          }
+        : null;
 
     const fingerprint = JSON.stringify({
+      address,
+      fulfillmentType,
       lines: cart.lines,
       name: trimmedName,
       phone: trimmedPhone,
@@ -381,10 +459,16 @@ function GuestCheckoutForm({
         ),
         {
           body: JSON.stringify({
-            fulfillmentType: "pickup",
+            address,
+            deliveryFeeCents: feePreview ?? undefined,
+            fulfillmentType,
             guest: { name: trimmedName, phone: trimmedPhone },
             lines: cart.lines,
             paymentMethod: "on_delivery",
+            totalCents:
+              itemsTotalCents != null && feePreview != null
+                ? itemsTotalCents + feePreview
+                : undefined,
           }),
           headers: {
             "content-type": "application/json",
@@ -418,18 +502,66 @@ function GuestCheckoutForm({
         Finalizar Pedido
       </h3>
       <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Guest checkout — sem conta e sem endereço.
+        Guest checkout — valores do navegador são só prévia.
       </p>
 
+      <fieldset className="mt-4 grid gap-2">
+        <legend className="text-sm font-bold text-[var(--color-ink)]">
+          Modalidade
+        </legend>
+        {deliveryAvailable ? (
+          <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--color-hairline)] px-3 text-sm">
+            <input
+              checked={fulfillmentType === "delivery"}
+              name="fulfillment"
+              onChange={() => {
+                setFulfillmentType("delivery");
+                setError(null);
+              }}
+              type="radio"
+            />
+            Delivery
+          </label>
+        ) : null}
+        {pickupEnabled ? (
+          <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--color-hairline)] px-3 text-sm">
+            <input
+              checked={fulfillmentType === "pickup"}
+              name="fulfillment"
+              onChange={() => {
+                setFulfillmentType("pickup");
+                setError(null);
+              }}
+              type="radio"
+            />
+            Retirada
+          </label>
+        ) : null}
+      </fieldset>
+
       <dl className="mt-4 grid gap-2 text-sm">
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
-          <dt className="text-[var(--color-muted)]">Modalidade</dt>
-          <dd className="font-bold text-[var(--color-ink)]">Retirada</dd>
-        </div>
         <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
           <dt className="text-[var(--color-muted)]">Pagamento</dt>
           <dd className="font-bold text-[var(--color-ink)]">Pagamento na entrega</dd>
         </div>
+        {fulfillmentType === "delivery" ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
+            <dt className="text-[var(--color-muted)]">Taxa (prévia)</dt>
+            <dd className="font-bold text-[var(--color-ink)]">
+              {feePreview === null
+                ? "Informe um bairro atendido"
+                : formatPrice(feePreview)}
+            </dd>
+          </div>
+        ) : null}
+        {itemsTotalCents != null && fulfillmentType === "delivery" && feePreview != null ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
+            <dt className="text-[var(--color-muted)]">Total (prévia)</dt>
+            <dd className="font-bold text-[var(--color-primary-active)]">
+              {formatPrice(itemsTotalCents + feePreview)}
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
       <form className="mt-5 grid gap-4" onSubmit={submitCheckout}>
@@ -463,6 +595,75 @@ function GuestCheckoutForm({
           />
         </label>
 
+        {fulfillmentType === "delivery" ? (
+          <>
+            <label className="block text-sm font-bold text-[var(--color-ink)]">
+              Endereço (rua e número)
+              <input
+                autoComplete="street-address"
+                className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)]"
+                onChange={(event) => {
+                  setStreetLine(event.target.value);
+                  setError(null);
+                }}
+                placeholder="Rua Exemplo, 123"
+                required
+                value={streetLine}
+              />
+            </label>
+            <label className="block text-sm font-bold text-[var(--color-ink)]">
+              Bairro
+              {delivery.mode === "neighborhood" && delivery.neighborhoods.length > 0 ? (
+                <select
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)]"
+                  onChange={(event) => {
+                    setNeighborhood(event.target.value);
+                    setError(null);
+                  }}
+                  required
+                  value={neighborhood}
+                >
+                  <option value="">Selecione o bairro</option>
+                  {delivery.neighborhoods.map((entry) => (
+                    <option key={entry.name} value={entry.name}>
+                      {entry.name} · {formatPrice(entry.feeCents)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)]"
+                  onChange={(event) => {
+                    setNeighborhood(event.target.value);
+                    setError(null);
+                  }}
+                  placeholder="Seu bairro"
+                  required
+                  value={neighborhood}
+                />
+              )}
+            </label>
+            <label className="block text-sm font-bold text-[var(--color-ink)]">
+              Complemento (opcional)
+              <input
+                className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)]"
+                onChange={(event) => setComplement(event.target.value)}
+                placeholder="Apto, bloco…"
+                value={complement}
+              />
+            </label>
+            <label className="block text-sm font-bold text-[var(--color-ink)]">
+              Referência (opcional)
+              <input
+                className="mt-2 min-h-12 w-full rounded-xl border border-[var(--color-hairline)] px-4 font-normal outline-none focus:border-[var(--color-primary)]"
+                onChange={(event) => setReference(event.target.value)}
+                placeholder="Ponto de referência"
+                value={reference}
+              />
+            </label>
+          </>
+        ) : null}
+
         {error ? (
           <p className="text-sm font-bold text-[var(--color-error)]" role="alert">
             {error}
@@ -485,21 +686,21 @@ function CartPreview({
   apiUrl,
   cart,
   checkoutAllowed,
+  delivery,
   itemsById,
   onClearCart,
   onRemove,
   onQuantityChange,
-  pickupEnabled,
   storeSlug,
 }: {
   apiUrl: string;
   cart: CartContract;
   checkoutAllowed: boolean;
+  delivery: PublicDeliveryConfig;
   itemsById: Map<string, PublicMenuItem>;
   onClearCart: () => void;
   onQuantityChange: (lineIndex: number, quantity: number) => void;
   onRemove: (lineIndex: number) => void;
-  pickupEnabled: boolean;
   storeSlug: string;
 }) {
   const calculationItems = useMemo(
@@ -610,8 +811,9 @@ function CartPreview({
           apiUrl={apiUrl}
           cart={cart}
           checkoutAllowed={checkoutAllowed}
+          delivery={delivery}
+          itemsTotalCents={total}
           onSuccess={onClearCart}
-          pickupEnabled={pickupEnabled}
           storeSlug={storeSlug}
         />
       ) : null}
@@ -623,13 +825,13 @@ export function StorefrontCatalog({
   apiUrl,
   categories,
   checkoutAllowed,
-  pickupEnabled,
+  delivery,
   storeSlug,
 }: {
   apiUrl: string;
   categories: PublicMenuCategory[];
   checkoutAllowed: boolean;
-  pickupEnabled: boolean;
+  delivery: PublicDeliveryConfig;
   storeSlug: string;
 }) {
   const [cart, setCart] = useState<CartContract>(() => createEmptyCart(storeSlug));
@@ -749,6 +951,7 @@ export function StorefrontCatalog({
           apiUrl={apiUrl}
           cart={cart}
           checkoutAllowed={checkoutAllowed}
+          delivery={delivery}
           itemsById={itemsById}
           onClearCart={() => {
             setCart(createEmptyCart(storeSlug));
@@ -756,7 +959,6 @@ export function StorefrontCatalog({
           }}
           onQuantityChange={changeQuantity}
           onRemove={removeLine}
-          pickupEnabled={pickupEnabled}
           storeSlug={storeSlug}
         />
       )}

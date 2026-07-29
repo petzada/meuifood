@@ -31,28 +31,54 @@ enum MembershipRole {
   @@map("membership_role")
 }
 
+enum DeliveryFeeMode {
+  fixed
+  neighborhood
+
+  @@map("delivery_fee_mode")
+}
+
 model Store {
-  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  taxId              String                 @unique @map("tax_id")
-  name               String
-  slug               String                 @unique
-  billingMode        BillingMode            @map("billing_mode")
-  paused             Boolean                @default(false)
-  pickupEnabled      Boolean                @default(true) @map("pickup_enabled")
-  contactPhoneE164   String?                @map("contact_phone_e164")
-  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
-  members            StoreMember[]
-  categories         MenuCategory[]
-  items              MenuItem[]
-  complementGroups   MenuComplementGroup[]
-  complementOptions  MenuComplementOption[]
-  additionals        MenuAdditional[]
-  operatingPeriods   StoreOperatingPeriod[]
-  orders             Order[]
-  orderLines         OrderLine[]
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taxId                  String                  @unique @map("tax_id")
+  name                   String
+  slug                   String                  @unique
+  billingMode            BillingMode             @map("billing_mode")
+  paused                 Boolean                 @default(false)
+  pickupEnabled          Boolean                 @default(true) @map("pickup_enabled")
+  contactPhoneE164       String?                 @map("contact_phone_e164")
+  deliveryFeeMode        DeliveryFeeMode?        @map("delivery_fee_mode")
+  fixedDeliveryFeeCents  Int?                    @map("fixed_delivery_fee_cents")
+  createdAt              DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  members                StoreMember[]
+  categories             MenuCategory[]
+  items                  MenuItem[]
+  complementGroups       MenuComplementGroup[]
+  complementOptions      MenuComplementOption[]
+  additionals            MenuAdditional[]
+  operatingPeriods       StoreOperatingPeriod[]
+  deliveryNeighborhoods  DeliveryNeighborhood[]
+  orders                 Order[]
+  orderLines             OrderLine[]
 
   @@map("stores")
+}
+
+model DeliveryNeighborhood {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId        String   @map("store_id") @db.Uuid
+  name           String
+  normalizedName String   @map("normalized_name")
+  feeCents       Int      @map("fee_cents")
+  sortOrder      Int      @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, normalizedName])
+  @@index([storeId, sortOrder])
+  @@map("delivery_neighborhoods")
 }
 
 model StoreOperatingPeriod {
@@ -173,6 +199,7 @@ enum OrderStatus {
   received
   preparing
   ready_for_pickup
+  out_for_delivery
   completed
   cancelled
 
@@ -181,6 +208,7 @@ enum OrderStatus {
 
 enum FulfillmentType {
   pickup
+  delivery
 
   @@map("fulfillment_type")
 }
@@ -192,26 +220,31 @@ enum PaymentMethod {
 }
 
 model Order {
-  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId                String          @map("store_id") @db.Uuid
-  publicCode             String          @map("public_code")
+  id                       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId                  String           @map("store_id") @db.Uuid
+  publicCode               String           @map("public_code")
   /// SHA-256 hex (64 chars) do capability token opaco; token bruto nunca é persistido.
-  accessToken            String          @unique @map("access_token")
-  status                 OrderStatus     @default(received)
-  fulfillmentType        FulfillmentType @map("fulfillment_type")
-  paymentMethod          PaymentMethod   @map("payment_method")
-  guestName              String          @map("guest_name")
-  guestPhoneE164         String          @map("guest_phone_e164")
-  customerUserId         String?         @map("customer_user_id") @db.Uuid
-  itemsTotalCents        Int             @map("items_total_cents")
-  deliveryFeeCents       Int             @default(0) @map("delivery_fee_cents")
-  totalCents             Int             @map("total_cents")
-  idempotencyKey         String          @map("idempotency_key")
-  idempotencyPayloadHash String          @map("idempotency_payload_hash")
-  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  store                  Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  lines                  OrderLine[]
+  accessToken              String           @unique @map("access_token")
+  status                   OrderStatus      @default(received)
+  fulfillmentType          FulfillmentType  @map("fulfillment_type")
+  paymentMethod            PaymentMethod    @map("payment_method")
+  guestName                String           @map("guest_name")
+  guestPhoneE164           String           @map("guest_phone_e164")
+  customerUserId           String?          @map("customer_user_id") @db.Uuid
+  itemsTotalCents          Int              @map("items_total_cents")
+  deliveryFeeCents         Int              @default(0) @map("delivery_fee_cents")
+  totalCents               Int              @map("total_cents")
+  deliveryStreetLine       String?          @map("delivery_street_line")
+  deliveryNeighborhood     String?          @map("delivery_neighborhood")
+  deliveryComplement       String?          @map("delivery_complement")
+  deliveryReference        String?          @map("delivery_reference")
+  deliveryFeeModeSnapshot  DeliveryFeeMode? @map("delivery_fee_mode_snapshot")
+  idempotencyKey           String           @map("idempotency_key")
+  idempotencyPayloadHash   String           @map("idempotency_payload_hash")
+  createdAt                DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store                    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lines                    OrderLine[]
 
   @@unique([storeId, id])
   @@unique([storeId, idempotencyKey])

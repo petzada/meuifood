@@ -19,7 +19,8 @@ describe("shell do Painel", () => {
     expect(html).not.toContain("Cardápio");
     expect(html).not.toContain("Funcionamento");
     expect(html).not.toContain("Equipe");
-    expect(html).not.toContain("Configurações");
+    expect(html).not.toContain("#configuracoes");
+    expect(html).not.toContain('href="#cardapio"');
   });
 
   it("oferece ao Dono a âncora de Cardápio na navegação", () => {
@@ -29,6 +30,8 @@ describe("shell do Painel", () => {
     expect(html).toContain("#cardapio");
     expect(html).toContain("Funcionamento");
     expect(html).toContain("#funcionamento");
+    expect(html).toContain("Delivery");
+    expect(html).toContain("#configuracoes");
   });
 
   it("oferece ao Dono a gestão funcional da Equipe", () => {

@@ -2,7 +2,10 @@ import { createHash, randomBytes } from "node:crypto";
 
 import {
   recalculateGuestPickupOrder,
+  resolveDeliveryFeeCents,
+  sanitizeDeliveryAddress,
   type CartLineContract,
+  type DeliveryFeeMode,
 } from "@foode/shared";
 
 import { checkoutBlockReason } from "./checkout-gate.js";
@@ -38,9 +41,18 @@ export type OrderLineView = {
   unitPriceCents: number;
 };
 
+export type OrderDeliveryAddressView = {
+  complement: string | null;
+  neighborhood: string;
+  reference: string | null;
+  streetLine: string;
+};
+
 export type OrderDetailView = {
   createdAt: string;
+  deliveryAddress: OrderDeliveryAddressView | null;
   deliveryFeeCents: number;
+  deliveryFeeModeSnapshot: DeliveryFeeMode | null;
   fulfillmentType: FulfillmentType;
   guestName: string;
   guestPhoneE164: string;
@@ -66,7 +78,14 @@ export type OrderListItemView = {
   totalCents: number;
 };
 
-export type CreateGuestPickupOrderInput = {
+export type CreateGuestOrderInput = {
+  address?: {
+    complement?: string | null;
+    neighborhood: string;
+    reference?: string | null;
+    streetLine: string;
+  } | null;
+  fulfillmentType: FulfillmentType;
   guestName: string;
   guestPhoneE164: string;
   idempotencyKey: string;
@@ -77,15 +96,28 @@ export type CreateGuestPickupOrderInput = {
   storeSlug: string;
 };
 
-export type CreateGuestPickupOrderResult =
+/** @deprecated use CreateGuestOrderInput */
+export type CreateGuestPickupOrderInput = Omit<
+  CreateGuestOrderInput,
+  "address" | "fulfillmentType"
+> & {
+  fulfillmentType?: "pickup";
+};
+
+export type CreateGuestOrderResult =
   | { kind: "created"; accessToken: string; order: OrderDetailView }
   | { kind: "replay"; order: OrderDetailView }
   | { kind: "conflict" }
   | { kind: "store_not_found" }
   | { kind: "pickup_disabled" }
+  | { kind: "delivery_not_configured" }
+  | { kind: "neighborhood_not_served" }
+  | { kind: "invalid_address" }
   | { kind: "store_paused" }
   | { kind: "store_outside_hours" }
   | { kind: "recalculation_failed"; error: string };
+
+export type CreateGuestPickupOrderResult = CreateGuestOrderResult;
 
 export type TransitionOrderResult =
   | { kind: "updated"; order: OrderDetailView }
@@ -156,7 +188,12 @@ const orderLineSelect = {
 
 const orderDetailSelect = {
   createdAt: true,
+  deliveryComplement: true,
   deliveryFeeCents: true,
+  deliveryFeeModeSnapshot: true,
+  deliveryNeighborhood: true,
+  deliveryReference: true,
+  deliveryStreetLine: true,
   fulfillmentType: true,
   guestName: true,
   guestPhoneE164: true,
@@ -174,9 +211,36 @@ const orderDetailSelect = {
   },
 } satisfies Prisma.OrderSelect;
 
+function mapDeliveryAddress(order: {
+  deliveryComplement: string | null;
+  deliveryNeighborhood: string | null;
+  deliveryReference: string | null;
+  deliveryStreetLine: string | null;
+  fulfillmentType: FulfillmentType;
+}): OrderDeliveryAddressView | null {
+  if (
+    order.fulfillmentType !== "delivery" ||
+    !order.deliveryStreetLine ||
+    !order.deliveryNeighborhood
+  ) {
+    return null;
+  }
+  return {
+    complement: order.deliveryComplement,
+    neighborhood: order.deliveryNeighborhood,
+    reference: order.deliveryReference,
+    streetLine: order.deliveryStreetLine,
+  };
+}
+
 function mapOrderDetail(order: {
   createdAt: Date;
+  deliveryComplement: string | null;
   deliveryFeeCents: number;
+  deliveryFeeModeSnapshot: DeliveryFeeMode | null;
+  deliveryNeighborhood: string | null;
+  deliveryReference: string | null;
+  deliveryStreetLine: string | null;
   fulfillmentType: FulfillmentType;
   guestName: string;
   guestPhoneE164: string;
@@ -202,7 +266,9 @@ function mapOrderDetail(order: {
 }): OrderDetailView {
   return {
     createdAt: order.createdAt.toISOString(),
+    deliveryAddress: mapDeliveryAddress(order),
     deliveryFeeCents: order.deliveryFeeCents,
+    deliveryFeeModeSnapshot: order.deliveryFeeModeSnapshot,
     fulfillmentType: order.fulfillmentType,
     guestName: order.guestName,
     guestPhoneE164: order.guestPhoneE164,
@@ -229,10 +295,10 @@ async function loadOrderDetail(
   return order ? mapOrderDetail(order) : null;
 }
 
-export async function createGuestPickupOrderRecord(
+export async function createGuestOrderRecord(
   transaction: Prisma.TransactionClient,
-  input: CreateGuestPickupOrderInput,
-): Promise<CreateGuestPickupOrderResult> {
+  input: CreateGuestOrderInput,
+): Promise<CreateGuestOrderResult> {
   await transaction.$executeRaw`SET LOCAL ROLE foode_business`;
   await transaction.$executeRaw`
     SELECT set_config('app.public_slug', ${input.storeSlug}, true)
@@ -241,8 +307,6 @@ export async function createGuestPickupOrderRecord(
     SELECT set_config('app.current_store_id', '', true)
   `;
 
-  // Lookup público (SELECT). FOR UPDATE sob RLS exige policy de UPDATE —
-  // por isso o lock vem depois de setar app.current_store_id.
   const storeRef = await transaction.store.findFirst({
     where: { slug: input.storeSlug },
     select: { id: true },
@@ -253,21 +317,34 @@ export async function createGuestPickupOrderRecord(
     SELECT set_config('app.current_store_id', ${storeRef.id}, true)
   `;
 
-  // Lock de linha da Loja: serializa com atualização de Pausa (UPDATE stores).
   const lockedStores = await transaction.$queryRaw<
-    Array<{ id: string; paused: boolean; pickupEnabled: boolean }>
+    Array<{
+      deliveryFeeMode: DeliveryFeeMode | null;
+      fixedDeliveryFeeCents: number | null;
+      id: string;
+      paused: boolean;
+      pickupEnabled: boolean;
+    }>
   >`
     SELECT
       id,
       paused,
-      pickup_enabled AS "pickupEnabled"
+      pickup_enabled AS "pickupEnabled",
+      delivery_fee_mode AS "deliveryFeeMode",
+      fixed_delivery_fee_cents AS "fixedDeliveryFeeCents"
     FROM stores
     WHERE id = ${storeRef.id}::uuid
     FOR UPDATE
   `;
   const store = lockedStores[0];
   if (!store) return { kind: "store_not_found" };
-  if (!store.pickupEnabled) return { kind: "pickup_disabled" };
+
+  if (input.fulfillmentType === "pickup" && !store.pickupEnabled) {
+    return { kind: "pickup_disabled" };
+  }
+  if (input.fulfillmentType === "delivery" && store.deliveryFeeMode == null) {
+    return { kind: "delivery_not_configured" };
+  }
 
   const periods = await transaction.storeOperatingPeriod.findMany({
     orderBy: [{ weekday: "asc" }, { opensAt: "asc" }],
@@ -281,7 +358,6 @@ export async function createGuestPickupOrderRecord(
   if (block === "paused") return { kind: "store_paused" };
   if (block === "outside_hours") return { kind: "store_outside_hours" };
 
-  // Serializa (store_id, idempotency_key) sem abortar a transação em P2002.
   await transaction.$executeRaw`
     SELECT pg_advisory_xact_lock(
       hashtext(${`foode:order-idem:${store.id}:${input.idempotencyKey}`})
@@ -307,6 +383,47 @@ export async function createGuestPickupOrderRecord(
     return { kind: "replay", order: replay };
   }
 
+  let deliveryFeeCents = 0;
+  let deliveryFeeModeSnapshot: DeliveryFeeMode | null = null;
+  let deliveryStreetLine: string | null = null;
+  let deliveryNeighborhood: string | null = null;
+  let deliveryComplement: string | null = null;
+  let deliveryReference: string | null = null;
+
+  if (input.fulfillmentType === "delivery") {
+    if (!input.address) return { kind: "invalid_address" };
+    const neighborhoods =
+      store.deliveryFeeMode === "neighborhood"
+        ? await transaction.deliveryNeighborhood.findMany({
+            where: { storeId: store.id },
+            select: {
+              feeCents: true,
+              name: true,
+              normalizedName: true,
+            },
+          })
+        : [];
+    const fee = resolveDeliveryFeeCents(
+      {
+        fixedDeliveryFeeCents: store.fixedDeliveryFeeCents,
+        mode: store.deliveryFeeMode,
+        neighborhoods,
+      },
+      input.address,
+    );
+    if (!fee.ok) {
+      return { kind: fee.error };
+    }
+    const sanitized = sanitizeDeliveryAddress(input.address);
+    if (!sanitized.ok) return { kind: "invalid_address" };
+    deliveryFeeCents = fee.feeCents;
+    deliveryFeeModeSnapshot = fee.mode;
+    deliveryStreetLine = sanitized.streetLine;
+    deliveryNeighborhood = fee.neighborhoodDisplay;
+    deliveryComplement = sanitized.complement;
+    deliveryReference = sanitized.reference;
+  }
+
   const itemIds = [...new Set(input.lines.map((line) => line.itemId))];
   const catalogItems = await loadCatalogItemsForOrder(
     transaction,
@@ -321,7 +438,6 @@ export async function createGuestPickupOrderRecord(
     return { kind: "recalculation_failed", error: recalculated.error };
   }
 
-  const deliveryFeeCents = 0;
   const totalCents = recalculated.itemsTotalCents + deliveryFeeCents;
   const now = new Date();
   const rawAccessToken = mintOrderAccessToken();
@@ -331,8 +447,13 @@ export async function createGuestPickupOrderRecord(
     data: {
       accessToken: accessTokenHash,
       createdAt: now,
+      deliveryComplement,
       deliveryFeeCents,
-      fulfillmentType: "pickup",
+      deliveryFeeModeSnapshot,
+      deliveryNeighborhood,
+      deliveryReference,
+      deliveryStreetLine,
+      fulfillmentType: input.fulfillmentType,
       guestName: input.guestName,
       guestPhoneE164: input.guestPhoneE164,
       idempotencyKey: input.idempotencyKey,
@@ -370,6 +491,18 @@ export async function createGuestPickupOrderRecord(
     throw new Error("order_persist_failed");
   }
   return { kind: "created", accessToken: rawAccessToken, order: detail };
+}
+
+/** Compat Ticket 08: Pedido Guest Retirada. */
+export async function createGuestPickupOrderRecord(
+  transaction: Prisma.TransactionClient,
+  input: CreateGuestPickupOrderInput,
+): Promise<CreateGuestOrderResult> {
+  return createGuestOrderRecord(transaction, {
+    ...input,
+    address: null,
+    fulfillmentType: "pickup",
+  });
 }
 
 export async function findOrderByAccessToken(
