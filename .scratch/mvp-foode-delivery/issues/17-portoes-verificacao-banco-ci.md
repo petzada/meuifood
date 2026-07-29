@@ -15,7 +15,11 @@
 - [ ] `REVOKE` e `COMMENT ON` deixam de ser rejeitados; `EXECUTE` só conta dentro de corpo dollar-quoted.
 - [ ] A prova real de R2 deixa de passar verde sem executar, ou sai da suíte de CI com o README corrigido.
 - [ ] O README declara Node 24, coerente com `.nvmrc`, `engines` e o CI.
-- [ ] Decisão registrada sobre o job `migrate` rodar ou não em `pull_request` (ver Comments).
+- [ ] Em `pull_request` o CI roda `quality` + preflight transacional; o push persistente sai do PR.
+- [ ] Em `push` de `master` o CI roda preflight, `supabase db push` e `integration`.
+- [ ] Cada migration que cria tabela de negócio traz seu module de prova, chamado de dentro da transação do preflight.
+- [ ] `migrate` e `integration` têm `timeout-minutes`.
+- [ ] Decisão 55 atualizada com o novo fluxo (PR prova, master aplica).
 
 ## Achados — portões e infraestrutura
 
@@ -101,4 +105,21 @@ Sem as cinco variáveis `R2_*`, o teste cai em `expect(menuImageStorageFromEnvir
 
 - 2026-07-29 — Ticket derivado de `/improve-codebase-architecture` rodado sobre `f64ea28` (master, base do deploy Railway) com o Ticket 08 em PR #17 e CI verde. Exploração em quatro agentes Opus paralelos; achados validados pelo agente principal contra o código.
 
-- **Decisão pendente do Dono — job `migrate` em `pull_request`.** `.github/workflows/ci.yml:3-6, 28-30, 74`: o job roda em `pull_request` sem filtro, então um PR não mergeado aplica sua migration no Supabase de produção. A partir daí, qualquer run de outra branch falha duas vezes — no preflight com "Histórico remoto não é prefixo das migrations Prisma canônicas" e no `integration` com "Histórico remoto de migrations divergente". O `concurrency: supabase-producao-migrations` serializa as runs, mas serialização evita corrida, não drift; a saída, quando acontece, é editar `supabase_migrations.schema_migrations` à mão. Opções: (a) restringir `migrate`/`integration` a `push` em `master`, mantendo `quality` em PR; (b) assumir explicitamente a política de branch única e documentá-la. Em ambos os casos, somar `timeout-minutes` aos dois jobs — hoje faltam, e com `queue: max` podem segurar o grupo de concorrência por horas. Nem a Decisão 25 nem a 55 afirmam que o PR deve *aplicar* a migration; a 55 diz "só depois de `quality` e preflight verdes". Vale nota na 55 seja qual for a escolha. **Esta é a única alínea deste ticket que exige aval de produto, não só técnico.**
+- **Decisão do Dono (2026-07-29) — "PR prova, master aplica".**
+
+  **O problema.** `.github/workflows/ci.yml:3-6, 28-30, 74`: o job `migrate` roda em `pull_request` sem filtro, então um PR não mergeado aplica sua migration no Supabase de produção. A partir daí, qualquer run de outra branch falha duas vezes — no preflight com "Histórico remoto não é prefixo das migrations Prisma canônicas" e no `integration` com "Histórico remoto de migrations divergente". O `concurrency: supabase-producao-migrations` serializa as runs, mas serialização evita corrida, não drift; a saída, quando acontece, é editar `supabase_migrations.schema_migrations` à mão. Um PR abandonado deixa a migration em produção para sempre.
+
+  **A peça que resolve já existe.** `preflight-production-migrations.ts` abre transação no banco de produção (`:242`), aplica as migrations pendentes, sobe a API com `createTransactionalBusinessDatabase(transaction)` e roda provas HTTP reais — RLS cross-Loja, RBAC de Operador, horários e Pausa (`:188-234`) —, reverte com `throw rollbackProof` (`:240`) e confere resíduo zero (`:249-254`). Isso já é teste contra o banco de produção, com role e policies reais, sem persistir nada. A política de migration inclusive bloqueia `CONCURRENTLY` com a justificativa "não pode rodar dentro do preflight transacional": todo SQL que a política aceita é transacionável por construção. O que causa o drift não é o teste — é o `supabase db push --linked` rodando no mesmo PR.
+
+  **O fluxo decidido.**
+  - `pull_request` → `quality` + preflight transacional (aplica, prova, reverte).
+  - `push` em `master` → preflight + `supabase db push --linked` + `integration`.
+  - `timeout-minutes` nos dois jobs que tocam o banco.
+
+  **Preserva o critério do Dono:** testa no banco de produção e somente nele, sem staging nem banco local (Decisão 55), e sem deixar resíduo antes do merge.
+
+  **Custo aceito e mitigação — 17.4 vira pré-requisito, não melhoria opcional.** Hoje o `integration` roda os testes de rota com schema persistido em PR; com a mudança, isso passa a rodar só em `master`. Para não abrir janela sem cobertura, cada migration que cria tabela de negócio precisa trazer um module de prova chamado de dentro da transação do preflight, no padrão que `proveStoreOperationPreflight` (`:228`) já estabelece. Evidência de que isso funciona: o bug corrigido em `7ab210e` (faltava `GRANT USAGE ON TYPE`, e o `INSERT` de Pedido sob RLS quebrava com 500) passou pelo preflight justamente porque nenhuma prova exercia a criação de Pedido — com prova por migration, teria falhado no PR, dentro da transação, sem chegar a produção.
+
+  **Risco residual.** Classes de erro que só aparecem com schema persistido e conexão nova ficam para o `integration` em `master`, que permanece como rede final — não desaparece, muda de momento.
+
+  Nem a Decisão 25 nem a 55 afirmavam que o PR deveria *aplicar* a migration; a 55 diz "só depois de `quality` e preflight verdes". Atualizar a 55 com o fluxo acima faz parte deste ticket.
