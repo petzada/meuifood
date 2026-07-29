@@ -89,6 +89,10 @@ async function productionDatabaseUrls() {
   };
 }
 
+function syntheticTaxId() {
+  return [...randomBytes(14)].map((byte) => String(byte % 10)).join("");
+}
+
 describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
   const runId = (process.env.CI_RUN_ID?.trim() || randomUUID()).slice(0, 8);
   const suffix = randomBytes(3).toString("hex");
@@ -106,6 +110,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
   let deniedCategoryId = "";
   let deniedItemId = "";
   let createCalls = 0;
+  let createdPilotStore = false;
 
   const wooviAdapter = createControlledWooviAdapter(async (input) => {
     createCalls += 1;
@@ -163,13 +168,14 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
     if (existingPilot) {
       pilotStoreId = existingPilot.id;
     } else {
+      createdPilotStore = true;
       pilotStoreId = (
         await administrative.store.create({
           data: {
             billingMode: "pilot_platform",
             name: `PIX Pilot ${runId}`,
             slug: `pix-pilot-${runId}-${suffix}`,
-            taxId: `9${suffix}${runId}`.padEnd(14, "0").slice(0, 14),
+            taxId: syntheticTaxId(),
             paused: false,
             pickupEnabled: true,
           },
@@ -192,7 +198,7 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
           billingMode: "baas",
           name: `PIX Denied ${runId}`,
           slug: `pix-denied-${runId}-${suffix}`,
-          taxId: `8${suffix}${runId}`.padEnd(14, "0").slice(0, 14),
+          taxId: syntheticTaxId(),
           paused: false,
           pickupEnabled: true,
         },
