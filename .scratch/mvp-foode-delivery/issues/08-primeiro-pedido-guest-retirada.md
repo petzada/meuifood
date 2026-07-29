@@ -51,5 +51,7 @@
   5. 500 Guest genérico (`order_create_failed`) sem `error.message`.
   6. Cross-store usa item real da Loja B.
   Evidência local: lint/typecheck/test:quality/build/migrations:validate +
-  `order-routes.test.ts` (8/8) no Supabase de produção. Sem alteração de CI
-  nem reescrita de migration já aplicada. `Status: needs-review`.
+  `order-routes.test.ts` (8/8) no Supabase de produção. CI PR #17 run
+  `30412754349` no HEAD `a4c3207`: quality/migrate/integration verdes.
+  Sem alteração de CI nem reescrita de migration já aplicada.
+  `Status: needs-review`.
