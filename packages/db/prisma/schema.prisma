@@ -61,6 +61,9 @@ model Store {
   deliveryNeighborhoods  DeliveryNeighborhood[]
   orders                 Order[]
   orderLines             OrderLine[]
+  paymentCharges         PaymentCharge[]
+  paymentEvents          PaymentEvent[]
+  ledgerEntries          LedgerEntry[]
 
   @@map("stores")
 }
@@ -214,9 +217,34 @@ enum FulfillmentType {
 }
 
 enum PaymentMethod {
+  pix
   on_delivery
 
   @@map("payment_method")
+}
+
+enum PaymentStatus {
+  not_required
+  awaiting_payment
+  paid
+
+  @@map("payment_status")
+}
+
+enum PaymentProvider {
+  woovi
+
+  @@map("payment_provider")
+}
+
+enum ChargeStatus {
+  pending
+  active
+  completed
+  expired
+  provider_error
+
+  @@map("charge_status")
 }
 
 model Order {
@@ -228,6 +256,7 @@ model Order {
   status                   OrderStatus      @default(received)
   fulfillmentType          FulfillmentType  @map("fulfillment_type")
   paymentMethod            PaymentMethod    @map("payment_method")
+  paymentStatus            PaymentStatus    @default(not_required) @map("payment_status")
   guestName                String           @map("guest_name")
   guestPhoneE164           String           @map("guest_phone_e164")
   customerUserId           String?          @map("customer_user_id") @db.Uuid
@@ -245,6 +274,8 @@ model Order {
   updatedAt                DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   store                    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   lines                    OrderLine[]
+  paymentCharge            PaymentCharge?
+  ledgerEntry              LedgerEntry?
 
   @@unique([storeId, id])
   @@unique([storeId, idempotencyKey])
@@ -252,6 +283,80 @@ model Order {
   @@index([storeId, createdAt(sort: Desc)])
   @@index([storeId, status, createdAt(sort: Desc)])
   @@map("orders")
+}
+
+/// Cobrança online (PIX Woovi no Ticket 10). Uma por Pedido.
+model PaymentCharge {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId          String          @map("store_id") @db.Uuid
+  orderId          String          @unique @map("order_id") @db.Uuid
+  provider         PaymentProvider
+  /// correlationID estável enviado ao provider (idempotência no gateway).
+  correlationId    String          @unique @map("correlation_id")
+  providerChargeId String?         @map("provider_charge_id")
+  status           ChargeStatus    @default(pending)
+  amountCents      Int             @map("amount_cents")
+  brCode           String?         @map("br_code")
+  qrCodeImage      String?         @map("qr_code_image")
+  expiresAt        DateTime?       @map("expires_at") @db.Timestamptz(3)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store            Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order            Order           @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  events           PaymentEvent[]
+  ledgerEntry      LedgerEntry?
+
+  @@unique([storeId, id])
+  @@unique([storeId, orderId])
+  @@index([storeId, status, createdAt(sort: Desc)])
+  @@map("payment_charges")
+}
+
+/// Eventos de webhook com identidade única do provider (at-least-once).
+model PaymentEvent {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId         String          @map("store_id") @db.Uuid
+  chargeId        String?         @map("charge_id") @db.Uuid
+  provider        PaymentProvider
+  providerEventId String          @map("provider_event_id")
+  eventType       String          @map("event_type")
+  /// Payload sanitizado (sem secrets); raw assinado fica só em memória de verificação.
+  payload         Json
+  processedAt     DateTime?       @map("processed_at") @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  store           Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  charge          PaymentCharge?  @relation(fields: [storeId, chargeId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([provider, providerEventId])
+  @@index([storeId, createdAt(sort: Desc)])
+  @@map("payment_events")
+}
+
+/// Obrigação de repasse piloto — não é extrato bancário nem payout automático.
+model LedgerEntry {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId           String          @map("store_id") @db.Uuid
+  orderId           String          @unique @map("order_id") @db.Uuid
+  chargeId          String          @unique @map("charge_id") @db.Uuid
+  provider          PaymentProvider
+  grossCents        Int             @map("gross_cents")
+  feeBps            Int             @map("fee_bps")
+  feeCents          Int             @map("fee_cents")
+  netCents          Int             @map("net_cents")
+  expectedPayoutAt  DateTime        @map("expected_payout_at") @db.Date
+  paidAt            DateTime?       @map("paid_at") @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  store             Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order             Order           @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  charge            PaymentCharge   @relation(fields: [storeId, chargeId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([storeId, id])
+  @@unique([storeId, orderId])
+  @@unique([storeId, chargeId])
+  @@index([storeId, expectedPayoutAt])
+  @@index([storeId, paidAt])
+  @@map("ledger_entries")
 }
 
 model OrderLine {

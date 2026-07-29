@@ -279,6 +279,12 @@ function checkoutErrorMessage(error: string | undefined) {
   switch (error) {
     case "invalid_phone":
       return "Informe um telefone celular válido com DDD.";
+    case "billing_mode_not_allowed":
+      return "PIX não está disponível para esta Loja.";
+    case "pix_provider_error":
+    case "pix_charge_unavailable":
+    case "pix_provider_unavailable":
+      return "Não foi possível gerar o PIX. Tente novamente em instantes.";
     case "store_paused":
       return "A Loja está em Pausa. Tente novamente mais tarde.";
     case "store_outside_hours":
@@ -340,6 +346,9 @@ function GuestCheckoutForm({
   const [fulfillmentType, setFulfillmentType] = useState<
     "pickup" | "delivery" | null
   >(defaultFulfillment);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "on_delivery">(
+    "pix",
+  );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [streetLine, setStreetLine] = useState("");
@@ -437,6 +446,7 @@ function GuestCheckoutForm({
       fulfillmentType,
       lines: cart.lines,
       name: trimmedName,
+      paymentMethod,
       phone: trimmedPhone,
     });
     if (attemptFingerprintRef.current !== fingerprint) {
@@ -464,7 +474,7 @@ function GuestCheckoutForm({
             fulfillmentType,
             guest: { name: trimmedName, phone: trimmedPhone },
             lines: cart.lines,
-            paymentMethod: "on_delivery",
+            paymentMethod,
             totalCents:
               itemsTotalCents != null && feePreview != null
                 ? itemsTotalCents + feePreview
@@ -539,11 +549,37 @@ function GuestCheckoutForm({
         ) : null}
       </fieldset>
 
+      <fieldset className="mt-4 grid gap-2">
+        <legend className="text-sm font-bold text-[var(--color-ink)]">
+          Pagamento
+        </legend>
+        <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--color-hairline)] px-3 text-sm">
+          <input
+            checked={paymentMethod === "pix"}
+            name="payment"
+            onChange={() => {
+              setPaymentMethod("pix");
+              setError(null);
+            }}
+            type="radio"
+          />
+          PIX
+        </label>
+        <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--color-hairline)] px-3 text-sm">
+          <input
+            checked={paymentMethod === "on_delivery"}
+            name="payment"
+            onChange={() => {
+              setPaymentMethod("on_delivery");
+              setError(null);
+            }}
+            type="radio"
+          />
+          Pagamento na entrega
+        </label>
+      </fieldset>
+
       <dl className="mt-4 grid gap-2 text-sm">
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
-          <dt className="text-[var(--color-muted)]">Pagamento</dt>
-          <dd className="font-bold text-[var(--color-ink)]">Pagamento na entrega</dd>
-        </div>
         {fulfillmentType === "delivery" ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-hairline)] px-3 py-3">
             <dt className="text-[var(--color-muted)]">Taxa (prévia)</dt>

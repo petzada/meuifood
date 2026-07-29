@@ -39,6 +39,7 @@ export {
   allowedDeliveryTransitions,
   allowedOrderTransitions,
   allowedPickupTransitions,
+  canAdvancePaymentStatus,
   canTransitionDelivery,
   canTransitionOrder,
   canTransitionPickup,
@@ -46,10 +47,34 @@ export {
   orderStatusLabelPt,
   orderStatusSchema,
   paymentMethodSchema,
+  paymentStatusSchema,
   type FulfillmentType,
   type OrderStatus,
   type PaymentMethod,
+  type PaymentStatus,
 } from "./order-status.js";
+
+export {
+  addCalendarDaysIsoDate,
+  civilDateInSaoPaulo,
+  pixExpectedPayoutDate,
+  pixFeeCents,
+  pixNetCents,
+  PIX_FEE_RATE_BPS,
+} from "./money.js";
+
+export {
+  buildPixLedgerObligation,
+  type PixLedgerObligation,
+} from "./ledger.js";
+
+export {
+  canAdvanceChargeStatus,
+  parseWooviWebhookPayload,
+  wooviWebhookPayloadSchema,
+  type NormalizedWooviEvent,
+  type WooviWebhookPayload,
+} from "./woovi-webhook.js";
 
 export {
   ORDER_POLL_INTERVAL_MS,

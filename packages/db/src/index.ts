@@ -38,6 +38,17 @@ import {
   type TransitionOrderResult,
 } from "./orders.js";
 import {
+  activatePixChargeForOrder,
+  applyWooviWebhookEvent,
+  findPublicPixChargeForOrder,
+  markLedgerEntryPaid,
+  type ActivatePixChargeResult,
+  type ApplyWooviWebhookResult,
+  type MarkLedgerPaidResult,
+  type PublicPixChargeView,
+  type WooviPaymentAdapter,
+} from "./payments.js";
+import {
   createDeliveryNeighborhood,
   deleteDeliveryNeighborhood,
   getStoreDeliveryConfig,
@@ -60,6 +71,15 @@ export type {
   PublicComplementGroupView,
   PublicComplementOptionView,
 } from "./menu-customization.js";
+
+export type {
+  ActivatePixChargeResult,
+  ApplyWooviWebhookResult,
+  MarkLedgerPaidResult,
+  PublicPixChargeView,
+  WooviChargeCreateResult,
+  WooviPaymentAdapter,
+} from "./payments.js";
 
 export type {
   AdditionalSnapshotRecord,
@@ -213,6 +233,24 @@ export type BusinessDatabase = {
   createGuestPickupOrder(
     input: CreateGuestPickupOrderInput,
   ): Promise<CreateGuestPickupOrderResult>;
+  activatePixCharge(input: {
+    adapter: WooviPaymentAdapter;
+    orderId: string;
+    storeId: string;
+  }): Promise<ActivatePixChargeResult>;
+  applyWooviWebhook(input: {
+    confirmedAtIso: string;
+    payload: unknown;
+    providerEventIdOverride?: string;
+  }): Promise<ApplyWooviWebhookResult>;
+  findPublicPixCharge(input: {
+    orderId: string;
+    storeId: string;
+  }): Promise<PublicPixChargeView | null>;
+  markLedgerPaid(input: {
+    ledgerEntryId: string;
+    paidAtIso: string;
+  }): Promise<MarkLedgerPaidResult>;
   createDeliveryNeighborhood(
     context: StoreContext,
     input: { feeCents: number; name: string },
@@ -671,6 +709,18 @@ export function createTransactionalBusinessDatabase(
     async createGuestPickupOrder(input) {
       return await createGuestPickupOrderRecord(transaction, input);
     },
+    async activatePixCharge() {
+      throw new Error("activate_pix_charge_requires_outer_database");
+    },
+    async applyWooviWebhook(input) {
+      return await applyWooviWebhookEvent(transaction, input);
+    },
+    async findPublicPixCharge(input) {
+      return await findPublicPixChargeForOrder(transaction, input);
+    },
+    async markLedgerPaid(input) {
+      return await markLedgerEntryPaid(transaction, input);
+    },
     async getStoreDeliveryConfig(context) {
       return await inStoreContext(transaction, context, async (storeTransaction) =>
         getStoreDeliveryConfig(storeTransaction, context.storeId),
@@ -1086,6 +1136,27 @@ export function createBusinessDatabase(databaseUrl: string): BusinessDatabase {
       return await withDatabase((database) =>
         database.createGuestPickupOrder(input),
       );
+    },
+    async activatePixCharge(input) {
+      return await activatePixChargeForOrder(
+        async (op) =>
+          await prisma.$transaction(async (transaction) => await op(transaction), {
+            maxWait: 15_000,
+            timeout: 15_000,
+          }),
+        input,
+      );
+    },
+    async applyWooviWebhook(input) {
+      return await withDatabase((database) => database.applyWooviWebhook(input));
+    },
+    async findPublicPixCharge(input) {
+      return await withDatabase((database) =>
+        database.findPublicPixCharge(input),
+      );
+    },
+    async markLedgerPaid(input) {
+      return await withDatabase((database) => database.markLedgerPaid(input));
     },
     async createDeliveryNeighborhood(context, input) {
       return await withDatabase((database) =>
