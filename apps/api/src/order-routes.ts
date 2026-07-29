@@ -137,14 +137,23 @@ export function registerPublicOrderRoutes(
         storeSlug: slug,
       });
 
-      const result = await businessDatabase.createGuestPickupOrder({
-        guestName: body.data.guest.name,
-        guestPhoneE164: phone.e164,
-        idempotencyKey,
-        lines: body.data.lines,
-        payloadHash,
-        storeSlug: slug,
-      });
+      let result: Awaited<
+        ReturnType<BusinessDatabase["createGuestPickupOrder"]>
+      >;
+      try {
+        result = await businessDatabase.createGuestPickupOrder({
+          guestName: body.data.guest.name,
+          guestPhoneE164: phone.e164,
+          idempotencyKey,
+          lines: body.data.lines,
+          payloadHash,
+          storeSlug: slug,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "order_create_failed";
+        return reply.code(500).send({ error: "order_create_failed", message });
+      }
 
       if (result.kind === "store_not_found") {
         return reply.code(404).send({ error: "store_not_found" });

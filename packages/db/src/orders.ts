@@ -272,11 +272,13 @@ export async function createGuestPickupOrderRecord(
 
   const deliveryFeeCents = 0;
   const totalCents = recalculated.itemsTotalCents + deliveryFeeCents;
+  const now = new Date();
 
   try {
     const created = await transaction.order.create({
       data: {
         accessToken: newAccessToken(),
+        createdAt: now,
         deliveryFeeCents,
         fulfillmentType: "pickup",
         guestName: input.guestName,
@@ -289,23 +291,33 @@ export async function createGuestPickupOrderRecord(
         status: "received",
         storeId: store.id,
         totalCents,
-        lines: {
-          create: recalculated.lines.map((line, index) => ({
-            additionalSnapshots: line.additionalSnapshots,
-            complementSnapshots: line.complementSnapshots,
-            itemName: line.itemName,
-            lineTotalCents: line.lineTotalCents,
-            menuItemId: line.menuItemId,
-            quantity: line.quantity,
-            sortOrder: index,
-            storeId: store.id,
-            unitPriceCents: line.unitPriceCents,
-          })),
-        },
+        updatedAt: now,
       },
-      select: orderDetailSelect,
+      select: { id: true },
     });
-    return { kind: "created", order: mapOrderDetail(created) };
+
+    await transaction.orderLine.createMany({
+      data: recalculated.lines.map((line, index) => ({
+        additionalSnapshots: line.additionalSnapshots,
+        complementSnapshots: line.complementSnapshots,
+        createdAt: now,
+        itemName: line.itemName,
+        lineTotalCents: line.lineTotalCents,
+        menuItemId: line.menuItemId,
+        orderId: created.id,
+        quantity: line.quantity,
+        sortOrder: index,
+        storeId: store.id,
+        unitPriceCents: line.unitPriceCents,
+        updatedAt: now,
+      })),
+    });
+
+    const detail = await loadOrderDetail(transaction, created.id);
+    if (!detail) {
+      throw new Error("order_persist_failed");
+    }
+    return { kind: "created", order: detail };
   } catch (error) {
     const code =
       error && typeof error === "object" && "code" in error

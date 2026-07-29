@@ -284,7 +284,7 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         payload: validPayload(),
         url: `/public/stores/${storeASlug}/orders`,
       });
-      expect(created.statusCode).toBe(201);
+      expect(created.statusCode, created.body).toBe(201);
       const body = created.json() as {
         order: {
           accessToken: string;
@@ -323,7 +323,7 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         payload: validPayload({ guest: { name: "Bia", phone: "11977776666" } }),
         url: `/public/stores/${storeASlug}/orders`,
       });
-      expect(first.statusCode).toBe(201);
+      expect(first.statusCode, first.body).toBe(201);
       const firstOrder = (first.json() as { order: { accessToken: string } })
         .order;
 
@@ -429,7 +429,7 @@ describe("Pedido Guest Retirada on_delivery", { timeout: 60_000 }, () => {
         }),
         url: `/public/stores/${storeASlug}/orders`,
       });
-      expect(created.statusCode).toBe(201);
+      expect(created.statusCode, created.body).toBe(201);
 
       const listOwner = await app.inject({
         headers: { authorization: "Bearer owner-a" },
