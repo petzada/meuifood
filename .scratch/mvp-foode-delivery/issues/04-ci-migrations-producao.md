@@ -102,3 +102,10 @@
   automatizada): no projeto Railway `sparkling-embrace`, os serviços
   `@foode/web`, `@foode/api` e `@foode/admin` subiram `ae13bf1` sem crash de
   WebSocket/boot.
+- 2026-07-29 — Ticket 09 / PR #18 alterou novamente o footprint deste ticket:
+  `packages/db/scripts/migration-policy.mjs` passou a aceitar `ALTER TYPE`
+  aditivo para enums PostgreSQL. O Composer 2.5 considerou a mudança
+  fail-closed e não bloqueadora, com padrões destrutivos ainda rejeitados, mas
+  recomendou reverificação leve e um caso positivo específico para
+  `ALTER TYPE ... ADD VALUE`. Estado registrado como `✅ conforme 🔄` no
+  STATUS; não reabre `Status: done`.

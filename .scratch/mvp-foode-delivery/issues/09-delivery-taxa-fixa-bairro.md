@@ -4,7 +4,7 @@
 
 **Blocked by:** 08 — Concluir o primeiro Pedido Guest na Retirada.
 
-**Status:** needs-review
+**Status:** done
 
 - [x] Dono escolhe Taxa fixa ou taxa por bairro, nunca os dois modos ativos simultaneamente.
 - [x] No modo por bairro, Dono mantém bairros e preços em centavos sem duplicatas ambíguas.
@@ -50,3 +50,8 @@
   `migrate` e `integration` passaram (`delivery-routes.test.ts` + regressão
   `order-routes.test.ts` no Supabase de produção). Checklist completo com
   evidência; `Status: needs-review` para aceite humano. Sem merge.
+- 2026-07-29 — PR #18 mergeada em
+  `5359e664c6de857dd25c3199b1a2fa9c38bb5493` após Composer 2.5 `PASS` no
+  HEAD `78462de`; run final `30486470422` verde (`quality`, `migrate`,
+  `integration`). Aceite humano registrado. A extensão da policy de migrations
+  para `ALTER TYPE` aditivo entrou na fila de reverificação leve do Ticket 04.

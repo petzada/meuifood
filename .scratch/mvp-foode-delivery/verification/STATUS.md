@@ -14,7 +14,7 @@ Cada relatório confronta a implementação com `spec.md`, o ticket, `docs/decis
 | 01 | Bootstrapar monorepo e identidade Foode | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/01-bootstrap-monorepo-identidade-foode.md) |
 | 02 | Instalar Loja, `store_id` e RLS efetiva | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/02-loja-store-id-rls.md) |
 | 03 | Autenticar Dono e Operador e aplicar RBAC | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 18:34 | [relatório](reports/03-auth-rbac-dono-operador.md) |
-| 04 | Bloquear produção com CI e migrations validadas | sim | ✅ conforme | 0 | 0 | 2026-07-28 19:25 | [relatório](reports/04-ci-migrations-producao.md) |
+| 04 | Bloquear produção com CI e migrations validadas | sim | ✅ conforme 🔄 | 0 | 0 | 2026-07-28 19:25 | [relatório](reports/04-ci-migrations-producao.md) |
 | 05 | Gerenciar e publicar o Cardápio da Loja | não | — | — | — | — | — |
 | 06 | Configurar Complementos e montar o carrinho | não | — | — | — | — | — |
 | 07 | Aplicar horários e Pausa no Canal próprio | não | — | — | — | — | — |
