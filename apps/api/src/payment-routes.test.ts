@@ -302,6 +302,11 @@ describe("Ticket 10 — PIX Woovi pilot_platform (Seam 1+2)", () => {
           },
         })
         .catch(() => undefined);
+      if (createdPilotStore) {
+        await administrative.store
+          .delete({ where: { id: pilotStoreId } })
+          .catch(() => undefined);
+      }
     }
     await businessDatabase.close();
     await administrative.$disconnect();
