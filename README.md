@@ -1,124 +1,128 @@
 # Foode Delivery
 
-Monorepo pnpm do Foode Delivery.
+![Status](https://img.shields.io/badge/status-pausado-lightgrey) ![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js) ![Fastify](https://img.shields.io/badge/Fastify-5-000000?logo=fastify) ![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)
 
-## Workspaces
+SaaS de **canal próprio de delivery** para pequenos restaurantes: cardápio digital, pedidos e gestão da loja, cobrando assinatura fixa em vez de comissão de marketplace.
 
-- `apps/web`: Storefront e landing institucional em Next.js.
-- `apps/admin`: Painel da Loja em Next.js.
-- `apps/api`: API Fastify, incluindo `GET /health`.
-- `packages/shared`: contratos Zod e tokens Foode.
-- `packages/ui`: primitives compartilhadas outline-first.
-- `packages/db`: Prisma Client, schema, migrations e helpers transacionais de RLS.
+## Índice
 
-## Desenvolvimento
+- [Status do projeto](#status-do-projeto)
+- [Demonstração](#demonstração)
+- [Tecnologias utilizadas](#tecnologias-utilizadas)
+- [Pré-requisitos e instalação](#pré-requisitos-e-instalação)
+- [Como utilizar](#como-utilizar)
+- [Testes](#testes)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
+- [Autor e contato](#autor-e-contato)
 
-Requer Node.js 24 ou superior e pnpm 10.
+## Status do projeto
+
+⏸️ **Pausado**: o MVP avançou até a operação de pedidos e o cardápio com imagens; o desenvolvimento está parado desde julho de 2026.
+
+## Demonstração
+
+A loja divulga o próprio link ou QR code e o consumidor pede direto, sem marketplace no meio.
+
+**Storefront (consumidor)**
+- Landing institucional e página da loja com o cardápio.
+- Pedido como convidado ou com conta.
+
+**Painel da loja**
+- Papéis **Dono** (acesso total) e **Operador** (só pedidos e status).
+- Gestão do **cardápio** com personalização de itens e **imagens** (upload direto para o R2 por URL pré-assinada).
+- Painel de **operação** com abertura e fechamento da loja e fila de **pedidos**.
+- Configuração de **entrega** e da **equipe**.
+
+**API**
+- Isolamento por loja garantido no banco com **Row Level Security**: cada transação recebe o `store_id` confiável do usuário autenticado (JWT verificado contra o JWKS do Supabase).
+- Pedidos idempotentes e health check em `GET /health`.
+
+O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [`docs/`](docs/).
+
+## Tecnologias utilizadas
+
+| Camada | Tecnologias |
+|---|---|
+| Monorepo | **pnpm workspaces**, **TypeScript** |
+| Front-end | **Next.js 16**, **React 19**, **Tailwind CSS 4** (`apps/web` e `apps/admin`) |
+| API | **Fastify 5**, **Zod**, Pino (`apps/api`) |
+| Dados | **Prisma 7** + **Postgres (Supabase)** com RLS (`packages/db`) |
+| Arquivos | **Cloudflare R2** (SDK S3) |
+| Observabilidade | **Sentry** |
+| Qualidade | **Vitest**, ESLint, GitHub Actions |
+
+## Pré-requisitos e instalação
+
+**Pré-requisitos**
+
+- **Node.js 24** ou superior
+- **pnpm 10**
+- Um projeto Supabase apenas para usar banco e autenticação reais
+
+**Instalação**
 
 ```bash
+git clone https://github.com/petzada/meuifood.git
+cd meuifood
 pnpm install
+```
+
+Copie os arquivos `.env.example` (raiz, `apps/api`, `apps/admin`, `apps/web`) só quando precisar configurar banco, autenticação, R2 ou Sentry: nenhum DSN é obrigatório para subir os apps.
+
+## Como utilizar
+
+```bash
 pnpm dev
 ```
 
-Os apps ficam em `http://localhost:3000`, `http://localhost:3001` e `http://localhost:3333`.
-Copie os arquivos `.env.example` apenas quando precisar configurar observabilidade. Nenhum DSN é obrigatório localmente.
+| App | Endereço |
+|---|---|
+| Storefront (`apps/web`) | http://localhost:3000 |
+| Painel da loja (`apps/admin`) | http://localhost:3001 |
+| API (`apps/api`) | http://localhost:3333 (`GET /health`) |
 
-## Banco e isolamento por Loja
-
-O Prisma é o owner único do schema e das migrations. Valide migrations
-canônicas antes de submetê-las e use `DATABASE_URL` somente para seed e
-operações administrativas conscientes:
+**Banco**
 
 ```bash
-pnpm db:generate
-pnpm db:migrations:validate
-pnpm db:seed
+pnpm db:generate               # gera o Prisma Client
+pnpm db:migrations:validate    # valida as migrations canônicas
+pnpm db:seed                   # dados iniciais (usa DATABASE_URL)
 ```
 
-As migrations canônicas ficam somente em `packages/db/prisma/migrations`.
-Antes do `db push`, o comando de deploy gera a representação plana e ignorada
-que a Supabase CLI exige em `supabase/migrations`; ela não é uma segunda fonte.
+A API exige `BUSINESS_DATABASE_URL` com um login sem `BYPASSRLS`, membro da role `foode_business`; ela se recusa a iniciar com credencial privilegiada.
 
-A infraestrutura de banco da API recebe uma credencial de negócio distinta da
-credencial administrativa. Esse login deve ser membro da role `foode_business`,
-criada pela migration, e não pode ter `BYPASSRLS`. Cada operação de negócio
-recebe um `store_id` confiável e o aplica com `set_config(..., true)` dentro da
-própria transação; o contexto não permanece na conexão depois do request.
-
-O Ticket 03 liga essa infraestrutura ao runtime por meio do JWT/JWKS e da
-membership autenticada. Até essa identidade confiável existir, o entrypoint não
-ativa rotas de negócio: `store_id` nunca deve ser aceito de header, query string
-ou body arbitrários como substituto da autenticação.
-
-O runtime da API exige `BUSINESS_DATABASE_URL` com o login exclusivo
-`foode_business`. Toda transação assume essa role obrigatoriamente; antes de
-escutar, a API também rejeita credencial cuja sessão seja `postgres`, cuja role
-efetiva não seja `foode_business` ou que possua `BYPASSRLS`. A senha desse login
-é provisionada manualmente no Supabase e mantida apenas nos secrets do GitHub
-Actions e nas variables da API na Railway, nunca em migration ou no Git.
-
-JWTs do Painel são verificados pela API contra o JWKS do Supabase, incluindo
-assinatura ES256, issuer, audience e expiração. `store_id` e papel vêm da
-membership consultada a cada request, portanto remover um Operador invalida o
-acesso mesmo para uma sessão já emitida. O secret `SUPABASE_SERVICE_ROLE_KEY`
-fica isolado no adapter Auth Admin usado para convites; queries de Loja e equipe
-continuam no Prisma com a role RLS.
-
-O Painel usa `@supabase/ssr` para cookies/PKCE, e-mail e senha. Configure somente
-as variáveis públicas `NEXT_PUBLIC_SUPABASE_URL` e
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no admin, além de `API_URL`. O callback de
-convite é `/auth/confirm`, seguido da definição de senha.
-
-O primeiro Dono de uma Loja é provisionado por uma operação consciente, depois
-do seed e das migrations, usando somente credenciais administrativas fora do
-runtime:
+## Testes
 
 ```bash
-pnpm --filter @foode/api provision:owner -- <store_id> <email>
-```
-
-O comando exige `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e
-`ADMIN_AUTH_REDIRECT_URL`. Ele convida o Dono no Supabase Auth, persiste a
-membership `owner` na Loja informada e revoga o usuário convidado se a
-persistência falhar. A API Railway continua sem receber `DATABASE_URL`.
-
-O seed é idempotente e mantém o único Comerciante-modelo no modo
-`pilot_platform`. A migration e os testes de RLS são executados exclusivamente
-no Supabase de produção linkado pela CLI. Fixtures sintéticas usam identificadores
-únicos e cleanup exato; não existe fallback para banco local.
-
-Na Actions, os passos remotos recebem somente os secrets necessários e falham
-explicitamente se algum estiver ausente; a suíte nunca faz skip, usa mock ou
-recorre a banco local. Quando uma migration altera RLS/RBAC, o workflow executa
-um DAG fail-closed: `quality` (sem secrets) precisa ficar verde antes de
-`migrate`; `migrate` aplica as migrations pendentes dentro de uma única
-transação no Supabase, prova HTTP/RLS/RBAC pela mesma sessão e força rollback.
-Somente depois desse preflight verde ele faz dry-run e aplica pela Supabase CLI
-no projeto Foode Delivery. Por fim, `integration` repete toda a prova
-HTTP/RLS/RBAC sobre o schema persistido em produção. Esse fluxo usa
-`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
-`SUPABASE_POOLER_URL` e `BUSINESS_DATABASE_URL` nos passos mínimos indicados no
-workflow.
-
-A validação local usa uma allowlist estrutural e rejeita migrations vazias,
-timestamps duplicados, remoções fora de `DROP INDEX`, `DELETE`, `TRUNCATE`,
-bypass de RLS, SQL dinâmico e controle transacional antes de qualquer secret ser
-disponibilizado. Ao final da integração, uma conexão administrativa
-independente da suíte compara o histórico remoto com as migrations Prisma e
-exige zero resíduos das fixtures `fixture-preflight-*`, `fixture-rls-*` e
-`fixture-rbac-*`, mesmo quando os testes falham.
-
-Nos três serviços Railway (`web`, `admin` e `api`), o autodeploy da branch
-`master` deve manter **Wait for CI** habilitado. Assim, o deploy permanece em
-espera até o workflow de `push` terminar e é descartado quando qualquer job
-falha. Nenhum serviço usa pre-deploy command para migration; essa
-responsabilidade pertence exclusivamente ao job `migrate` do GitHub Actions.
-
-## Verificação
-
-```bash
-pnpm lint
+pnpm test:quality     # suíte de qualidade de API, painel, storefront e pacotes
 pnpm typecheck
-pnpm test
-pnpm build
+pnpm lint
 ```
+
+Cada app e pacote também roda `pnpm test` (Vitest) isoladamente. O GitHub Actions executa as verificações em todo PR.
+
+## Contribuição
+
+Contribuições são bem-vindas! Para propor uma melhoria:
+
+1. Abra uma **issue** descrevendo o problema ou a ideia antes de começar algo grande.
+2. Faça um **fork** e crie um branch a partir da `main`: `<tipo>/<nome-kebab>` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`).
+3. Use **commits semânticos** em português: `<tipo>(<escopo>): <descrição no imperativo>`.
+4. Rode lint e testes antes de enviar (veja [Testes](#testes)).
+5. Abra o **Pull Request** em *draft*, explicando o quê e o porquê. O merge é feito pelo autor.
+
+Não inclua segredos (`.env`, chaves de API, tokens) em commits ou PRs.
+
+## Licença
+
+Distribuído sob a licença **MIT**, de código aberto. Isso significa que você **pode** usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e até vender cópias do código, inclusive em projetos comerciais, **desde que** mantenha o aviso de copyright e o texto da licença. O software é fornecido "no estado em que se encontra", **sem garantias**, e o autor não se responsabiliza por danos decorrentes do uso.
+
+Texto completo em [`LICENSE`](LICENSE).
+
+## Autor e contato
+
+**Marcio Petigrosso** ("petzada"): idealização e desenvolvimento.
+
+- GitHub: [@petzada](https://github.com/petzada)
+- LinkedIn: [in/petigrosso](https://www.linkedin.com/in/petigrosso)
