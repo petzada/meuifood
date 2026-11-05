@@ -36,6 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { Turnstile, type TurnstileHandle } from "../../../../components/turnstile";
 import { summarizeCart } from "../storefront/cart-store";
+import { trackFunnel } from "../storefront/funnel";
 import { blockedCheckoutMessage, describeAvailability } from "../storefront/store-status";
 import { useStoreCart } from "../storefront/use-store-cart";
 import { lookupCep } from "./cep";
@@ -172,6 +173,11 @@ export function Checkout({
   /** Última versão do formulário para a cotação (rua/número não disparam nova cotação). */
   const formRef = useRef(form);
   formRef.current = form;
+
+  // Funil próprio: etapa "checkout" uma vez por sessão (Ticket 28, sem dado pessoal).
+  useEffect(() => {
+    trackFunnel(menu.slug, "checkout_start");
+  }, [menu.slug]);
 
   // Dados lembrados no aparelho (P-2.2), só depois da hidratação.
   useEffect(() => {

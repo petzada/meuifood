@@ -8,6 +8,7 @@ import {
   MENU_SEARCH_MIN_LENGTH,
   featuredItems,
   indexMenuItems,
+  lineSubtotalCents,
   normalizeSearchText,
   searchMenu,
   type CartLine,
@@ -25,9 +26,11 @@ import { CartSheet } from "./cart-sheet";
 import { cartItemCount, summarizeCart } from "./cart-store";
 import { CategoryNav, categoryAnchorId } from "./category-nav";
 import { FeaturedCarousel } from "./featured-carousel";
+import { trackFunnel } from "./funnel";
 import { ItemSheet } from "./item-sheet";
 import { MenuItemCard } from "./menu-item-card";
 import { MenuSearch } from "./menu-search";
+import { firePixelEvent, type PixelWindow } from "./pixels";
 import { itemShareUrl, shareLink, shareOutcomeMessagePt, storeShareUrl } from "./share";
 import { StoreHeader, type StoreBranding } from "./store-header";
 import { describeAvailability } from "./store-status";
@@ -74,6 +77,23 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
   const openItemId = searchParams.get(MENU_ITEM_SHARE_PARAM);
   const openItem = openItemId ? (itemsById.get(openItemId) ?? null) : null;
   const itemOpen = openItem !== null;
+  const pixels = state?.showcase?.pixels ?? null;
+
+  // Funil próprio (uma vez por sessão e etapa, sem dado pessoal) e Pixel da Loja (Ticket 28).
+  useEffect(() => {
+    trackFunnel(menu.slug, "visit");
+  }, [menu.slug]);
+
+  useEffect(() => {
+    if (!openItem) return;
+    trackFunnel(menu.slug, "item_view");
+    firePixelEvent(window as PixelWindow, pixels, {
+      name: "view_item",
+      itemId: openItem.id,
+      itemName: openItem.name,
+      priceCents: openItem.priceCents,
+    });
+  }, [menu.slug, openItem, pixels]);
 
   useEffect(() => {
     // `?item=` desconhecido (saiu do Cardápio): limpa a URL e avisa.
@@ -115,6 +135,16 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
       return;
     }
     dispatch({ line, type: "add" });
+    trackFunnel(menu.slug, "add_to_cart");
+    if (item) {
+      firePixelEvent(window as PixelWindow, pixels, {
+        name: "add_to_cart",
+        itemId: item.id,
+        itemName: item.name,
+        quantity: line.quantity,
+        valueCents: lineSubtotalCents(item, line) ?? item.priceCents * line.quantity,
+      });
+    }
     closeItemSheet();
     show(`${item?.name ?? "Item"} adicionado`, {
       label: "Ver carrinho",
@@ -157,6 +187,7 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
       <StoreHeader
         {...(branding ? { branding } : {})}
         availability={availability}
+        description={state?.showcase?.description ?? null}
         name={menu.name}
         {...(state ? { onAbout: () => setAboutOpen(true) } : {})}
         onShare={() =>

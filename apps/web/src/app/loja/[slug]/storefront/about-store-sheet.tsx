@@ -3,7 +3,7 @@
 // Sheet "Sobre a Loja" (C6, P-5.1): horários da semana, endereço (só com Retirada ativa,
 // P-3.3), como receber com tempo estimado e mínimo (P-2.4), meios de pagamento com as
 // bandeiras de débito/crédito na entrega (P-4.3). Cada bloco só aparece quando configurado.
-// Descrição, logo e capa entram pelo Ticket 28.
+// Descrição e Instagram vêm da vitrine (Ticket 28).
 import type { StorefrontStoreState } from "@foode/shared/order";
 
 import { Sheet } from "./sheet";
@@ -46,6 +46,23 @@ export function AboutStoreSheet({
   return (
     <Sheet labelledBy={ABOUT_STORE_TITLE_ID} onClose={onClose} open={open} title={state.name}>
       <div className="grid">
+        {state.showcase?.description ? (
+          <Block title="Sobre">
+            <p>{state.showcase.description}</p>
+            {state.showcase.instagram ? (
+              <p className="mt-1">
+                <a
+                  className="font-bold text-[var(--color-primary-strong)] underline-offset-2 hover:underline"
+                  href={`https://instagram.com/${state.showcase.instagram}`}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  @{state.showcase.instagram}
+                </a>
+              </p>
+            ) : null}
+          </Block>
+        ) : null}
         {hours.length > 0 ? (
           <Block title="Horários">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">

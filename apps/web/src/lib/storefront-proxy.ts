@@ -6,6 +6,7 @@ import { storeSlugSchema } from "@foode/shared/menu";
 
 import { apiFetch } from "./api";
 import type { ContractSchema } from "./contract";
+import { movedResponse, slugMovedTo } from "./slug-moved";
 
 export type ForwardOptions<TRequest, TResponse> = {
   /** Caminho na api, já com o Slug validado. */
@@ -46,10 +47,15 @@ export async function forwardStorefrontPost<TRequest, TResponse>(
       body: JSON.stringify(parsedBody.data),
       headers,
       method: "POST",
+      redirect: "manual",
     });
   } catch {
     return Response.json({ error: options.unavailableError }, { status: 502 });
   }
+
+  // Link personalizado antigo (decisão 69): 308 para o mesmo caminho com o link atual.
+  const currentSlug = await slugMovedTo(upstream);
+  if (currentSlug) return movedResponse(request.url, currentSlug);
 
   const passthrough = options.passthroughStatuses ?? [400, 404];
   if (passthrough.includes(upstream.status)) {

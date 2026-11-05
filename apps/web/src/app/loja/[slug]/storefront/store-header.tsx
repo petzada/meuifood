@@ -2,7 +2,7 @@
 
 // Cabeçalho compacto da Loja (C1): logo (ou iniciais), nome, linha de estado (aberta até /
 // fechada com próximo horário / Pausa — decisão 41) com link "Sobre a Loja", e
-// "Compartilhar" (P-5.4). Logo e capa só aparecem se o contrato trouxer (Ticket 28).
+// "Compartilhar" (P-5.4). Logo, capa e descrição só aparecem se o contrato trouxer (Ticket 28).
 import { Clock, Pause, ShareNetwork } from "@phosphor-icons/react";
 
 import type { StoreAvailabilityView } from "./store-status";
@@ -22,6 +22,7 @@ function initials(name: string): string {
 export function StoreHeader({
   availability,
   branding,
+  description = null,
   name,
   onAbout,
   onShare,
@@ -29,6 +30,8 @@ export function StoreHeader({
   /** Sem estado (api indisponível): só nome e Compartilhar. */
   availability?: StoreAvailabilityView | null;
   branding?: StoreBranding;
+  /** Descrição curta da Loja (P-VIS-3), ≤ 160. */
+  description?: string | null;
   name: string;
   onAbout?: () => void;
   onShare: () => void;
@@ -62,6 +65,9 @@ export function StoreHeader({
           <h1 className="truncate text-xl font-bold tracking-[-0.02em] text-[var(--color-ink)]">
             {name}
           </h1>
+          {description ? (
+            <p className="mt-0.5 line-clamp-2 text-sm text-[var(--color-body)]">{description}</p>
+          ) : null}
           {availability ? (
             <p
               className={[
