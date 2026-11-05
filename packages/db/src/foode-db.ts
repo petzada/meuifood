@@ -13,6 +13,7 @@ import {
   type StoreContext,
 } from "./context";
 import { newId, utcNow } from "./conventions";
+import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
 import { FoodeDbError } from "./errors";
 import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
 import {
@@ -252,6 +253,11 @@ export function createFoodeDb(d1: D1Database) {
           .limit(1);
         return row ?? null;
       },
+
+      /** Cardápio público da Loja `active` do Slug; null para inexistente ou não ativa. */
+      publicMenuBySlug(slug: string): Promise<PublicStoreMenu | null> {
+        return publicMenuBySlug(d1, slug);
+      },
     },
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
@@ -348,6 +354,9 @@ export function createFoodeDb(d1: D1Database) {
 
       return {
         get: () => storeOf(context),
+
+        /** Cardápio (Ticket 23): escrita só do Dono, sempre nesta Loja, com auditoria. */
+        menu: () => createMenuOps(d1, context),
 
         async members(): Promise<StoreMember[]> {
           return db

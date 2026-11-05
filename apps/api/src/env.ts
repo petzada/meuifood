@@ -15,4 +15,8 @@ export type Env = {
   TURNSTILE_SECRET_KEY?: string;
   /** Remetente dos e-mails, ex.: `Foode <nao-responda@foodedelivery.com.br>`. */
   EMAIL_FROM?: string;
+  // Ticket 23 (imagens do Cardápio, decisões 57/59/64). `MEDIA` (binding do bucket `foode-media`)
+  // grava, lê e apaga objetos `stores/{store_id}/menu/{uuid}.{ext}`; sem credenciais S3.
+  /** Base pública de leitura = rota `/media` da api, ex.: `https://api.foodedelivery.com.br/media`. */
+  MEDIA_PUBLIC_BASE_URL?: string;
 };

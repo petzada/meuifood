@@ -2,4 +2,5 @@
 // o drizzle-kit lê este índice (drizzle.config.ts).
 export * from "./fundacao";
 export * from "./auth";
+export * from "./menu";
 export * from "./ops";

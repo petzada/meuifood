@@ -1,156 +1,107 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ids, publicMenu } from "./storefront/fixtures";
+
+const apiFetch = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>();
+
+vi.mock("../../../lib/api", () => ({
+  apiFetch: (...args: [string, RequestInit?]) => apiFetch(...args),
+}));
 
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },
+  usePathname: () => "/loja/lanchonete-do-ze",
+  useRouter: () => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { "content-type": "application/json" },
+    status,
+  });
+}
+
+async function render(slug = "lanchonete-do-ze") {
+  const { default: StorefrontPage } = await import("./page");
+  const element = await StorefrontPage({ params: Promise.resolve({ slug }) });
+  return renderToStaticMarkup(element);
+}
+
 describe("storefront /loja/[slug]", () => {
-  it("renderiza categorias e itens públicos com preço formatado", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          storefront: {
-            name: "Cantina do Bairro",
-            slug: "cantina-do-bairro",
-            operation: {
-              checkout: { allowed: true, blockReason: null },
-              nextOpeningAt: null,
-              state: "open",
-              timezone: "America/Sao_Paulo",
-            },
-            categories: [
-              {
-                id: "cat-1",
-                name: "Lanches",
-                items: [
-                  {
-                    additionals: [
-                      {
-                        id: "77777777-7777-4777-8777-777777777777",
-                        name: "Bacon",
-                        priceCents: 350,
-                      },
-                    ],
-                    complementGroups: [
-                      {
-                        id: "22222222-2222-4222-8222-222222222222",
-                        name: "Ponto da carne",
-                        options: [
-                          {
-                            id: "33333333-3333-4333-8333-333333333333",
-                            name: "Ao ponto",
-                          },
-                        ],
-                        required: true,
-                      },
-                    ],
-                    id: "item-1",
-                    name: "X-Burger",
-                    description: "Pão e carne",
-                    priceCents: 2590,
-                    imageUrl: null,
-                  },
-                ],
-              },
-            ],
-          },
-        }),
-      })),
-    );
-    process.env.API_URL = "http://api.test";
-
-    const { default: StorefrontPage } = await import("./page.js");
-    const element = await StorefrontPage({
-      params: Promise.resolve({ slug: "cantina-do-bairro" }),
-    });
-    const html = renderToStaticMarkup(element);
-
-    expect(html).toContain("Cantina do Bairro");
-    expect(html).toContain("Lanches");
-    expect(html).toContain("X-Burger");
-    expect(html).toContain("Pão e carne");
-    expect(html).toContain("Ponto da carne");
-    expect(html).toContain("obrigatório");
-    expect(html).toContain("Bacon");
-    expect(html).toContain("Carrinho");
-    expect(html).toContain("preços serão recalculados pelo servidor");
-    expect(html).toContain("Loja aberta");
-    expect(html).toContain("R$");
-    expect(html).not.toContain("billingMode");
-    expect(html).not.toContain("pilot_platform");
-
-    vi.unstubAllGlobals();
+  beforeEach(() => {
+    apiFetch.mockReset();
   });
 
-  it.each([
-    {
-      expected: "Loja em Pausa",
-      operation: {
-        checkout: { allowed: false, blockReason: "paused" },
-        nextOpeningAt: null,
-        state: "paused",
-        timezone: "America/Sao_Paulo",
-      },
-    },
-    {
-      expected: "Abre",
-      operation: {
-        checkout: { allowed: false, blockReason: "outside_hours" },
-        nextOpeningAt: "2026-07-29T21:30:00Z",
-        state: "outside_hours",
-        timezone: "America/Sao_Paulo",
-      },
-    },
-  ])("mantém o Cardápio visível quando $expected", async ({ expected, operation }) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          storefront: {
-            categories: [
-              {
-                id: "cat-1",
-                items: [
-                  {
-                    additionals: [],
-                    complementGroups: [],
-                    description: "",
-                    id: "item-1",
-                    imageUrl: null,
-                    name: "X-Burger",
-                    priceCents: 2590,
-                  },
-                ],
-                name: "Lanches",
-              },
-            ],
-            name: "Cantina do Bairro",
-            operation,
-            slug: "cantina-do-bairro",
-          },
-        }),
-      })),
+  it("chama a api pelo binding com o Slug e renderiza o Cardápio do contrato", async () => {
+    apiFetch.mockResolvedValue(jsonResponse(publicMenu));
+    const html = await render();
+
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/storefront/lojas/lanchonete-do-ze/cardapio",
+      expect.objectContaining({ cache: "no-store" }),
     );
-    process.env.API_URL = "http://api.test";
-
-    const { default: StorefrontPage } = await import("./page.js");
-    const element = await StorefrontPage({
-      params: Promise.resolve({ slug: "cantina-do-bairro" }),
-    });
-    const html = renderToStaticMarkup(element);
-
-    expect(html).toContain(expected);
+    expect(html).toContain("Lanchonete do Zé");
+    expect(html).toContain("Buscar no Cardápio");
+    expect(html).toContain("Destaques");
+    expect(html).toContain('aria-label="Categorias"');
+    expect(html).toContain("Lanches");
+    expect(html).toContain("Bebidas");
     expect(html).toContain("X-Burger");
-    expect(html).not.toContain("Agendar");
+    expect(html).toContain("Pão, carne 160g e queijo.");
+    expect(html).toContain("R$\u00a025,00");
+    expect(html).toContain("Suco de laranja");
+    expect(html).toContain("Indisponível");
+    expect(html).toContain('aria-label="Compartilhar Lanchonete do Zé"');
+    // O item só abre por `?item=`; sem ele, nenhum grupo de Complemento no HTML inicial.
+    expect(html).not.toContain("Ponto da carne");
+    // Barra do carrinho só com itens (K1).
+    expect(html).not.toContain("Ver carrinho");
+  });
 
-    vi.unstubAllGlobals();
+  it("mostra o item indisponível esmaecido e sem botão", async () => {
+    apiFetch.mockResolvedValue(jsonResponse(publicMenu));
+    const html = await render();
+    const start = html.indexOf("Suco de laranja");
+    const card = html.slice(html.lastIndexOf("<li", start), start);
+    expect(card).toContain('aria-disabled="true"');
+    expect(card).not.toContain("<button");
+  });
+
+  it("Cardápio sem categorias mostra 'Cardápio em preparação'", async () => {
+    apiFetch.mockResolvedValue(jsonResponse({ ...publicMenu, categories: [] }));
+    const html = await render();
+    expect(html).toContain("Cardápio em preparação");
+    expect(html).not.toContain("Buscar no Cardápio");
+  });
+
+  it("Loja inexistente ou não ativa (404) cai no not-found", async () => {
+    apiFetch.mockResolvedValue(jsonResponse({ error: "store_not_found" }, 404));
+    await expect(render()).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("Slug inválido nem chama a api", async () => {
+    await expect(render("Loja Inválida!")).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it("resposta fora do contrato ou 5xx vira erro de carga (error boundary)", async () => {
+    apiFetch.mockResolvedValue(jsonResponse({ name: "x" }));
+    await expect(render()).rejects.toThrow("storefront_unavailable:api_contract_mismatch");
+    apiFetch.mockResolvedValue(jsonResponse({ error: "not_implemented" }, 501));
+    await expect(render()).rejects.toThrow("storefront_unavailable:api_status_501");
+  });
+
+  it("gera o título com o nome da Loja", async () => {
+    apiFetch.mockResolvedValue(jsonResponse(publicMenu));
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "lanchonete-do-ze" }),
+    });
+    expect(metadata.title).toBe("Lanchonete do Zé | Cardápio");
+    expect(ids.burger).toMatch(/^[0-9a-f-]{36}$/u);
   });
 });

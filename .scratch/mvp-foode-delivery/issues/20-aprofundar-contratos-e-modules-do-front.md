@@ -4,7 +4,7 @@
 
 **Blocked by:** 14 — Expor Plano, relatórios e Repasses ao Dono; 15 — Reconciliar pagamentos e repasses por Cron Triggers.
 
-**Status:** ready-for-agent
+**Status:** wontfix
 
 **Agente:** Fable (front), com revisão de contrato por Opus se tocar `@foode/shared`.
 
@@ -111,3 +111,5 @@ Concluir o que o Ticket 18 deixou pela metade por decisão deliberada:
 - 2026-11-05 — Referência Anota (lojista): os achados 20.4 e 20.5 encontram as diretrizes NAV-01/NAV-02 (campo `group` opcional em `RouteRule`) e T-04/T-05 (estados e feedback) de [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md). Achado de contraste T-02 (branco sobre `#F35050` = 3,5:1, abaixo do AA) aguarda P-DS-1 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).
 
 - 2026-11-05 — Referência UX do concorrente (sem mudar critérios): o module de carrinho do 20.2 deve suportar as ações de [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) K2 (editar linha substituindo-a, remover com Desfazer) e K4 (linha inválida destacada).
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): ticket cortado; critérios viram itens do /code-review de cada ticket de UI.

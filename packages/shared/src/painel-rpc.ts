@@ -8,6 +8,28 @@ import type {
 } from "./auth/schemas.js";
 import type { ActiveStore, RpcResult, SessionCtx } from "./auth/types.js";
 import type {
+  AdminMenu,
+  MenuCopyComplementGroupsInput,
+  MenuCreateAdditionalInput,
+  MenuCreateCategoryInput,
+  MenuCreateComplementGroupInput,
+  MenuCreateItemInput,
+  MenuDeleteAdditionalInput,
+  MenuDeleteCategoryInput,
+  MenuDeleteComplementGroupInput,
+  MenuDeleteItemInput,
+  MenuReorderAdditionalsInput,
+  MenuReorderCategoriesInput,
+  MenuReorderComplementGroupsInput,
+  MenuReorderItemsInput,
+  MenuUpdateAdditionalInput,
+  MenuUpdateCategoryInput,
+  MenuUpdateComplementGroupInput,
+  MenuUpdateItemInput,
+  MenuUploadedImage,
+  MenuUploadImageInput,
+} from "./menu/admin.js";
+import type {
   OpsActivateStoreInput,
   OpsAuditEntry,
   OpsCreatePaymentFeesInput,
@@ -95,6 +117,107 @@ export interface PainelRpc {
    * cada request). Sem outra membership, as sessões do usuário são revogadas.
    */
   removeMember(caller: PainelCaller, input: RemoveMemberInput): Promise<RpcResult<null>>;
+
+  // ---- Cardápio (Ticket 23). Só o Dono da Loja ATIVA (`can(role, "store.menu")`); Operador e
+  // Ops recebem `forbidden`. Entradas validadas com os schemas `menu*InputSchema` de
+  // `@foode/shared/menu` (`invalid_input`). A Loja vem do StoreContext; id de outra Loja ou
+  // inexistente = `not_found`. Reordenar com conjunto de ids diferente do gravado = `conflict`.
+
+  /** Cardápio completo da Loja ativa (inclui indisponíveis), na ordem do Dono. */
+  menuGet(caller: PainelCaller): Promise<RpcResult<AdminMenu>>;
+
+  menuCreateCategory(
+    caller: PainelCaller,
+    input: MenuCreateCategoryInput,
+  ): Promise<RpcResult<{ categoryId: string }>>;
+
+  menuUpdateCategory(
+    caller: PainelCaller,
+    input: MenuUpdateCategoryInput,
+  ): Promise<RpcResult<null>>;
+
+  /** Categoria com itens = `conflict`. */
+  menuDeleteCategory(
+    caller: PainelCaller,
+    input: MenuDeleteCategoryInput,
+  ): Promise<RpcResult<null>>;
+
+  menuReorderCategories(
+    caller: PainelCaller,
+    input: MenuReorderCategoriesInput,
+  ): Promise<RpcResult<null>>;
+
+  /** `featured: true` além de MAX_FEATURED_ITEMS (4) = `conflict`; imagem de outra Loja ou ausente no R2 = `invalid_input`. */
+  menuCreateItem(
+    caller: PainelCaller,
+    input: MenuCreateItemInput,
+  ): Promise<RpcResult<{ itemId: string }>>;
+
+  /** Preço/disponibilidade/destaque inline usam esta RPC com um campo (P-CAR-5, CAR-02, P-5.5). */
+  menuUpdateItem(caller: PainelCaller, input: MenuUpdateItemInput): Promise<RpcResult<null>>;
+
+  /** Apaga item, grupos, opções e Adicionais; tenta apagar a imagem no R2 (só da Loja). */
+  menuDeleteItem(caller: PainelCaller, input: MenuDeleteItemInput): Promise<RpcResult<null>>;
+
+  menuReorderItems(caller: PainelCaller, input: MenuReorderItemsInput): Promise<RpcResult<null>>;
+
+  menuCreateComplementGroup(
+    caller: PainelCaller,
+    input: MenuCreateComplementGroupInput,
+  ): Promise<RpcResult<{ groupId: string }>>;
+
+  /** `options` = lista completa na nova ordem (com `id` atualiza, sem cria, ausente apaga). */
+  menuUpdateComplementGroup(
+    caller: PainelCaller,
+    input: MenuUpdateComplementGroupInput,
+  ): Promise<RpcResult<null>>;
+
+  menuDeleteComplementGroup(
+    caller: PainelCaller,
+    input: MenuDeleteComplementGroupInput,
+  ): Promise<RpcResult<null>>;
+
+  menuReorderComplementGroups(
+    caller: PainelCaller,
+    input: MenuReorderComplementGroupsInput,
+  ): Promise<RpcResult<null>>;
+
+  /** P-CAR-1: copia grupos de outro item da mesma Loja (ids novos, no fim do item alvo). */
+  menuCopyComplementGroups(
+    caller: PainelCaller,
+    input: MenuCopyComplementGroupsInput,
+  ): Promise<RpcResult<{ groupIds: string[] }>>;
+
+  menuCreateAdditional(
+    caller: PainelCaller,
+    input: MenuCreateAdditionalInput,
+  ): Promise<RpcResult<{ additionalId: string }>>;
+
+  menuUpdateAdditional(
+    caller: PainelCaller,
+    input: MenuUpdateAdditionalInput,
+  ): Promise<RpcResult<null>>;
+
+  menuDeleteAdditional(
+    caller: PainelCaller,
+    input: MenuDeleteAdditionalInput,
+  ): Promise<RpcResult<null>>;
+
+  menuReorderAdditionals(
+    caller: PainelCaller,
+    input: MenuReorderAdditionalsInput,
+  ): Promise<RpcResult<null>>;
+
+  /**
+   * Upload da foto pelos bytes (decisão 64): o servidor do admin repassa o arquivo; a api confere
+   * JPEG/PNG/WebP ≤ 5 MiB pela assinatura dos bytes, grava em `stores/{store_id}/menu/{uuid}.{ext}`
+   * pelo binding `MEDIA` e devolve a chave (para gravar no item) e a URL pública. Bytes que não
+   * batem com `contentType` = `invalid_input`. Só Dono; rate limit por usuário (`rate_limited`).
+   */
+  menuUploadImage(
+    caller: PainelCaller,
+    input: MenuUploadImageInput,
+  ): Promise<RpcResult<MenuUploadedImage>>;
 
   // ---- Área Ops (Ticket 29). Só `foode_ops` (OpsContext emitido por @foode/db); Dono e
   // Operador recebem `forbidden`. Entradas validadas com os schemas de `@foode/shared/ops`

@@ -9,7 +9,7 @@ export default async function PedidosPage() {
   const store = session.activeStore;
   return (
     <section className="mx-auto max-w-5xl">
-      <p className="text-sm font-bold text-[var(--color-primary-active)]">
+      <p className="text-sm font-bold text-[var(--color-primary-strong)]">
         {store ? store.name : "Pedidos"}
       </p>
       <h1 className="mt-2 text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--color-ink)]">

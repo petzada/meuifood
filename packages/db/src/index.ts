@@ -19,6 +19,20 @@ export {
 } from "./foode-db";
 export { type FoodeDbErrorCode } from "./errors";
 export {
+  MENU_MAX_ADDITIONALS,
+  MENU_MAX_FEATURED,
+  type MenuError,
+  type MenuOps,
+  type MenuResult,
+  type PublicStoreMenu,
+  type StoreMenu,
+  type StoreMenuAdditional,
+  type StoreMenuCategory,
+  type StoreMenuGroup,
+  type StoreMenuItem,
+  type StoreMenuOption,
+} from "./menu";
+export {
   ACTIVATION_REQUIRED_CHECKS,
   type EffectivePaymentFee,
   ONBOARDING_CHECKS,
@@ -42,6 +56,10 @@ export {
   type CardMode,
   FEE_PAYMENT_METHODS,
   MEMBERSHIP_ROLES,
+  MENU_DESCRIPTION_MAX,
+  MENU_MAX_CENTS,
+  MENU_MAX_OPTIONS,
+  MENU_NAME_MAX,
   type MembershipRole,
   PAYMENT_PROVIDERS,
   PIX_KEY_TYPES,

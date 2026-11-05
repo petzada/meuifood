@@ -80,7 +80,7 @@ export function LoginForm({
       <p className="text-center text-sm">
         <Link
           href="/esqueci-senha"
-          className="font-bold text-[var(--color-primary-active)] underline-offset-4 hover:underline"
+          className="font-bold text-[var(--color-primary-strong)] underline-offset-4 hover:underline"
         >
           Esqueci minha senha
         </Link>

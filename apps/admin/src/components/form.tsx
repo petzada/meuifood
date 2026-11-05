@@ -58,7 +58,7 @@ export function Notice({
     tone === "error"
       ? "border-[var(--color-error)] text-[var(--color-error)]"
       : tone === "success"
-        ? "border-[var(--color-primary)] text-[var(--color-primary-active)]"
+        ? "border-[var(--color-primary)] text-[var(--color-primary-strong)]"
         : "border-[var(--color-hairline)] text-[var(--color-body)]";
   return (
     <p
