@@ -38,8 +38,8 @@ import {
 import { toPublicMenu } from "./public-menu";
 
 /**
- * Meios online com integração pronta. PIX e Cartão entram nos Tickets 26/27: até lá, mesmo com
- * taxa Foode vigente, só `on_delivery` cria Pedido (e é o único exibido).
+ * Meios online com integração pronta por padrão. O PIX (Ticket 26) entra quando as chaves da
+ * AbacatePay existem (`live` vindo do storefront-service); o Cartão entra no Ticket 27.
  */
 export const LIVE_ONLINE_METHODS: readonly PaymentMethod[] = [];
 

@@ -109,6 +109,11 @@ export type OrderDetail = {
   deliveryFeeCents: number;
   discountCents: number;
   totalCents: number;
+  /**
+   * Tarifa de serviço do pagamento online (decisão 71): item da Foode, fora do total do lojista;
+   * 0 no Pagamento na entrega.
+   */
+  serviceFeeCents?: number;
   payment: { method: PaymentMethod; changeForCents: number | null };
   note: string | null;
   eta: EtaRange | null;

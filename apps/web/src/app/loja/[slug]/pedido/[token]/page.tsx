@@ -2,8 +2,10 @@ import { movedStorePath } from "@foode/shared/onboarding";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
+import { getCustomerSession } from "../../../../../lib/customer-session";
 import { searchString } from "../../../../../lib/slug-moved";
 import { getStoreState, loadOrderTracking } from "../../../../../lib/storefront";
+import { turnstileSiteKey } from "../../../../../lib/turnstile";
 import { PixelScripts } from "../../storefront/pixel-scripts";
 import { OrderTrackingView } from "./order-tracking";
 
@@ -41,11 +43,24 @@ export default async function OrderTrackingPage({
   // Pixel `purchase` (Ticket 28): só com a Loja configurada; o estado falhar não derruba a página.
   const state = await getStoreState(slug);
   const pixels = state.kind === "ok" ? (state.data.showcase?.pixels ?? null) : null;
+  // Oferta de conta (decisão 71): só sem sessão e com login disponível (site key do Turnstile).
+  const session = await getCustomerSession();
+  const siteKey = turnstileSiteKey();
+  const accountOffer =
+    session.state !== "signed_in" && siteKey
+      ? { siteKey, startAtSignup: session.state === "signup_required" }
+      : null;
 
   return (
     <>
       <PixelScripts pixels={pixels} />
-      <OrderTrackingView initial={result.data} pixels={pixels} storeSlug={slug} token={token} />
+      <OrderTrackingView
+        accountOffer={accountOffer}
+        initial={result.data}
+        pixels={pixels}
+        storeSlug={slug}
+        token={token}
+      />
     </>
   );
 }

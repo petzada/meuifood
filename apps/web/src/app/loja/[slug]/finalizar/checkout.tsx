@@ -8,6 +8,7 @@
 import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { PublicMenu } from "@foode/shared/menu";
 import { formatBRL } from "@foode/shared/money";
+import { SERVICE_FEE_LABEL_PT, serviceFeeCentsFor } from "@foode/shared/payment";
 import {
   CARD_BRAND_LABELS,
   ORDER_NOTE_MAX,
@@ -140,6 +141,15 @@ function Section({
     </section>
   );
 }
+
+/**
+ * Grupos do pagamento (X5): "Pagar agora" (PIX e Cartão, mesmo peso, sem selo, desconto ou texto
+ * de incentivo — P-4.4) e "Pagar na entrega".
+ */
+const PAYMENT_GROUPS: { title: string; methods: PaymentMethod[] }[] = [
+  { title: "Pagar agora", methods: PAYMENT_METHODS.filter((m) => m !== "on_delivery") },
+  { title: "Pagar na entrega", methods: ["on_delivery"] },
+];
 
 function methodDescription(method: PaymentMethod, available: boolean): string {
   if (!available) return "Indisponível no momento";
@@ -495,11 +505,16 @@ export function Checkout({
     router.push(result.trackingPath);
   }
 
+  // Tarifa de serviço do pagamento online (decisão 71): só com PIX/Cartão escolhido, depois do
+  // Cupom e fora do total do lojista; o servidor calcula de novo na criação.
+  const serviceFeeCents = form.payment ? serviceFeeCentsFor(form.payment) : 0;
+  const chargedCents = totals.totalCents + serviceFeeCents;
+
   const ctaLabel = closedMessage
     ? "Pedidos indisponíveis agora"
     : checkoutCtaLabel(
         { errors: validation.errors, firstError: validation.firstError, minimum },
-        totals.totalCents,
+        chargedCents,
         submitting,
       );
 
@@ -919,27 +934,34 @@ export function Checkout({
             tabIndex={-1}
           >
             <legend className="sr-only">Como pagar</legend>
-            {PAYMENT_METHODS.map((method) => {
-              const available = paymentMethods.includes(method);
-              return (
-                <Radio
-                  checked={form.payment === method}
-                  className="foode-outline px-4 py-3"
-                  disabled={!available}
-                  key={method}
-                  name="payment"
-                  onChange={() => update("payment", method)}
-                  value={method}
-                >
-                  <span className="block font-bold text-[var(--color-ink)]">
-                    {paymentMethodLabelPt(method)}
-                  </span>
-                  <span className="block text-sm text-[var(--color-muted)]">
-                    {methodDescription(method, available)}
-                  </span>
-                </Radio>
-              );
-            })}
+            {PAYMENT_GROUPS.map((group) => (
+              <div className="grid gap-2" key={group.title} role="group" aria-label={group.title}>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+                  {group.title}
+                </p>
+                {group.methods.map((method) => {
+                  const available = paymentMethods.includes(method);
+                  return (
+                    <Radio
+                      checked={form.payment === method}
+                      className="foode-outline px-4 py-3"
+                      disabled={!available}
+                      key={method}
+                      name="payment"
+                      onChange={() => update("payment", method)}
+                      value={method}
+                    >
+                      <span className="block font-bold text-[var(--color-ink)]">
+                        {paymentMethodLabelPt(method)}
+                      </span>
+                      <span className="block text-sm text-[var(--color-muted)]">
+                        {methodDescription(method, available)}
+                      </span>
+                    </Radio>
+                  );
+                })}
+              </div>
+            ))}
             {errorFor("payment") ? (
               <p className="foode-field__error" id={`${fieldId("payment")}-error`} role="alert">
                 {errorFor("payment")}
@@ -1051,10 +1073,16 @@ export function Checkout({
                   <dd className="m-0 tabular-nums">−{formatBRL(totals.discountCents)}</dd>
                 </div>
               ) : null}
+              {serviceFeeCents > 0 ? (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-body)]">{SERVICE_FEE_LABEL_PT}</dt>
+                  <dd className="m-0 tabular-nums">{formatBRL(serviceFeeCents)}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between text-base font-bold text-[var(--color-ink)]">
                 <dt>Total</dt>
                 <dd aria-live="polite" className="m-0 tabular-nums">
-                  {formatBRL(totals.totalCents)}
+                  {formatBRL(chargedCents)}
                 </dd>
               </div>
             </dl>

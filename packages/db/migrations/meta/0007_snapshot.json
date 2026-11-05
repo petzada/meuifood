@@ -1,0 +1,5682 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1c7e50f9-23bb-4a8b-9e12-51f1c12def88",
+  "prevId": "844328f5-0f20-4617-8c89-619b3619467d",
+  "tables": {
+    "audit_events": {
+      "name": "audit_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "audit_events_store_idx": {
+          "name": "audit_events_store_idx",
+          "columns": [
+            "store_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "audit_events_actor_user_id_users_id_fk": {
+          "name": "audit_events_actor_user_id_users_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_store_id_stores_id_fk": {
+          "name": "audit_events_store_id_stores_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "audit_events_action_not_blank": {
+          "name": "audit_events_action_not_blank",
+          "value": "length(trim(\"action\")) > 0"
+        },
+        "audit_events_metadata_json": {
+          "name": "audit_events_metadata_json",
+          "value": "json_valid(\"metadata\")"
+        },
+        "audit_events_occurred_at_utc": {
+          "name": "audit_events_occurred_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
+        }
+      }
+    },
+    "store_memberships": {
+      "name": "store_memberships",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_memberships_store_user_unique": {
+          "name": "store_memberships_store_user_unique",
+          "columns": [
+            "store_id",
+            "user_id"
+          ],
+          "isUnique": true
+        },
+        "store_memberships_user_idx": {
+          "name": "store_memberships_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_memberships_store_id_stores_id_fk": {
+          "name": "store_memberships_store_id_stores_id_fk",
+          "tableFrom": "store_memberships",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_memberships_user_id_users_id_fk": {
+          "name": "store_memberships_user_id_users_id_fk",
+          "tableFrom": "store_memberships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_memberships_role": {
+          "name": "store_memberships_role",
+          "value": "\"role\" IN ('owner', 'operator')"
+        },
+        "store_memberships_created_at_utc": {
+          "name": "store_memberships_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "stores": {
+      "name": "stores",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'onboarding'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "stores_slug_unique": {
+          "name": "stores_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "stores_slug_format": {
+          "name": "stores_slug_format",
+          "value": "length(\"slug\") BETWEEN 3 AND 63 AND \"slug\" NOT GLOB '*[^a-z0-9-]*' AND \"slug\" NOT GLOB '-*' AND \"slug\" NOT GLOB '*-'"
+        },
+        "stores_name_not_blank": {
+          "name": "stores_name_not_blank",
+          "value": "length(trim(\"name\")) > 0"
+        },
+        "stores_status": {
+          "name": "stores_status",
+          "value": "\"status\" IN ('onboarding', 'active', 'suspended')"
+        },
+        "stores_created_at_utc": {
+          "name": "stores_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "stores_updated_at_utc": {
+          "name": "stores_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "platform_role": {
+          "name": "platform_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "users_email_lowercase": {
+          "name": "users_email_lowercase",
+          "value": "\"email\" = lower(\"email\") AND \"email\" LIKE '%_@_%'"
+        },
+        "users_email_verified_bool": {
+          "name": "users_email_verified_bool",
+          "value": "\"email_verified\" IN (0, 1)"
+        },
+        "users_platform_role": {
+          "name": "users_platform_role",
+          "value": "\"platform_role\" IS NULL OR \"platform_role\" IN ('foode_ops')"
+        },
+        "users_created_at_utc": {
+          "name": "users_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "users_updated_at_utc": {
+          "name": "users_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "accounts_provider_account_unique": {
+          "name": "accounts_provider_account_unique",
+          "columns": [
+            "provider_id",
+            "account_id"
+          ],
+          "isUnique": true
+        },
+        "accounts_user_idx": {
+          "name": "accounts_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_user_id_users_id_fk": {
+          "name": "accounts_user_id_users_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "accounts_access_token_expires_at_utc": {
+          "name": "accounts_access_token_expires_at_utc",
+          "value": "\"access_token_expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"access_token_expires_at\") IS \"access_token_expires_at\""
+        },
+        "accounts_refresh_token_expires_at_utc": {
+          "name": "accounts_refresh_token_expires_at_utc",
+          "value": "\"refresh_token_expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"refresh_token_expires_at\") IS \"refresh_token_expires_at\""
+        },
+        "accounts_created_at_utc": {
+          "name": "accounts_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "accounts_updated_at_utc": {
+          "name": "accounts_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "rate_limits": {
+      "name": "rate_limits",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_limits_key_unique": {
+          "name": "rate_limits_key_unique",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "rate_limits_count_non_negative": {
+          "name": "rate_limits_count_non_negative",
+          "value": "\"count\" >= 0"
+        }
+      }
+    },
+    "sessions": {
+      "name": "sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active_store_id": {
+          "name": "active_store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [
+            "token"
+          ],
+          "isUnique": true
+        },
+        "sessions_user_idx": {
+          "name": "sessions_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "sessions_active_store_id_stores_id_fk": {
+          "name": "sessions_active_store_id_stores_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "active_store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "sessions_expires_at_utc": {
+          "name": "sessions_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "sessions_created_at_utc": {
+          "name": "sessions_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "sessions_updated_at_utc": {
+          "name": "sessions_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "verifications": {
+      "name": "verifications",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "verifications_identifier_idx": {
+          "name": "verifications_identifier_idx",
+          "columns": [
+            "identifier"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "verifications_expires_at_utc": {
+          "name": "verifications_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "verifications_created_at_utc": {
+          "name": "verifications_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "verifications_updated_at_utc": {
+          "name": "verifications_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "menu_additionals": {
+      "name": "menu_additionals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "available": {
+          "name": "available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "menu_additionals_item_position_idx": {
+          "name": "menu_additionals_item_position_idx",
+          "columns": [
+            "store_id",
+            "item_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "menu_additionals_store_id_stores_id_fk": {
+          "name": "menu_additionals_store_id_stores_id_fk",
+          "tableFrom": "menu_additionals",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_additionals_item_fk": {
+          "name": "menu_additionals_item_fk",
+          "tableFrom": "menu_additionals",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "store_id",
+            "item_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "menu_additionals_name": {
+          "name": "menu_additionals_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "menu_additionals_price_cents": {
+          "name": "menu_additionals_price_cents",
+          "value": "\"price_cents\" BETWEEN 0 AND 100000000"
+        },
+        "menu_additionals_available_bool": {
+          "name": "menu_additionals_available_bool",
+          "value": "\"available\" IN (0, 1)"
+        },
+        "menu_additionals_position": {
+          "name": "menu_additionals_position",
+          "value": "\"position\" >= 0"
+        },
+        "menu_additionals_created_at_utc": {
+          "name": "menu_additionals_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "menu_additionals_updated_at_utc": {
+          "name": "menu_additionals_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "menu_categories": {
+      "name": "menu_categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "available": {
+          "name": "available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "menu_categories_store_id_unique": {
+          "name": "menu_categories_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "menu_categories_store_position_idx": {
+          "name": "menu_categories_store_position_idx",
+          "columns": [
+            "store_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "menu_categories_store_id_stores_id_fk": {
+          "name": "menu_categories_store_id_stores_id_fk",
+          "tableFrom": "menu_categories",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "menu_categories_name": {
+          "name": "menu_categories_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "menu_categories_position": {
+          "name": "menu_categories_position",
+          "value": "\"position\" >= 0"
+        },
+        "menu_categories_available_bool": {
+          "name": "menu_categories_available_bool",
+          "value": "\"available\" IN (0, 1)"
+        },
+        "menu_categories_created_at_utc": {
+          "name": "menu_categories_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "menu_categories_updated_at_utc": {
+          "name": "menu_categories_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "menu_complement_groups": {
+      "name": "menu_complement_groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "min_select": {
+          "name": "min_select",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "max_select": {
+          "name": "max_select",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "menu_complement_groups_store_id_unique": {
+          "name": "menu_complement_groups_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "menu_complement_groups_item_position_idx": {
+          "name": "menu_complement_groups_item_position_idx",
+          "columns": [
+            "store_id",
+            "item_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "menu_complement_groups_store_id_stores_id_fk": {
+          "name": "menu_complement_groups_store_id_stores_id_fk",
+          "tableFrom": "menu_complement_groups",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_complement_groups_item_fk": {
+          "name": "menu_complement_groups_item_fk",
+          "tableFrom": "menu_complement_groups",
+          "tableTo": "menu_items",
+          "columnsFrom": [
+            "store_id",
+            "item_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "menu_complement_groups_name": {
+          "name": "menu_complement_groups_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "menu_complement_groups_select_bounds": {
+          "name": "menu_complement_groups_select_bounds",
+          "value": "\"min_select\" >= 0 AND \"max_select\" BETWEEN 1 AND 40 AND \"min_select\" <= \"max_select\""
+        },
+        "menu_complement_groups_position": {
+          "name": "menu_complement_groups_position",
+          "value": "\"position\" >= 0"
+        },
+        "menu_complement_groups_created_at_utc": {
+          "name": "menu_complement_groups_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "menu_complement_groups_updated_at_utc": {
+          "name": "menu_complement_groups_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "menu_complement_options": {
+      "name": "menu_complement_options",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "menu_complement_options_group_position_idx": {
+          "name": "menu_complement_options_group_position_idx",
+          "columns": [
+            "store_id",
+            "group_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "menu_complement_options_store_id_stores_id_fk": {
+          "name": "menu_complement_options_store_id_stores_id_fk",
+          "tableFrom": "menu_complement_options",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_complement_options_group_fk": {
+          "name": "menu_complement_options_group_fk",
+          "tableFrom": "menu_complement_options",
+          "tableTo": "menu_complement_groups",
+          "columnsFrom": [
+            "store_id",
+            "group_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "menu_complement_options_name": {
+          "name": "menu_complement_options_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "menu_complement_options_price_cents": {
+          "name": "menu_complement_options_price_cents",
+          "value": "\"price_cents\" BETWEEN 0 AND 100000000"
+        },
+        "menu_complement_options_position": {
+          "name": "menu_complement_options_position",
+          "value": "\"position\" >= 0"
+        },
+        "menu_complement_options_created_at_utc": {
+          "name": "menu_complement_options_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "menu_complement_options_updated_at_utc": {
+          "name": "menu_complement_options_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "menu_items": {
+      "name": "menu_items",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "available": {
+          "name": "available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "featured": {
+          "name": "featured",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "image_object_key": {
+          "name": "image_object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "menu_items_store_id_unique": {
+          "name": "menu_items_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "menu_items_category_position_idx": {
+          "name": "menu_items_category_position_idx",
+          "columns": [
+            "store_id",
+            "category_id",
+            "position"
+          ],
+          "isUnique": false
+        },
+        "menu_items_store_featured_idx": {
+          "name": "menu_items_store_featured_idx",
+          "columns": [
+            "store_id",
+            "featured"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "menu_items_store_id_stores_id_fk": {
+          "name": "menu_items_store_id_stores_id_fk",
+          "tableFrom": "menu_items",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "menu_items_category_fk": {
+          "name": "menu_items_category_fk",
+          "tableFrom": "menu_items",
+          "tableTo": "menu_categories",
+          "columnsFrom": [
+            "store_id",
+            "category_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "menu_items_name": {
+          "name": "menu_items_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "menu_items_description": {
+          "name": "menu_items_description",
+          "value": "length(\"description\") <= 600"
+        },
+        "menu_items_price_cents": {
+          "name": "menu_items_price_cents",
+          "value": "\"price_cents\" BETWEEN 0 AND 100000000"
+        },
+        "menu_items_available_bool": {
+          "name": "menu_items_available_bool",
+          "value": "\"available\" IN (0, 1)"
+        },
+        "menu_items_featured_bool": {
+          "name": "menu_items_featured_bool",
+          "value": "\"featured\" IN (0, 1)"
+        },
+        "menu_items_image_key_store": {
+          "name": "menu_items_image_key_store",
+          "value": "\"image_object_key\" IS NULL OR (length(\"image_object_key\") <= 200 AND substr(\"image_object_key\", 1, length('stores/' || \"store_id\" || '/menu/')) = 'stores/' || \"store_id\" || '/menu/')"
+        },
+        "menu_items_position": {
+          "name": "menu_items_position",
+          "value": "\"position\" >= 0"
+        },
+        "menu_items_created_at_utc": {
+          "name": "menu_items_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "menu_items_updated_at_utc": {
+          "name": "menu_items_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "payment_fees": {
+      "name": "payment_fees",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fixed_cents": {
+          "name": "fixed_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "payment_fees_lookup_idx": {
+          "name": "payment_fees_lookup_idx",
+          "columns": [
+            "store_id",
+            "method",
+            "card_mode",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payment_fees_store_id_stores_id_fk": {
+          "name": "payment_fees_store_id_stores_id_fk",
+          "tableFrom": "payment_fees",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_fees_created_by_user_id_users_id_fk": {
+          "name": "payment_fees_created_by_user_id_users_id_fk",
+          "tableFrom": "payment_fees",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_fees_method": {
+          "name": "payment_fees_method",
+          "value": "\"method\" IN ('pix', 'credit')"
+        },
+        "payment_fees_card_mode": {
+          "name": "payment_fees_card_mode",
+          "value": "(\"method\" = 'credit' AND \"card_mode\" IN ('normal', 'rapido')) OR (\"method\" = 'pix' AND \"card_mode\" IS NULL)"
+        },
+        "payment_fees_percent_bps": {
+          "name": "payment_fees_percent_bps",
+          "value": "\"percent_bps\" BETWEEN 0 AND 10000"
+        },
+        "payment_fees_fixed_cents": {
+          "name": "payment_fees_fixed_cents",
+          "value": "\"fixed_cents\" >= 0"
+        },
+        "payment_fees_period": {
+          "name": "payment_fees_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "payment_fees_valid_from_utc": {
+          "name": "payment_fees_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "payment_fees_valid_to_utc": {
+          "name": "payment_fees_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "payment_fees_created_at_utc": {
+          "name": "payment_fees_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "plan_price_tiers": {
+      "name": "plan_price_tiers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "min_orders": {
+          "name": "min_orders",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "max_orders": {
+          "name": "max_orders",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "plan_price_tiers_valid_from_idx": {
+          "name": "plan_price_tiers_valid_from_idx",
+          "columns": [
+            "valid_from",
+            "cycle",
+            "min_orders"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "plan_price_tiers_created_by_user_id_users_id_fk": {
+          "name": "plan_price_tiers_created_by_user_id_users_id_fk",
+          "tableFrom": "plan_price_tiers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "plan_price_tiers_cycle": {
+          "name": "plan_price_tiers_cycle",
+          "value": "\"cycle\" IN ('monthly', 'annual')"
+        },
+        "plan_price_tiers_min_orders": {
+          "name": "plan_price_tiers_min_orders",
+          "value": "\"min_orders\" >= 0"
+        },
+        "plan_price_tiers_max_orders": {
+          "name": "plan_price_tiers_max_orders",
+          "value": "\"max_orders\" IS NULL OR \"max_orders\" >= \"min_orders\""
+        },
+        "plan_price_tiers_annual_unlimited": {
+          "name": "plan_price_tiers_annual_unlimited",
+          "value": "\"cycle\" <> 'annual' OR (\"min_orders\" = 0 AND \"max_orders\" IS NULL)"
+        },
+        "plan_price_tiers_price_cents": {
+          "name": "plan_price_tiers_price_cents",
+          "value": "\"price_cents\" >= 0"
+        },
+        "plan_price_tiers_period": {
+          "name": "plan_price_tiers_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "plan_price_tiers_valid_from_utc": {
+          "name": "plan_price_tiers_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "plan_price_tiers_valid_to_utc": {
+          "name": "plan_price_tiers_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "plan_price_tiers_created_at_utc": {
+          "name": "plan_price_tiers_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "provider_costs": {
+      "name": "provider_costs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fixed_cents": {
+          "name": "fixed_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "provider_costs_lookup_idx": {
+          "name": "provider_costs_lookup_idx",
+          "columns": [
+            "provider",
+            "operation",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "provider_costs_created_by_user_id_users_id_fk": {
+          "name": "provider_costs_created_by_user_id_users_id_fk",
+          "tableFrom": "provider_costs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "provider_costs_provider": {
+          "name": "provider_costs_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "provider_costs_operation": {
+          "name": "provider_costs_operation",
+          "value": "\"operation\" IN ('pix_charge', 'card_charge', 'pix_payout')"
+        },
+        "provider_costs_efi_no_pix_charge": {
+          "name": "provider_costs_efi_no_pix_charge",
+          "value": "NOT (\"provider\" = 'efi' AND \"operation\" = 'pix_charge')"
+        },
+        "provider_costs_percent_bps": {
+          "name": "provider_costs_percent_bps",
+          "value": "\"percent_bps\" BETWEEN 0 AND 10000"
+        },
+        "provider_costs_fixed_cents": {
+          "name": "provider_costs_fixed_cents",
+          "value": "\"fixed_cents\" >= 0"
+        },
+        "provider_costs_period": {
+          "name": "provider_costs_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "provider_costs_valid_from_utc": {
+          "name": "provider_costs_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "provider_costs_valid_to_utc": {
+          "name": "provider_costs_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "provider_costs_created_at_utc": {
+          "name": "provider_costs_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "store_plans": {
+      "name": "store_plans",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "store_plans_store_idx": {
+          "name": "store_plans_store_idx",
+          "columns": [
+            "store_id",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_plans_store_id_stores_id_fk": {
+          "name": "store_plans_store_id_stores_id_fk",
+          "tableFrom": "store_plans",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_plans_created_by_user_id_users_id_fk": {
+          "name": "store_plans_created_by_user_id_users_id_fk",
+          "tableFrom": "store_plans",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_plans_cycle": {
+          "name": "store_plans_cycle",
+          "value": "\"cycle\" IN ('monthly', 'annual')"
+        },
+        "store_plans_period": {
+          "name": "store_plans_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "store_plans_valid_from_utc": {
+          "name": "store_plans_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "store_plans_valid_to_utc": {
+          "name": "store_plans_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "store_plans_created_at_utc": {
+          "name": "store_plans_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "store_profiles": {
+      "name": "store_profiles",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cnpj": {
+          "name": "cnpj",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "whatsapp": {
+          "name": "whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_postal_code": {
+          "name": "address_postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_street": {
+          "name": "address_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_number": {
+          "name": "address_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_complement": {
+          "name": "address_complement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "address_district": {
+          "name": "address_district",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_city": {
+          "name": "address_city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_state": {
+          "name": "address_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_pix_key_type": {
+          "name": "payout_pix_key_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_pix_key": {
+          "name": "payout_pix_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_holder_name": {
+          "name": "payout_holder_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_holder_document": {
+          "name": "payout_holder_document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_profiles_cnpj_idx": {
+          "name": "store_profiles_cnpj_idx",
+          "columns": [
+            "cnpj"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_profiles_store_id_stores_id_fk": {
+          "name": "store_profiles_store_id_stores_id_fk",
+          "tableFrom": "store_profiles",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_profiles_cnpj_length": {
+          "name": "store_profiles_cnpj_length",
+          "value": "length(\"cnpj\") = 14"
+        },
+        "store_profiles_whatsapp_length": {
+          "name": "store_profiles_whatsapp_length",
+          "value": "length(\"whatsapp\") = 13"
+        },
+        "store_profiles_postal_code_length": {
+          "name": "store_profiles_postal_code_length",
+          "value": "length(\"address_postal_code\") = 8"
+        },
+        "store_profiles_state_length": {
+          "name": "store_profiles_state_length",
+          "value": "length(\"address_state\") = 2"
+        },
+        "store_profiles_pix_key_type": {
+          "name": "store_profiles_pix_key_type",
+          "value": "\"payout_pix_key_type\" IN ('cpf', 'cnpj', 'email', 'phone', 'random')"
+        },
+        "store_profiles_pix_key_not_blank": {
+          "name": "store_profiles_pix_key_not_blank",
+          "value": "length(trim(\"payout_pix_key\")) > 0"
+        },
+        "store_profiles_holder_name_not_blank": {
+          "name": "store_profiles_holder_name_not_blank",
+          "value": "length(trim(\"payout_holder_name\")) > 0"
+        },
+        "store_profiles_holder_document_length": {
+          "name": "store_profiles_holder_document_length",
+          "value": "length(\"payout_holder_document\") IN (11, 14)"
+        },
+        "store_profiles_card_mode": {
+          "name": "store_profiles_card_mode",
+          "value": "\"card_mode\" IS NULL OR \"card_mode\" IN ('normal', 'rapido')"
+        },
+        "store_profiles_created_at_utc": {
+          "name": "store_profiles_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_profiles_updated_at_utc": {
+          "name": "store_profiles_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "delivery_neighborhoods": {
+      "name": "delivery_neighborhoods",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fee_cents": {
+          "name": "fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "active": {
+          "name": "active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "delivery_neighborhoods_store_id_unique": {
+          "name": "delivery_neighborhoods_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "delivery_neighborhoods_store_name_unique": {
+          "name": "delivery_neighborhoods_store_name_unique",
+          "columns": [
+            "store_id",
+            "normalized_name"
+          ],
+          "isUnique": true
+        },
+        "delivery_neighborhoods_store_position_idx": {
+          "name": "delivery_neighborhoods_store_position_idx",
+          "columns": [
+            "store_id",
+            "position"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "delivery_neighborhoods_store_id_stores_id_fk": {
+          "name": "delivery_neighborhoods_store_id_stores_id_fk",
+          "tableFrom": "delivery_neighborhoods",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "delivery_neighborhoods_name": {
+          "name": "delivery_neighborhoods_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "delivery_neighborhoods_normalized_name": {
+          "name": "delivery_neighborhoods_normalized_name",
+          "value": "length(\"normalized_name\") BETWEEN 1 AND 120"
+        },
+        "delivery_neighborhoods_fee_cents": {
+          "name": "delivery_neighborhoods_fee_cents",
+          "value": "\"fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "delivery_neighborhoods_active_bool": {
+          "name": "delivery_neighborhoods_active_bool",
+          "value": "\"active\" IN (0, 1)"
+        },
+        "delivery_neighborhoods_position": {
+          "name": "delivery_neighborhoods_position",
+          "value": "\"position\" >= 0"
+        },
+        "delivery_neighborhoods_created_at_utc": {
+          "name": "delivery_neighborhoods_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "delivery_neighborhoods_updated_at_utc": {
+          "name": "delivery_neighborhoods_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_opening_periods": {
+      "name": "store_opening_periods",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "weekday": {
+          "name": "weekday",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opens_at": {
+          "name": "opens_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "closes_at": {
+          "name": "closes_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_opening_periods_store_day_open_unique": {
+          "name": "store_opening_periods_store_day_open_unique",
+          "columns": [
+            "store_id",
+            "weekday",
+            "opens_at"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "store_opening_periods_store_id_stores_id_fk": {
+          "name": "store_opening_periods_store_id_stores_id_fk",
+          "tableFrom": "store_opening_periods",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_opening_periods_weekday": {
+          "name": "store_opening_periods_weekday",
+          "value": "\"weekday\" BETWEEN 1 AND 7"
+        },
+        "store_opening_periods_opens_at": {
+          "name": "store_opening_periods_opens_at",
+          "value": "strftime('%H:%M', \"opens_at\") IS \"opens_at\""
+        },
+        "store_opening_periods_closes_at": {
+          "name": "store_opening_periods_closes_at",
+          "value": "strftime('%H:%M', \"closes_at\") IS \"closes_at\""
+        },
+        "store_opening_periods_order": {
+          "name": "store_opening_periods_order",
+          "value": "\"opens_at\" < \"closes_at\""
+        },
+        "store_opening_periods_created_at_utc": {
+          "name": "store_opening_periods_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "store_operation_settings": {
+      "name": "store_operation_settings",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "paused": {
+          "name": "paused",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "paused_at": {
+          "name": "paused_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "paused_by_user_id": {
+          "name": "paused_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "paused_by_role": {
+          "name": "paused_by_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pickup_enabled": {
+          "name": "pickup_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "delivery_mode": {
+          "name": "delivery_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_fixed_fee_cents": {
+          "name": "delivery_fixed_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_minimum_order_cents": {
+          "name": "delivery_minimum_order_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_eta_min_minutes": {
+          "name": "delivery_eta_min_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_eta_max_minutes": {
+          "name": "delivery_eta_max_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pickup_eta_min_minutes": {
+          "name": "pickup_eta_min_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pickup_eta_max_minutes": {
+          "name": "pickup_eta_max_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "debit_brands": {
+          "name": "debit_brands",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "credit_brands": {
+          "name": "credit_brands",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "print_on_accept": {
+          "name": "print_on_accept",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_operation_settings_store_id_stores_id_fk": {
+          "name": "store_operation_settings_store_id_stores_id_fk",
+          "tableFrom": "store_operation_settings",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_operation_settings_paused_by_user_id_users_id_fk": {
+          "name": "store_operation_settings_paused_by_user_id_users_id_fk",
+          "tableFrom": "store_operation_settings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "paused_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_operation_settings_paused_bool": {
+          "name": "store_operation_settings_paused_bool",
+          "value": "\"paused\" IN (0, 1)"
+        },
+        "store_operation_settings_pause_actor": {
+          "name": "store_operation_settings_pause_actor",
+          "value": "(\"paused\" = 0 AND \"paused_at\" IS NULL AND \"paused_by_user_id\" IS NULL AND \"paused_by_role\" IS NULL) OR (\"paused\" = 1 AND \"paused_at\" IS NOT NULL AND \"paused_by_user_id\" IS NOT NULL AND \"paused_by_role\" IS NOT NULL)"
+        },
+        "store_operation_settings_paused_by_role": {
+          "name": "store_operation_settings_paused_by_role",
+          "value": "\"paused_by_role\" IS NULL OR \"paused_by_role\" IN ('owner', 'operator')"
+        },
+        "store_operation_settings_paused_at_utc": {
+          "name": "store_operation_settings_paused_at_utc",
+          "value": "\"paused_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"paused_at\") IS \"paused_at\""
+        },
+        "store_operation_settings_pickup_bool": {
+          "name": "store_operation_settings_pickup_bool",
+          "value": "\"pickup_enabled\" IN (0, 1)"
+        },
+        "store_operation_settings_delivery_mode": {
+          "name": "store_operation_settings_delivery_mode",
+          "value": "\"delivery_mode\" IS NULL OR \"delivery_mode\" IN ('neighborhood', 'fixed')"
+        },
+        "store_operation_settings_fixed_fee": {
+          "name": "store_operation_settings_fixed_fee",
+          "value": "(\"delivery_fixed_fee_cents\" IS NULL OR \"delivery_fixed_fee_cents\" BETWEEN 0 AND 100000000) AND (\"delivery_mode\" IS NOT 'fixed' OR \"delivery_fixed_fee_cents\" IS NOT NULL)"
+        },
+        "store_operation_settings_minimum_order": {
+          "name": "store_operation_settings_minimum_order",
+          "value": "\"delivery_minimum_order_cents\" IS NULL OR \"delivery_minimum_order_cents\" BETWEEN 1 AND 100000000"
+        },
+        "store_operation_settings_delivery_eta": {
+          "name": "store_operation_settings_delivery_eta",
+          "value": "(\"delivery_eta_min_minutes\" IS NULL AND \"delivery_eta_max_minutes\" IS NULL) OR (\"delivery_eta_min_minutes\" BETWEEN 1 AND 240 AND \"delivery_eta_max_minutes\" BETWEEN 1 AND 240 AND \"delivery_eta_min_minutes\" <= \"delivery_eta_max_minutes\")"
+        },
+        "store_operation_settings_pickup_eta": {
+          "name": "store_operation_settings_pickup_eta",
+          "value": "(\"pickup_eta_min_minutes\" IS NULL AND \"pickup_eta_max_minutes\" IS NULL) OR (\"pickup_eta_min_minutes\" BETWEEN 1 AND 240 AND \"pickup_eta_max_minutes\" BETWEEN 1 AND 240 AND \"pickup_eta_min_minutes\" <= \"pickup_eta_max_minutes\")"
+        },
+        "store_operation_settings_debit_brands": {
+          "name": "store_operation_settings_debit_brands",
+          "value": "json_valid(\"debit_brands\") AND json_type(\"debit_brands\") = 'array'"
+        },
+        "store_operation_settings_credit_brands": {
+          "name": "store_operation_settings_credit_brands",
+          "value": "json_valid(\"credit_brands\") AND json_type(\"credit_brands\") = 'array'"
+        },
+        "store_operation_settings_print_bool": {
+          "name": "store_operation_settings_print_bool",
+          "value": "\"print_on_accept\" IN (0, 1)"
+        },
+        "store_operation_settings_created_at_utc": {
+          "name": "store_operation_settings_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_operation_settings_updated_at_utc": {
+          "name": "store_operation_settings_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "order_lines": {
+      "name": "order_lines",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "menu_item_id": {
+          "name": "menu_item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "item_name": {
+          "name": "item_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unit_price_cents": {
+          "name": "unit_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "line_total_cents": {
+          "name": "line_total_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "complements": {
+          "name": "complements",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "additionals": {
+          "name": "additionals",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "order_lines_order_position_unique": {
+          "name": "order_lines_order_position_unique",
+          "columns": [
+            "store_id",
+            "order_id",
+            "position"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "order_lines_store_id_stores_id_fk": {
+          "name": "order_lines_store_id_stores_id_fk",
+          "tableFrom": "order_lines",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_lines_order_fk": {
+          "name": "order_lines_order_fk",
+          "tableFrom": "order_lines",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "order_lines_position": {
+          "name": "order_lines_position",
+          "value": "\"position\" >= 0"
+        },
+        "order_lines_item_name": {
+          "name": "order_lines_item_name",
+          "value": "length(trim(\"item_name\")) BETWEEN 1 AND 120"
+        },
+        "order_lines_unit_price_cents": {
+          "name": "order_lines_unit_price_cents",
+          "value": "\"unit_price_cents\" BETWEEN 0 AND 100000000"
+        },
+        "order_lines_quantity": {
+          "name": "order_lines_quantity",
+          "value": "\"quantity\" BETWEEN 1 AND 99"
+        },
+        "order_lines_total": {
+          "name": "order_lines_total",
+          "value": "\"line_total_cents\" = \"unit_price_cents\" * \"quantity\""
+        },
+        "order_lines_complements_json": {
+          "name": "order_lines_complements_json",
+          "value": "json_valid(\"complements\") AND json_type(\"complements\") = 'array'"
+        },
+        "order_lines_additionals_json": {
+          "name": "order_lines_additionals_json",
+          "value": "json_valid(\"additionals\") AND json_type(\"additionals\") = 'array'"
+        },
+        "order_lines_created_at_utc": {
+          "name": "order_lines_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "order_status_events": {
+      "name": "order_status_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actor_role": {
+          "name": "actor_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "order_status_events_order_idx": {
+          "name": "order_status_events_order_idx",
+          "columns": [
+            "store_id",
+            "order_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "order_status_events_store_id_stores_id_fk": {
+          "name": "order_status_events_store_id_stores_id_fk",
+          "tableFrom": "order_status_events",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_status_events_actor_user_id_users_id_fk": {
+          "name": "order_status_events_actor_user_id_users_id_fk",
+          "tableFrom": "order_status_events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_status_events_order_fk": {
+          "name": "order_status_events_order_fk",
+          "tableFrom": "order_status_events",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "order_status_events_from_status": {
+          "name": "order_status_events_from_status",
+          "value": "\"from_status\" IS NULL OR \"from_status\" IN ('received', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled')"
+        },
+        "order_status_events_to_status": {
+          "name": "order_status_events_to_status",
+          "value": "\"to_status\" IN ('received', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled')"
+        },
+        "order_status_events_actor": {
+          "name": "order_status_events_actor",
+          "value": "(\"actor_user_id\" IS NULL AND \"actor_role\" IS NULL) OR (\"actor_user_id\" IS NOT NULL AND \"actor_role\" IN ('owner', 'operator'))"
+        },
+        "order_status_events_occurred_at_utc": {
+          "name": "order_status_events_occurred_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
+        }
+      }
+    },
+    "orders": {
+      "name": "orders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_token_hash": {
+          "name": "access_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_payload_hash": {
+          "name": "idempotency_payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'received'"
+        },
+        "fulfillment": {
+          "name": "fulfillment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payment_method": {
+          "name": "payment_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "customer_name": {
+          "name": "customer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "customer_phone_e164": {
+          "name": "customer_phone_e164",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "delivery_postal_code": {
+          "name": "delivery_postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_street": {
+          "name": "delivery_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_number": {
+          "name": "delivery_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_complement": {
+          "name": "delivery_complement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_reference": {
+          "name": "delivery_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_neighborhood": {
+          "name": "delivery_neighborhood",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivery_fee_mode": {
+          "name": "delivery_fee_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "items_subtotal_cents": {
+          "name": "items_subtotal_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "delivery_fee_cents": {
+          "name": "delivery_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "discount_cents": {
+          "name": "discount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "total_cents": {
+          "name": "total_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "change_for_cents": {
+          "name": "change_for_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "eta_min_minutes": {
+          "name": "eta_min_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "eta_max_minutes": {
+          "name": "eta_max_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "customer_account_id": {
+          "name": "customer_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'not_required'"
+        },
+        "service_fee_cents": {
+          "name": "service_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "orders_store_account_created_idx": {
+          "name": "orders_store_account_created_idx",
+          "columns": [
+            "store_id",
+            "customer_account_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "orders_store_id_unique": {
+          "name": "orders_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "orders_store_code_unique": {
+          "name": "orders_store_code_unique",
+          "columns": [
+            "store_id",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "orders_store_idempotency_unique": {
+          "name": "orders_store_idempotency_unique",
+          "columns": [
+            "store_id",
+            "idempotency_key"
+          ],
+          "isUnique": true
+        },
+        "orders_access_token_hash_unique": {
+          "name": "orders_access_token_hash_unique",
+          "columns": [
+            "access_token_hash"
+          ],
+          "isUnique": true
+        },
+        "orders_store_status_created_idx": {
+          "name": "orders_store_status_created_idx",
+          "columns": [
+            "store_id",
+            "status",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "orders_store_created_idx": {
+          "name": "orders_store_created_idx",
+          "columns": [
+            "store_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "orders_store_phone_created_idx": {
+          "name": "orders_store_phone_created_idx",
+          "columns": [
+            "store_id",
+            "customer_phone_e164",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "orders_store_id_stores_id_fk": {
+          "name": "orders_store_id_stores_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_customer_account_id_customer_accounts_id_fk": {
+          "name": "orders_customer_account_id_customer_accounts_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "customer_accounts",
+          "columnsFrom": [
+            "customer_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "orders_code": {
+          "name": "orders_code",
+          "value": "\"code\" >= 1"
+        },
+        "orders_access_token_hash": {
+          "name": "orders_access_token_hash",
+          "value": "length(\"access_token_hash\") = 64 AND lower(\"access_token_hash\") = \"access_token_hash\""
+        },
+        "orders_idempotency_key": {
+          "name": "orders_idempotency_key",
+          "value": "length(\"idempotency_key\") = 36"
+        },
+        "orders_idempotency_payload_hash": {
+          "name": "orders_idempotency_payload_hash",
+          "value": "length(\"idempotency_payload_hash\") = 64 AND lower(\"idempotency_payload_hash\") = \"idempotency_payload_hash\""
+        },
+        "orders_status": {
+          "name": "orders_status",
+          "value": "\"status\" IN ('received', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled')"
+        },
+        "orders_fulfillment": {
+          "name": "orders_fulfillment",
+          "value": "\"fulfillment\" IN ('delivery', 'pickup')"
+        },
+        "orders_payment_method": {
+          "name": "orders_payment_method",
+          "value": "\"payment_method\" IN ('pix', 'credit', 'on_delivery')"
+        },
+        "orders_status_fulfillment": {
+          "name": "orders_status_fulfillment",
+          "value": "NOT (\"fulfillment\" = 'delivery' AND \"status\" = 'ready_for_pickup') AND NOT (\"fulfillment\" = 'pickup' AND \"status\" = 'out_for_delivery')"
+        },
+        "orders_customer_name": {
+          "name": "orders_customer_name",
+          "value": "length(trim(\"customer_name\")) BETWEEN 1 AND 120"
+        },
+        "orders_customer_phone": {
+          "name": "orders_customer_phone",
+          "value": "length(\"customer_phone_e164\") = 13"
+        },
+        "orders_delivery_postal_code": {
+          "name": "orders_delivery_postal_code",
+          "value": "\"delivery_postal_code\" IS NULL OR length(\"delivery_postal_code\") = 8"
+        },
+        "orders_delivery_street": {
+          "name": "orders_delivery_street",
+          "value": "\"delivery_street\" IS NULL OR length(\"delivery_street\") BETWEEN 1 AND 200"
+        },
+        "orders_delivery_number": {
+          "name": "orders_delivery_number",
+          "value": "\"delivery_number\" IS NULL OR length(\"delivery_number\") BETWEEN 1 AND 20"
+        },
+        "orders_delivery_complement": {
+          "name": "orders_delivery_complement",
+          "value": "\"delivery_complement\" IS NULL OR length(\"delivery_complement\") BETWEEN 1 AND 120"
+        },
+        "orders_delivery_reference": {
+          "name": "orders_delivery_reference",
+          "value": "\"delivery_reference\" IS NULL OR length(\"delivery_reference\") BETWEEN 1 AND 160"
+        },
+        "orders_delivery_neighborhood": {
+          "name": "orders_delivery_neighborhood",
+          "value": "\"delivery_neighborhood\" IS NULL OR length(\"delivery_neighborhood\") BETWEEN 1 AND 120"
+        },
+        "orders_delivery_fee_mode": {
+          "name": "orders_delivery_fee_mode",
+          "value": "\"delivery_fee_mode\" IS NULL OR \"delivery_fee_mode\" IN ('neighborhood', 'fixed')"
+        },
+        "orders_address_by_fulfillment": {
+          "name": "orders_address_by_fulfillment",
+          "value": "(\"fulfillment\" = 'delivery' AND \"delivery_street\" IS NOT NULL AND \"delivery_number\" IS NOT NULL AND \"delivery_neighborhood\" IS NOT NULL AND \"delivery_fee_mode\" IS NOT NULL) OR (\"fulfillment\" = 'pickup' AND \"delivery_postal_code\" IS NULL AND \"delivery_street\" IS NULL AND \"delivery_number\" IS NULL AND \"delivery_complement\" IS NULL AND \"delivery_reference\" IS NULL AND \"delivery_neighborhood\" IS NULL AND \"delivery_fee_mode\" IS NULL AND \"delivery_fee_cents\" = 0)"
+        },
+        "orders_items_subtotal_cents": {
+          "name": "orders_items_subtotal_cents",
+          "value": "\"items_subtotal_cents\" BETWEEN 0 AND 100000000"
+        },
+        "orders_delivery_fee_cents": {
+          "name": "orders_delivery_fee_cents",
+          "value": "\"delivery_fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "orders_discount_cents": {
+          "name": "orders_discount_cents",
+          "value": "\"discount_cents\" BETWEEN 0 AND 100000000"
+        },
+        "orders_total_cents": {
+          "name": "orders_total_cents",
+          "value": "\"total_cents\" BETWEEN 0 AND 100000000"
+        },
+        "orders_total_sum": {
+          "name": "orders_total_sum",
+          "value": "\"discount_cents\" <= \"items_subtotal_cents\" + \"delivery_fee_cents\" AND \"total_cents\" = \"items_subtotal_cents\" + \"delivery_fee_cents\" - \"discount_cents\""
+        },
+        "orders_change_for": {
+          "name": "orders_change_for",
+          "value": "\"change_for_cents\" IS NULL OR (\"payment_method\" = 'on_delivery' AND \"change_for_cents\" >= \"total_cents\" AND \"change_for_cents\" <= 100000000)"
+        },
+        "orders_note": {
+          "name": "orders_note",
+          "value": "\"note\" IS NULL OR length(\"note\") BETWEEN 1 AND 200"
+        },
+        "orders_eta": {
+          "name": "orders_eta",
+          "value": "(\"eta_min_minutes\" IS NULL AND \"eta_max_minutes\" IS NULL) OR (\"eta_min_minutes\" BETWEEN 1 AND 240 AND \"eta_max_minutes\" BETWEEN 1 AND 240 AND \"eta_min_minutes\" <= \"eta_max_minutes\")"
+        },
+        "orders_created_at_utc": {
+          "name": "orders_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "orders_updated_at_utc": {
+          "name": "orders_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "phone_lookups": {
+      "name": "phone_lookups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "matched_order_id": {
+          "name": "matched_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirm_token_hash": {
+          "name": "confirm_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirm_expires_at": {
+          "name": "confirm_expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "phone_lookups_confirm_token_unique": {
+          "name": "phone_lookups_confirm_token_unique",
+          "columns": [
+            "confirm_token_hash"
+          ],
+          "isUnique": true
+        },
+        "phone_lookups_ip_idx": {
+          "name": "phone_lookups_ip_idx",
+          "columns": [
+            "ip_hash",
+            "occurred_at"
+          ],
+          "isUnique": false
+        },
+        "phone_lookups_store_idx": {
+          "name": "phone_lookups_store_idx",
+          "columns": [
+            "store_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "phone_lookups_store_id_stores_id_fk": {
+          "name": "phone_lookups_store_id_stores_id_fk",
+          "tableFrom": "phone_lookups",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "phone_lookups_order_fk": {
+          "name": "phone_lookups_order_fk",
+          "tableFrom": "phone_lookups",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "matched_order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "phone_lookups_ip_hash": {
+          "name": "phone_lookups_ip_hash",
+          "value": "length(\"ip_hash\") = 64 AND lower(\"ip_hash\") = \"ip_hash\""
+        },
+        "phone_lookups_result": {
+          "name": "phone_lookups_result",
+          "value": "\"result\" IN ('found', 'not_found', 'rate_limited', 'captcha_failed')"
+        },
+        "phone_lookups_found": {
+          "name": "phone_lookups_found",
+          "value": "(\"result\" = 'found' AND \"matched_order_id\" IS NOT NULL AND \"confirm_token_hash\" IS NOT NULL AND \"confirm_expires_at\" IS NOT NULL) OR (\"result\" <> 'found' AND \"matched_order_id\" IS NULL AND \"confirm_token_hash\" IS NULL AND \"confirm_expires_at\" IS NULL AND \"confirmed_at\" IS NULL)"
+        },
+        "phone_lookups_confirm_token_hash": {
+          "name": "phone_lookups_confirm_token_hash",
+          "value": "\"confirm_token_hash\" IS NULL OR (length(\"confirm_token_hash\") = 64 AND lower(\"confirm_token_hash\") = \"confirm_token_hash\")"
+        },
+        "phone_lookups_occurred_at_utc": {
+          "name": "phone_lookups_occurred_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
+        },
+        "phone_lookups_confirm_expires_at_utc": {
+          "name": "phone_lookups_confirm_expires_at_utc",
+          "value": "\"confirm_expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"confirm_expires_at\") IS \"confirm_expires_at\""
+        },
+        "phone_lookups_confirmed_at_utc": {
+          "name": "phone_lookups_confirmed_at_utc",
+          "value": "\"confirmed_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"confirmed_at\") IS \"confirmed_at\""
+        }
+      }
+    },
+    "store_funnel_daily": {
+      "name": "store_funnel_daily",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "day": {
+          "name": "day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event": {
+          "name": "event",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_funnel_daily_store_id_stores_id_fk": {
+          "name": "store_funnel_daily_store_id_stores_id_fk",
+          "tableFrom": "store_funnel_daily",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "store_funnel_daily_store_id_day_event_pk": {
+          "columns": [
+            "store_id",
+            "day",
+            "event"
+          ],
+          "name": "store_funnel_daily_store_id_day_event_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_funnel_daily_day": {
+          "name": "store_funnel_daily_day",
+          "value": "date(\"day\") IS \"day\""
+        },
+        "store_funnel_daily_event": {
+          "name": "store_funnel_daily_event",
+          "value": "\"event\" IN ('visit', 'item_view', 'add_to_cart', 'checkout_start', 'order')"
+        },
+        "store_funnel_daily_count": {
+          "name": "store_funnel_daily_count",
+          "value": "\"count\" >= 0"
+        },
+        "store_funnel_daily_updated_at_utc": {
+          "name": "store_funnel_daily_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_onboarding": {
+      "name": "store_onboarding",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_cuisine": {
+          "name": "profile_cuisine",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "profile_cuisine_other": {
+          "name": "profile_cuisine_other",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "profile_goal": {
+          "name": "profile_goal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "profile_goal_other": {
+          "name": "profile_goal_other",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "profile_answered_at": {
+          "name": "profile_answered_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "profile_answered_by_user_id": {
+          "name": "profile_answered_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "slug_confirmed_at": {
+          "name": "slug_confirmed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ready_acknowledged_at": {
+          "name": "ready_acknowledged_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_onboarding_store_id_stores_id_fk": {
+          "name": "store_onboarding_store_id_stores_id_fk",
+          "tableFrom": "store_onboarding",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_onboarding_profile_answered_by_user_id_users_id_fk": {
+          "name": "store_onboarding_profile_answered_by_user_id_users_id_fk",
+          "tableFrom": "store_onboarding",
+          "tableTo": "users",
+          "columnsFrom": [
+            "profile_answered_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_onboarding_cuisine": {
+          "name": "store_onboarding_cuisine",
+          "value": "\"profile_cuisine\" IS NULL OR \"profile_cuisine\" IN ('lanches', 'pizza', 'japonesa', 'brasileira', 'marmitas', 'doces', 'acai', 'saudavel', 'bebidas', 'other')"
+        },
+        "store_onboarding_goal": {
+          "name": "store_onboarding_goal",
+          "value": "\"profile_goal\" IS NULL OR \"profile_goal\" IN ('start_delivery', 'leave_marketplaces', 'organize_whatsapp', 'sell_more', 'other')"
+        },
+        "store_onboarding_profile_complete": {
+          "name": "store_onboarding_profile_complete",
+          "value": "(\"profile_cuisine\" IS NULL AND \"profile_goal\" IS NULL AND \"profile_answered_at\" IS NULL AND \"profile_answered_by_user_id\" IS NULL) OR (\"profile_cuisine\" IS NOT NULL AND \"profile_goal\" IS NOT NULL AND \"profile_answered_at\" IS NOT NULL AND \"profile_answered_by_user_id\" IS NOT NULL)"
+        },
+        "store_onboarding_cuisine_other": {
+          "name": "store_onboarding_cuisine_other",
+          "value": "(\"profile_cuisine\" IS 'other') = (\"profile_cuisine_other\" IS NOT NULL) AND (\"profile_cuisine_other\" IS NULL OR length(\"profile_cuisine_other\") BETWEEN 1 AND 80)"
+        },
+        "store_onboarding_goal_other": {
+          "name": "store_onboarding_goal_other",
+          "value": "(\"profile_goal\" IS 'other') = (\"profile_goal_other\" IS NOT NULL) AND (\"profile_goal_other\" IS NULL OR length(\"profile_goal_other\") BETWEEN 1 AND 80)"
+        },
+        "store_onboarding_answered_at_utc": {
+          "name": "store_onboarding_answered_at_utc",
+          "value": "\"profile_answered_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"profile_answered_at\") IS \"profile_answered_at\""
+        },
+        "store_onboarding_slug_confirmed_at_utc": {
+          "name": "store_onboarding_slug_confirmed_at_utc",
+          "value": "\"slug_confirmed_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"slug_confirmed_at\") IS \"slug_confirmed_at\""
+        },
+        "store_onboarding_ready_at_utc": {
+          "name": "store_onboarding_ready_at_utc",
+          "value": "\"ready_acknowledged_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"ready_acknowledged_at\") IS \"ready_acknowledged_at\""
+        },
+        "store_onboarding_created_at_utc": {
+          "name": "store_onboarding_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_onboarding_updated_at_utc": {
+          "name": "store_onboarding_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_showcases": {
+      "name": "store_showcases",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "logo_object_key": {
+          "name": "logo_object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cover_object_key": {
+          "name": "cover_object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "instagram": {
+          "name": "instagram",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "meta_pixel_id": {
+          "name": "meta_pixel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "google_tag_id": {
+          "name": "google_tag_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_showcases_store_id_stores_id_fk": {
+          "name": "store_showcases_store_id_stores_id_fk",
+          "tableFrom": "store_showcases",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_showcases_description": {
+          "name": "store_showcases_description",
+          "value": "\"description\" IS NULL OR length(\"description\") BETWEEN 1 AND 160"
+        },
+        "store_showcases_logo_key": {
+          "name": "store_showcases_logo_key",
+          "value": "\"logo_object_key\" IS NULL OR length(\"logo_object_key\") BETWEEN 1 AND 200"
+        },
+        "store_showcases_cover_key": {
+          "name": "store_showcases_cover_key",
+          "value": "\"cover_object_key\" IS NULL OR length(\"cover_object_key\") BETWEEN 1 AND 200"
+        },
+        "store_showcases_instagram": {
+          "name": "store_showcases_instagram",
+          "value": "\"instagram\" IS NULL OR (length(\"instagram\") BETWEEN 1 AND 30 AND \"instagram\" NOT GLOB '*[^a-z0-9._]*')"
+        },
+        "store_showcases_meta_pixel": {
+          "name": "store_showcases_meta_pixel",
+          "value": "\"meta_pixel_id\" IS NULL OR (length(\"meta_pixel_id\") BETWEEN 15 AND 16 AND \"meta_pixel_id\" NOT GLOB '*[^0-9]*')"
+        },
+        "store_showcases_google_tag": {
+          "name": "store_showcases_google_tag",
+          "value": "\"google_tag_id\" IS NULL OR (length(\"google_tag_id\") BETWEEN 6 AND 23 AND \"google_tag_id\" NOT GLOB '*[^A-Z0-9-]*')"
+        },
+        "store_showcases_created_at_utc": {
+          "name": "store_showcases_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_showcases_updated_at_utc": {
+          "name": "store_showcases_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_slug_history": {
+      "name": "store_slug_history",
+      "columns": {
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "replaced_at": {
+          "name": "replaced_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_slug_history_store_idx": {
+          "name": "store_slug_history_store_idx",
+          "columns": [
+            "store_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_slug_history_store_id_stores_id_fk": {
+          "name": "store_slug_history_store_id_stores_id_fk",
+          "tableFrom": "store_slug_history",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_slug_history_slug_format": {
+          "name": "store_slug_history_slug_format",
+          "value": "length(\"slug\") BETWEEN 3 AND 63 AND \"slug\" NOT GLOB '*[^a-z0-9-]*' AND \"slug\" NOT GLOB '-*' AND \"slug\" NOT GLOB '*-'"
+        },
+        "store_slug_history_replaced_at_utc": {
+          "name": "store_slug_history_replaced_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"replaced_at\") IS \"replaced_at\""
+        }
+      }
+    },
+    "customer_accounts": {
+      "name": "customer_accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phone_e164": {
+          "name": "phone_e164",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cpf": {
+          "name": "cpf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "customer_accounts_phone_unique": {
+          "name": "customer_accounts_phone_unique",
+          "columns": [
+            "phone_e164"
+          ],
+          "isUnique": true
+        },
+        "customer_accounts_cpf_unique": {
+          "name": "customer_accounts_cpf_unique",
+          "columns": [
+            "cpf"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "customer_accounts_phone": {
+          "name": "customer_accounts_phone",
+          "value": "length(\"phone_e164\") = 13 AND \"phone_e164\" NOT GLOB '*[^0-9]*'"
+        },
+        "customer_accounts_cpf": {
+          "name": "customer_accounts_cpf",
+          "value": "length(\"cpf\") = 11 AND \"cpf\" NOT GLOB '*[^0-9]*'"
+        },
+        "customer_accounts_name": {
+          "name": "customer_accounts_name",
+          "value": "length(trim(\"name\")) BETWEEN 1 AND 120"
+        },
+        "customer_accounts_created_at_utc": {
+          "name": "customer_accounts_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "customer_accounts_updated_at_utc": {
+          "name": "customer_accounts_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "customer_login_codes": {
+      "name": "customer_login_codes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phone_key": {
+          "name": "phone_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "customer_login_codes_phone_idx": {
+          "name": "customer_login_codes_phone_idx",
+          "columns": [
+            "phone_key",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "customer_login_codes_phone_key": {
+          "name": "customer_login_codes_phone_key",
+          "value": "length(\"phone_key\") = 64 AND lower(\"phone_key\") = \"phone_key\""
+        },
+        "customer_login_codes_code_hash": {
+          "name": "customer_login_codes_code_hash",
+          "value": "length(\"code_hash\") = 64 AND lower(\"code_hash\") = \"code_hash\""
+        },
+        "customer_login_codes_attempts": {
+          "name": "customer_login_codes_attempts",
+          "value": "\"attempts\" BETWEEN 0 AND 5"
+        },
+        "customer_login_codes_window": {
+          "name": "customer_login_codes_window",
+          "value": "\"expires_at\" > \"created_at\""
+        },
+        "customer_login_codes_created_at_utc": {
+          "name": "customer_login_codes_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "customer_login_codes_expires_at_utc": {
+          "name": "customer_login_codes_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "customer_login_codes_consumed_at_utc": {
+          "name": "customer_login_codes_consumed_at_utc",
+          "value": "\"consumed_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"consumed_at\") IS \"consumed_at\""
+        }
+      }
+    },
+    "customer_sessions": {
+      "name": "customer_sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "phone_e164": {
+          "name": "phone_e164",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "customer_sessions_token_unique": {
+          "name": "customer_sessions_token_unique",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        },
+        "customer_sessions_account_idx": {
+          "name": "customer_sessions_account_idx",
+          "columns": [
+            "account_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "customer_sessions_account_id_customer_accounts_id_fk": {
+          "name": "customer_sessions_account_id_customer_accounts_id_fk",
+          "tableFrom": "customer_sessions",
+          "tableTo": "customer_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "customer_sessions_token_hash": {
+          "name": "customer_sessions_token_hash",
+          "value": "length(\"token_hash\") = 64 AND lower(\"token_hash\") = \"token_hash\""
+        },
+        "customer_sessions_phone": {
+          "name": "customer_sessions_phone",
+          "value": "length(\"phone_e164\") = 13 AND \"phone_e164\" NOT GLOB '*[^0-9]*'"
+        },
+        "customer_sessions_window": {
+          "name": "customer_sessions_window",
+          "value": "\"expires_at\" > \"created_at\""
+        },
+        "customer_sessions_created_at_utc": {
+          "name": "customer_sessions_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "customer_sessions_expires_at_utc": {
+          "name": "customer_sessions_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        }
+      }
+    },
+    "coupon_redemptions": {
+      "name": "coupon_redemptions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "coupon_id": {
+          "name": "coupon_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "customer_account_id": {
+          "name": "customer_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "discount_cents": {
+          "name": "discount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "coupon_redemptions_order_unique": {
+          "name": "coupon_redemptions_order_unique",
+          "columns": [
+            "store_id",
+            "order_id"
+          ],
+          "isUnique": true
+        },
+        "coupon_redemptions_welcome_unique": {
+          "name": "coupon_redemptions_welcome_unique",
+          "columns": [
+            "store_id",
+            "customer_account_id"
+          ],
+          "isUnique": true,
+          "where": "\"source\" = 'welcome'"
+        },
+        "coupon_redemptions_coupon_idx": {
+          "name": "coupon_redemptions_coupon_idx",
+          "columns": [
+            "store_id",
+            "coupon_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "coupon_redemptions_store_id_stores_id_fk": {
+          "name": "coupon_redemptions_store_id_stores_id_fk",
+          "tableFrom": "coupon_redemptions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "coupon_redemptions_customer_account_id_customer_accounts_id_fk": {
+          "name": "coupon_redemptions_customer_account_id_customer_accounts_id_fk",
+          "tableFrom": "coupon_redemptions",
+          "tableTo": "customer_accounts",
+          "columnsFrom": [
+            "customer_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "coupon_redemptions_order_fk": {
+          "name": "coupon_redemptions_order_fk",
+          "tableFrom": "coupon_redemptions",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "coupon_redemptions_coupon_fk": {
+          "name": "coupon_redemptions_coupon_fk",
+          "tableFrom": "coupon_redemptions",
+          "tableTo": "coupons",
+          "columnsFrom": [
+            "store_id",
+            "coupon_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "coupon_redemptions_source": {
+          "name": "coupon_redemptions_source",
+          "value": "\"source\" IN ('promo', 'welcome')"
+        },
+        "coupon_redemptions_source_fields": {
+          "name": "coupon_redemptions_source_fields",
+          "value": "(\"source\" = 'promo' AND \"coupon_id\" IS NOT NULL) OR (\"source\" = 'welcome' AND \"coupon_id\" IS NULL AND \"customer_account_id\" IS NOT NULL)"
+        },
+        "coupon_redemptions_discount_cents": {
+          "name": "coupon_redemptions_discount_cents",
+          "value": "\"discount_cents\" BETWEEN 1 AND 100000000"
+        },
+        "coupon_redemptions_created_at_utc": {
+          "name": "coupon_redemptions_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "coupons": {
+      "name": "coupons",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "percent": {
+          "name": "percent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max_discount_cents": {
+          "name": "max_discount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "min_order_cents": {
+          "name": "min_order_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "weekdays": {
+          "name": "weekdays",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "usage_limit": {
+          "name": "usage_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "used_count": {
+          "name": "used_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "active": {
+          "name": "active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "coupons_store_id_unique": {
+          "name": "coupons_store_id_unique",
+          "columns": [
+            "store_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "coupons_store_code_unique": {
+          "name": "coupons_store_code_unique",
+          "columns": [
+            "store_id",
+            "code"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "coupons_store_id_stores_id_fk": {
+          "name": "coupons_store_id_stores_id_fk",
+          "tableFrom": "coupons",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "coupons_created_by_user_id_users_id_fk": {
+          "name": "coupons_created_by_user_id_users_id_fk",
+          "tableFrom": "coupons",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "coupons_code": {
+          "name": "coupons_code",
+          "value": "length(\"code\") BETWEEN 3 AND 20 AND \"code\" NOT GLOB '*[^A-Z0-9_-]*'"
+        },
+        "coupons_kind": {
+          "name": "coupons_kind",
+          "value": "\"kind\" IN ('percent', 'fixed')"
+        },
+        "coupons_kind_fields": {
+          "name": "coupons_kind_fields",
+          "value": "(\"kind\" = 'percent' AND \"percent\" BETWEEN 1 AND 100 AND \"amount_cents\" IS NULL) OR (\"kind\" = 'fixed' AND \"amount_cents\" BETWEEN 1 AND 100000000 AND \"percent\" IS NULL AND \"max_discount_cents\" IS NULL)"
+        },
+        "coupons_max_discount_cents": {
+          "name": "coupons_max_discount_cents",
+          "value": "\"max_discount_cents\" IS NULL OR \"max_discount_cents\" BETWEEN 1 AND 100000000"
+        },
+        "coupons_min_order_cents": {
+          "name": "coupons_min_order_cents",
+          "value": "\"min_order_cents\" IS NULL OR \"min_order_cents\" BETWEEN 1 AND 100000000"
+        },
+        "coupons_starts_on": {
+          "name": "coupons_starts_on",
+          "value": "\"starts_on\" IS NULL OR date(\"starts_on\") IS \"starts_on\""
+        },
+        "coupons_ends_on": {
+          "name": "coupons_ends_on",
+          "value": "\"ends_on\" IS NULL OR date(\"ends_on\") IS \"ends_on\""
+        },
+        "coupons_period": {
+          "name": "coupons_period",
+          "value": "\"starts_on\" IS NULL OR \"ends_on\" IS NULL OR \"starts_on\" <= \"ends_on\""
+        },
+        "coupons_weekdays": {
+          "name": "coupons_weekdays",
+          "value": "\"weekdays\" BETWEEN 0 AND 127"
+        },
+        "coupons_usage_limit": {
+          "name": "coupons_usage_limit",
+          "value": "\"usage_limit\" IS NULL OR \"usage_limit\" >= 1"
+        },
+        "coupons_used_count": {
+          "name": "coupons_used_count",
+          "value": "\"used_count\" >= 0 AND (\"usage_limit\" IS NULL OR \"used_count\" <= \"usage_limit\")"
+        },
+        "coupons_active_bool": {
+          "name": "coupons_active_bool",
+          "value": "\"active\" IN (0, 1)"
+        },
+        "coupons_created_at_utc": {
+          "name": "coupons_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "coupons_updated_at_utc": {
+          "name": "coupons_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_welcome_coupons": {
+      "name": "store_welcome_coupons",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "active": {
+          "name": "active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "percent": {
+          "name": "percent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max_discount_cents": {
+          "name": "max_discount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "min_order_cents": {
+          "name": "min_order_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_by_user_id": {
+          "name": "updated_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "store_welcome_coupons_store_id_stores_id_fk": {
+          "name": "store_welcome_coupons_store_id_stores_id_fk",
+          "tableFrom": "store_welcome_coupons",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_welcome_coupons_updated_by_user_id_users_id_fk": {
+          "name": "store_welcome_coupons_updated_by_user_id_users_id_fk",
+          "tableFrom": "store_welcome_coupons",
+          "tableTo": "users",
+          "columnsFrom": [
+            "updated_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_welcome_coupons_active_bool": {
+          "name": "store_welcome_coupons_active_bool",
+          "value": "\"active\" IN (0, 1)"
+        },
+        "store_welcome_coupons_kind": {
+          "name": "store_welcome_coupons_kind",
+          "value": "\"kind\" IN ('percent', 'fixed')"
+        },
+        "store_welcome_coupons_kind_fields": {
+          "name": "store_welcome_coupons_kind_fields",
+          "value": "(\"kind\" = 'percent' AND \"percent\" BETWEEN 1 AND 100 AND \"amount_cents\" IS NULL) OR (\"kind\" = 'fixed' AND \"amount_cents\" BETWEEN 1 AND 100000000 AND \"percent\" IS NULL AND \"max_discount_cents\" IS NULL)"
+        },
+        "store_welcome_coupons_max_discount_cents": {
+          "name": "store_welcome_coupons_max_discount_cents",
+          "value": "\"max_discount_cents\" IS NULL OR \"max_discount_cents\" BETWEEN 1 AND 100000000"
+        },
+        "store_welcome_coupons_min_order_cents": {
+          "name": "store_welcome_coupons_min_order_cents",
+          "value": "\"min_order_cents\" IS NULL OR \"min_order_cents\" BETWEEN 1 AND 100000000"
+        },
+        "store_welcome_coupons_created_at_utc": {
+          "name": "store_welcome_coupons_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_welcome_coupons_updated_at_utc": {
+          "name": "store_welcome_coupons_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "ledger_entries": {
+      "name": "ledger_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "intent_id": {
+          "name": "intent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'payment'"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custody": {
+          "name": "custody",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pilot_platform'"
+        },
+        "charged_cents": {
+          "name": "charged_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_total_cents": {
+          "name": "order_total_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "service_fee_cents": {
+          "name": "service_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "foode_fee_cents": {
+          "name": "foode_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "foode_fee_id": {
+          "name": "foode_fee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_cost_cents": {
+          "name": "provider_cost_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "net_cents": {
+          "name": "net_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "release_date": {
+          "name": "release_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_payout_date": {
+          "name": "expected_payout_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "ledger_entries_payment_intent_unique": {
+          "name": "ledger_entries_payment_intent_unique",
+          "columns": [
+            "intent_id"
+          ],
+          "isUnique": true,
+          "where": "\"kind\" = 'payment'"
+        },
+        "ledger_entries_store_payout_idx": {
+          "name": "ledger_entries_store_payout_idx",
+          "columns": [
+            "store_id",
+            "expected_payout_date"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ledger_entries_store_id_stores_id_fk": {
+          "name": "ledger_entries_store_id_stores_id_fk",
+          "tableFrom": "ledger_entries",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ledger_entries_intent_id_payment_intents_id_fk": {
+          "name": "ledger_entries_intent_id_payment_intents_id_fk",
+          "tableFrom": "ledger_entries",
+          "tableTo": "payment_intents",
+          "columnsFrom": [
+            "intent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ledger_entries_foode_fee_id_payment_fees_id_fk": {
+          "name": "ledger_entries_foode_fee_id_payment_fees_id_fk",
+          "tableFrom": "ledger_entries",
+          "tableTo": "payment_fees",
+          "columnsFrom": [
+            "foode_fee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ledger_entries_order_fk": {
+          "name": "ledger_entries_order_fk",
+          "tableFrom": "ledger_entries",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ledger_entries_kind": {
+          "name": "ledger_entries_kind",
+          "value": "\"kind\" IN ('payment')"
+        },
+        "ledger_entries_provider": {
+          "name": "ledger_entries_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "ledger_entries_method": {
+          "name": "ledger_entries_method",
+          "value": "\"method\" IN ('pix', 'credit')"
+        },
+        "ledger_entries_custody": {
+          "name": "ledger_entries_custody",
+          "value": "\"custody\" IN ('pilot_platform')"
+        },
+        "ledger_entries_charged_cents": {
+          "name": "ledger_entries_charged_cents",
+          "value": "\"charged_cents\" BETWEEN 1 AND 100000000"
+        },
+        "ledger_entries_order_total_cents": {
+          "name": "ledger_entries_order_total_cents",
+          "value": "\"order_total_cents\" BETWEEN 0 AND 100000000"
+        },
+        "ledger_entries_service_fee_cents": {
+          "name": "ledger_entries_service_fee_cents",
+          "value": "\"service_fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "ledger_entries_foode_fee_cents": {
+          "name": "ledger_entries_foode_fee_cents",
+          "value": "\"foode_fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "ledger_entries_provider_cost_cents": {
+          "name": "ledger_entries_provider_cost_cents",
+          "value": "\"provider_cost_cents\" IS NULL OR \"provider_cost_cents\" BETWEEN 0 AND 100000000"
+        },
+        "ledger_entries_sums": {
+          "name": "ledger_entries_sums",
+          "value": "\"charged_cents\" = \"order_total_cents\" + \"service_fee_cents\" AND \"foode_fee_cents\" <= \"order_total_cents\" AND \"net_cents\" = \"order_total_cents\" - \"foode_fee_cents\""
+        },
+        "ledger_entries_release_date": {
+          "name": "ledger_entries_release_date",
+          "value": "strftime('%Y-%m-%d', \"release_date\") IS \"release_date\""
+        },
+        "ledger_entries_expected_payout_date": {
+          "name": "ledger_entries_expected_payout_date",
+          "value": "strftime('%Y-%m-%d', \"expected_payout_date\") IS \"expected_payout_date\""
+        },
+        "ledger_entries_payout_after_release": {
+          "name": "ledger_entries_payout_after_release",
+          "value": "\"expected_payout_date\" > \"release_date\""
+        },
+        "ledger_entries_occurred_at_utc": {
+          "name": "ledger_entries_occurred_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
+        },
+        "ledger_entries_created_at_utc": {
+          "name": "ledger_entries_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "payment_intents": {
+      "name": "payment_intents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custody": {
+          "name": "custody",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pilot_platform'"
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "service_fee_cents": {
+          "name": "service_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "foode_fee_id": {
+          "name": "foode_fee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "foode_fee_percent_bps": {
+          "name": "foode_fee_percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "foode_fee_fixed_cents": {
+          "name": "foode_fee_fixed_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'creating'"
+        },
+        "provider_charge_id": {
+          "name": "provider_charge_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pix_copy_paste": {
+          "name": "pix_copy_paste",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pix_qr_code": {
+          "name": "pix_qr_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provider_fee_cents": {
+          "name": "provider_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "dev_mode": {
+          "name": "dev_mode",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "attempt_started_at": {
+          "name": "attempt_started_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "payment_intents_pix_order_unique": {
+          "name": "payment_intents_pix_order_unique",
+          "columns": [
+            "store_id",
+            "order_id"
+          ],
+          "isUnique": true,
+          "where": "\"method\" = 'pix'"
+        },
+        "payment_intents_provider_charge_unique": {
+          "name": "payment_intents_provider_charge_unique",
+          "columns": [
+            "provider",
+            "provider_charge_id"
+          ],
+          "isUnique": true
+        },
+        "payment_intents_state_idx": {
+          "name": "payment_intents_state_idx",
+          "columns": [
+            "state",
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payment_intents_store_id_stores_id_fk": {
+          "name": "payment_intents_store_id_stores_id_fk",
+          "tableFrom": "payment_intents",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_intents_foode_fee_id_payment_fees_id_fk": {
+          "name": "payment_intents_foode_fee_id_payment_fees_id_fk",
+          "tableFrom": "payment_intents",
+          "tableTo": "payment_fees",
+          "columnsFrom": [
+            "foode_fee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_intents_order_fk": {
+          "name": "payment_intents_order_fk",
+          "tableFrom": "payment_intents",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_intents_provider": {
+          "name": "payment_intents_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "payment_intents_method": {
+          "name": "payment_intents_method",
+          "value": "\"method\" IN ('pix', 'credit')"
+        },
+        "payment_intents_card_mode": {
+          "name": "payment_intents_card_mode",
+          "value": "(\"method\" = 'credit' AND \"card_mode\" IN ('normal', 'rapido')) OR (\"method\" = 'pix' AND \"card_mode\" IS NULL AND \"provider\" = 'abacatepay')"
+        },
+        "payment_intents_custody": {
+          "name": "payment_intents_custody",
+          "value": "\"custody\" IN ('pilot_platform')"
+        },
+        "payment_intents_amount_cents": {
+          "name": "payment_intents_amount_cents",
+          "value": "\"amount_cents\" BETWEEN 1 AND 100000000"
+        },
+        "payment_intents_service_fee_cents": {
+          "name": "payment_intents_service_fee_cents",
+          "value": "\"service_fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "payment_intents_service_fee_le_amount": {
+          "name": "payment_intents_service_fee_le_amount",
+          "value": "\"service_fee_cents\" < \"amount_cents\""
+        },
+        "payment_intents_foode_fee_percent_bps": {
+          "name": "payment_intents_foode_fee_percent_bps",
+          "value": "\"foode_fee_percent_bps\" BETWEEN 0 AND 10000"
+        },
+        "payment_intents_foode_fee_fixed_cents": {
+          "name": "payment_intents_foode_fee_fixed_cents",
+          "value": "\"foode_fee_fixed_cents\" BETWEEN 0 AND 100000000"
+        },
+        "payment_intents_state": {
+          "name": "payment_intents_state",
+          "value": "\"state\" IN ('creating', 'pending', 'paid', 'expired', 'failed')"
+        },
+        "payment_intents_provider_fee_cents": {
+          "name": "payment_intents_provider_fee_cents",
+          "value": "\"provider_fee_cents\" IS NULL OR \"provider_fee_cents\" BETWEEN 0 AND 100000000"
+        },
+        "payment_intents_charge_by_state": {
+          "name": "payment_intents_charge_by_state",
+          "value": "\"state\" NOT IN ('pending', 'paid') OR \"provider_charge_id\" IS NOT NULL"
+        },
+        "payment_intents_paid_at": {
+          "name": "payment_intents_paid_at",
+          "value": "(\"state\" = 'paid') = (\"paid_at\" IS NOT NULL)"
+        },
+        "payment_intents_pix_copy_paste": {
+          "name": "payment_intents_pix_copy_paste",
+          "value": "\"pix_copy_paste\" IS NULL OR length(\"pix_copy_paste\") BETWEEN 1 AND 1024"
+        },
+        "payment_intents_pix_qr_code": {
+          "name": "payment_intents_pix_qr_code",
+          "value": "\"pix_qr_code\" IS NULL OR length(\"pix_qr_code\") <= 200000"
+        },
+        "payment_intents_failure_code": {
+          "name": "payment_intents_failure_code",
+          "value": "\"failure_code\" IS NULL OR length(\"failure_code\") BETWEEN 1 AND 80"
+        },
+        "payment_intents_expires_at_utc": {
+          "name": "payment_intents_expires_at_utc",
+          "value": "\"expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "payment_intents_attempt_started_at_utc": {
+          "name": "payment_intents_attempt_started_at_utc",
+          "value": "\"attempt_started_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"attempt_started_at\") IS \"attempt_started_at\""
+        },
+        "payment_intents_checked_at_utc": {
+          "name": "payment_intents_checked_at_utc",
+          "value": "\"checked_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"checked_at\") IS \"checked_at\""
+        },
+        "payment_intents_paid_at_utc": {
+          "name": "payment_intents_paid_at_utc",
+          "value": "\"paid_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"paid_at\") IS \"paid_at\""
+        },
+        "payment_intents_created_at_utc": {
+          "name": "payment_intents_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "payment_intents_updated_at_utc": {
+          "name": "payment_intents_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "payment_webhook_events": {
+      "name": "payment_webhook_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_charge_id": {
+          "name": "provider_charge_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "intent_id": {
+          "name": "intent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dev_mode": {
+          "name": "dev_mode",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "payment_webhook_events_identity_unique": {
+          "name": "payment_webhook_events_identity_unique",
+          "columns": [
+            "provider",
+            "event_id"
+          ],
+          "isUnique": true
+        },
+        "payment_webhook_events_intent_idx": {
+          "name": "payment_webhook_events_intent_idx",
+          "columns": [
+            "intent_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payment_webhook_events_intent_id_payment_intents_id_fk": {
+          "name": "payment_webhook_events_intent_id_payment_intents_id_fk",
+          "tableFrom": "payment_webhook_events",
+          "tableTo": "payment_intents",
+          "columnsFrom": [
+            "intent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_webhook_events_provider": {
+          "name": "payment_webhook_events_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "payment_webhook_events_outcome": {
+          "name": "payment_webhook_events_outcome",
+          "value": "\"outcome\" IN ('applied', 'already_applied', 'ignored', 'unmatched', 'amount_mismatch', 'deferred')"
+        },
+        "payment_webhook_events_event_id": {
+          "name": "payment_webhook_events_event_id",
+          "value": "length(\"event_id\") BETWEEN 1 AND 200"
+        },
+        "payment_webhook_events_event_type": {
+          "name": "payment_webhook_events_event_type",
+          "value": "length(\"event_type\") BETWEEN 1 AND 80"
+        },
+        "payment_webhook_events_received_at_utc": {
+          "name": "payment_webhook_events_received_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"received_at\") IS \"received_at\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

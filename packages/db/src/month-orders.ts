@@ -1,3 +1,4 @@
+import { PAINEL_VISIBLE_PAYMENT_SQL } from "./schema/orders";
 // Mês civil de America/Sao_Paulo e contagem de Pedidos do mês por Loja (decisão 61: base da faixa
 // do Plano). Usado pelo Ops (lista/detalhe de Lojas) e pelo Dono (banner e `/plano`).
 
@@ -50,8 +51,7 @@ const COUNT_CHUNK = 90;
 /**
  * Contagem de Pedidos do mês (decisão 61): Pedidos NÃO cancelados do Canal próprio no mês civil
  * de America/Sao_Paulo (`created_at` em UTC dentro do intervalo do mês).
- * TODO(26): sem `payment_status` em `orders` ainda (migration 0007 no PR do Ticket 26); quando
- * existir, Pedido PIX não pago fica fora da contagem.
+ * Pedido online ainda não pago (PIX pendente ou expirado) fica fora: só conta o que o Painel vê.
  */
 export async function monthOrderCounts(
   d1: D1Database,
@@ -67,7 +67,8 @@ export async function monthOrderCounts(
       .prepare(
         `SELECT store_id AS storeId, count(*) AS total FROM orders
          WHERE store_id IN (${chunk.map(() => "?").join(", ")})
-           AND status <> 'cancelled' AND created_at >= ? AND created_at < ?
+           AND status <> 'cancelled' AND ${PAINEL_VISIBLE_PAYMENT_SQL}
+           AND created_at >= ? AND created_at < ?
          GROUP BY store_id`,
       )
       .bind(...chunk, from, to)

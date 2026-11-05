@@ -7,7 +7,7 @@
 // na criação, contado na mesma escrita do Pedido; Pedido autenticado nasce ligado à conta; a busca
 // por telefone com conta Foode só sinaliza "Entrar com WhatsApp" (decisão 68).
 // Dados pessoais: nenhum log aqui. Telefone, endereço e tokens nunca vão para log/Sentry.
-import type { CustomerSession, FoodeDb } from "@foode/db";
+import type { CustomerSession, EffectivePaymentFee, FoodeDb } from "@foode/db";
 import {
   type CheckoutCreateResponse,
   checkoutCreateRequestSchema,
@@ -28,6 +28,7 @@ import {
   phoneLookupResponseSchema,
   type StorefrontStoreState,
 } from "@foode/shared/order";
+import { serviceFeeCentsFor } from "@foode/shared/payment";
 import {
   FUNNEL_EVENT_RATE_LIMIT,
   funnelDay,
@@ -44,6 +45,7 @@ import {
   quoteCheckout,
 } from "./checkout-rules";
 import { resolveCheckoutCoupon, withDiscount } from "./coupon-checkout";
+import type { PixService } from "./pix-service";
 import { toStorefrontShowcase } from "./showcase";
 import {
   canonicalJson,
@@ -65,6 +67,8 @@ export type StorefrontServiceDeps = {
   mediaBaseUrl?: string | null;
   /** Sessão do Consumidor pelo header `cookie` (Ticket 13); ausente = sempre Guest. */
   customerSessionOf?: (cookie: string | null) => Promise<CustomerSession | null>;
+  /** PIX AbacatePay (Ticket 26); ausente ou sem chaves = PIX indisponível. */
+  pix?: PixService | null;
   now?: () => Date;
 };
 
@@ -96,8 +100,28 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     return (await deps.customerSessionOf(cookie))?.account ?? null;
   }
 
+  const live = deps.pix?.available() ? (["pix"] as const) : [];
+
+  async function paymentOptionsOf(storeId: string) {
+    const fees = await db.checkout.effectivePaymentFees(storeId);
+    return { fees, methods: availablePaymentMethods(fees, live) };
+  }
+
   async function paymentMethodsOf(storeId: string) {
-    return availablePaymentMethods(await db.checkout.effectivePaymentFees(storeId));
+    return (await paymentOptionsOf(storeId)).methods;
+  }
+
+  /** Snapshot da intenção PIX (taxa Foode vigente e valor = total + tarifa de serviço). */
+  function pixIntentOf(fees: EffectivePaymentFee[], totalCents: number) {
+    const fee = fees.find((candidate) => candidate.method === "pix");
+    if (!fee) return null;
+    return {
+      intentId: crypto.randomUUID(),
+      provider: "abacatepay" as const,
+      method: "pix" as const,
+      amountCents: totalCents + serviceFeeCentsFor("pix"),
+      foodeFee: { feeId: fee.feeId, percentBps: fee.percentBps, fixedCents: fee.fixedCents },
+    };
   }
 
   async function replyCreated(
@@ -231,10 +255,16 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
       const { idempotencyKey, ...payload } = request;
       const payloadHash = await sha256Hex(canonicalJson(payload));
 
-      const replay = async (existing: { orderId: string; code: number; payloadHash: string }) =>
-        existing.payloadHash === payloadHash
-          ? replyCreated(slug, existing.orderId, existing.code, true)
-          : checkoutFailure({ code: "idempotency_conflict" });
+      const replay = async (existing: { orderId: string; code: number; payloadHash: string }) => {
+        if (existing.payloadHash !== payloadHash) {
+          return checkoutFailure({ code: "idempotency_conflict" });
+        }
+        // Retry do mesmo Pedido PIX: nunca cria segunda cobrança (lease + cobrança gravada).
+        if (request.payment.method === "pix") {
+          await deps.pix?.ensureChargeForOrder(existing.orderId);
+        }
+        return replyCreated(slug, existing.orderId, existing.code, true);
+      };
 
       const previous = await db.storefront.findByIdempotencyKey(slug, idempotencyKey);
       if (previous) return replay(previous);
@@ -259,12 +289,14 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
         });
         if (!coupon.ok) return checkoutFailure(coupon.error);
         const quote = withDiscount(outcome.quote, coupon.applied?.discountCents ?? 0);
-        const paymentError = checkPayment(
-          quote,
-          request.payment,
-          await paymentMethodsOf(snapshot.store.id),
-        );
+        const payment = await paymentOptionsOf(snapshot.store.id);
+        const paymentError = checkPayment(quote, request.payment, payment.methods);
         if (paymentError) return checkoutFailure(paymentError);
+        const paymentIntent =
+          request.payment.method === "pix" ? pixIntentOf(payment.fees, quote.totalCents) : null;
+        if (request.payment.method === "pix" && !paymentIntent) {
+          return checkoutFailure({ code: "payment_method_unavailable" });
+        }
 
         const address = quote.neighborhoodName
           ? orderAddressOf(request, quote.neighborhoodName)
@@ -293,9 +325,13 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           itemPrices: quote.itemPrices,
           customerAccountId: account?.id ?? null,
           coupon: coupon.coupon,
+          serviceFeeCents: serviceFeeCentsFor(request.payment.method),
+          paymentIntent,
         });
         if (result.kind === "created") {
           await countFunnel(slug, "order");
+          // Cobrança PIX logo depois de gravar (falha não desfaz o Pedido: a página tenta de novo).
+          if (paymentIntent) await deps.pix?.ensureChargeForOrder(result.orderId);
           return replyCreated(slug, result.orderId, result.code, false);
         }
         if (result.kind === "existing") return replay(result);
@@ -334,7 +370,12 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           deliveryFeeCents: order.deliveryFeeCents,
           discountCents: order.discountCents,
           totalCents: order.totalCents,
+          serviceFeeCents: order.serviceFeeCents,
           payment: { method: order.paymentMethod, changeForCents: order.changeForCents },
+          pix:
+            order.paymentMethod === "pix" && deps.pix
+              ? await deps.pix.viewForOrder(order.id)
+              : null,
           note: order.note,
           address,
         }),

@@ -105,6 +105,7 @@ export {
   type CheckoutSnapshot,
   type CreateOrderCoupon,
   type CreateOrderData,
+  type CreatePaymentIntent,
   type CreateOrderDelivery,
   type CreateOrderResult,
   type IdempotentOrder,
@@ -145,7 +146,13 @@ export {
   ORDER_LINE_QUANTITY_MAX,
   ORDER_NOTE_MAX,
   ORDER_PAYMENT_METHODS,
+  ORDER_PAYMENT_STATUSES,
+  type OrderPaymentStatus,
   ORDER_STATUSES,
+  PAYMENT_INTENT_STATES,
+  type PaymentIntentState,
+  WEBHOOK_EVENT_OUTCOMES,
+  type WebhookEventOutcome,
   ORDER_STREET_MAX,
   PAUSE_ROLES,
   PAYMENT_PROVIDERS,
@@ -162,3 +169,14 @@ export {
   type StoreStatus,
 } from "./schema";
 export { saoPauloMonth, saoPauloMonthRange } from "./month-orders";
+
+export {
+  type ConfirmPaymentInput,
+  type ConfirmPaymentResult,
+  type LedgerSnapshotInput,
+  type PaymentOps,
+  type PaymentProviderName,
+  type PixIntentView,
+  type RecordPixChargeInput,
+  type WebhookEventInput,
+} from "./payment-db";

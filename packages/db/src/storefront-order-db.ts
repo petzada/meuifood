@@ -106,6 +106,23 @@ export type CreateOrderData = {
   customerAccountId?: string | null;
   /** Cupom aplicado (Ticket 13); null = sem desconto (`discountCents` = 0). */
   coupon?: CreateOrderCoupon | null;
+  /** Tarifa de serviço do pagamento online (decisão 71), fora de `totalCents`; 0 na entrega. */
+  serviceFeeCents?: number;
+  /**
+   * Intenção de pagamento online (Ticket 26), gravada na MESMA escrita do Pedido e antes de
+   * chamar o provedor. Presente = Pedido nasce `payment_status = 'awaiting'`.
+   */
+  paymentIntent?: CreatePaymentIntent | null;
+};
+
+/** Snapshot da intenção PIX gravado com o Pedido (o `intentId` é a chave de idempotência). */
+export type CreatePaymentIntent = {
+  intentId: string;
+  provider: "abacatepay";
+  method: "pix";
+  /** Valor cobrado = `totalCents + serviceFeeCents`. */
+  amountCents: number;
+  foodeFee: { feeId: string; percentBps: number; fixedCents: number };
 };
 
 export type CreateOrderResult =
@@ -287,6 +304,39 @@ export function createStorefrontOrderOps(d1: D1Database) {
       }
       const address = delivery?.address ?? null;
       const lines = input.lines.map((line) => ({ ...line, id: newId() }));
+      const intent = input.paymentIntent ?? null;
+      const serviceFeeCents = input.serviceFeeCents ?? 0;
+      if (intent && intent.amountCents !== input.totalCents + serviceFeeCents) {
+        throw new RangeError("checkout: valor da intenção diferente de total + tarifa de serviço");
+      }
+      if (!intent && serviceFeeCents !== 0) {
+        throw new RangeError("checkout: tarifa de serviço só com pagamento online");
+      }
+      // A intenção só nasce se o Pedido desta chamada foi gravado (`WHERE id = ?` com o nosso id).
+      const intentStatements: D1PreparedStatement[] = intent
+        ? [
+            d1
+              .prepare(
+                `INSERT INTO payment_intents (id, store_id, order_id, provider, method, card_mode,
+                   custody, amount_cents, service_fee_cents, foode_fee_id, foode_fee_percent_bps,
+                   foode_fee_fixed_cents, state, created_at, updated_at)
+                 SELECT ?, store_id, id, ?, ?, NULL, 'pilot_platform', ?, ?, ?, ?, ?, 'creating',
+                   created_at, created_at
+                 FROM orders WHERE id = ?`,
+              )
+              .bind(
+                intent.intentId,
+                intent.provider,
+                intent.method,
+                intent.amountCents,
+                serviceFeeCents,
+                intent.foodeFee.feeId,
+                intent.foodeFee.percentBps,
+                intent.foodeFee.fixedCents,
+                input.orderId,
+              ),
+          ]
+        : [];
 
       const couponStatements: D1PreparedStatement[] = [];
       if (coupon) {
@@ -327,9 +377,9 @@ export function createStorefrontOrderOps(d1: D1Database) {
                delivery_complement, delivery_reference, delivery_neighborhood, delivery_fee_mode,
                items_subtotal_cents, delivery_fee_cents, discount_cents, total_cents,
                change_for_cents, note, eta_min_minutes, eta_max_minutes, created_at, updated_at,
-               customer_account_id)
+               customer_account_id, payment_status, service_fee_cents)
              SELECT ?, s.id, (SELECT COALESCE(MAX(o.code), 0) + 1 FROM orders o WHERE o.store_id = s.id),
-               ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+               ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
              FROM stores s JOIN store_operation_settings st ON st.store_id = s.id
              WHERE ${guards.join(" AND ")}
              ON CONFLICT(store_id, idempotency_key) DO NOTHING`,
@@ -361,6 +411,8 @@ export function createStorefrontOrderOps(d1: D1Database) {
             input.now,
             input.now,
             input.customerAccountId ?? null,
+            intent ? "awaiting" : "not_required",
+            serviceFeeCents,
             ...guardBinds,
           ),
         d1
@@ -382,6 +434,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
           )
           .bind(newId(), input.orderId),
         ...couponStatements,
+        ...intentStatements,
         d1
           .prepare(
             `SELECT id AS orderId, code, idempotency_payload_hash AS payloadHash FROM orders
@@ -442,6 +495,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
         deliveryFeeCents: row.deliveryFeeCents,
         discountCents: row.discountCents,
         totalCents: row.totalCents,
+        serviceFeeCents: row.serviceFeeCents,
         changeForCents: row.changeForCents,
         note: row.note,
         etaMin: row.etaMin,
