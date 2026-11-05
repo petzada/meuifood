@@ -49,12 +49,16 @@ describe("TeamPanel (Equipe)", () => {
     ).toBeInTheDocument();
   });
 
-  it("convida Operador com o token do Turnstile e avisa no Toast", async () => {
+  it("convida Operador no modal com o token do Turnstile, fecha e avisa no Toast", async () => {
     const invite = vi.fn<Action>(async () => formSuccess("Convite enviado para bia@ze.com."));
     const { user } = setup(invite);
-    await user.type(screen.getByLabelText("E-mail"), "bia@ze.com");
+    expect(screen.queryByLabelText("E-mail")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Convidar Operador" }));
+    const dialog = screen.getByRole("dialog", { name: "Convidar Operador" });
+    await user.type(within(dialog).getByLabelText("E-mail"), "bia@ze.com");
+    await user.click(within(dialog).getByRole("button", { name: "Enviar convite" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Convite enviado para bia@ze.com.");
+    expect(screen.queryByRole("dialog", { name: "Convidar Operador" })).not.toBeInTheDocument();
     const sent = invite.mock.calls[0]?.[1];
     expect(sent?.get("email")).toBe("bia@ze.com");
     expect(sent?.get("turnstileToken")).toBe("token-ok");
@@ -63,9 +67,10 @@ describe("TeamPanel (Equipe)", () => {
   it("e-mail inválido fica no campo, mantém o digitado e recebe o foco", async () => {
     const invite = vi.fn<Action>(async () => formError({ email: "Informe um e-mail válido." }));
     const { user } = setup(invite);
+    await user.click(screen.getByRole("button", { name: "Convidar Operador" }));
     await user.type(screen.getByLabelText("Nome (opcional)"), "Bia");
     await user.type(screen.getByLabelText("E-mail"), "bia@");
-    await user.click(screen.getByRole("button", { name: "Convidar Operador" }));
+    await user.click(screen.getByRole("button", { name: "Enviar convite" }));
     const email = screen.getByLabelText("E-mail");
     expect(await screen.findByText("Informe um e-mail válido.")).toBeInTheDocument();
     expect(email).toHaveFocus();

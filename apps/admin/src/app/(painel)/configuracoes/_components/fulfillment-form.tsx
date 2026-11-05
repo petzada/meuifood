@@ -2,7 +2,8 @@
 
 // Entrega (CFG-03, decisão 42, P-CFG-1/2/5): Retirada liga/desliga; Delivery com UM modo —
 // "Por bairro" ou "Taxa fixa" — com aviso do que deixa de valer ao trocar; tabela Bairro · Taxa ·
-// interruptor ativo/inativo com "+ Bairro" em linha; pedido mínimo só do Delivery; tempo
+// interruptor ativo/inativo; "+ Bairro" abre o cadastro em modal (decisão 74) e salva na hora;
+// pedido mínimo só do Delivery; tempo
 // estimado mín–máx por Fulfillment. Validação (mín ≤ máx, ≥ 1 bairro ativo) no servidor.
 // Sugestão por km (decisão 73): "Quanto você cobra por km" (só neste navegador, por Loja) vira
 // PLACEHOLDER das taxas — bairro: centro do bairro e da Loja pelo Nominatim, linha reta × 1,3;
@@ -16,6 +17,8 @@ import {
   type StoreOperationSettings,
 } from "@foode/shared/order";
 import { useActionState, useEffect, useId, useMemo, useState } from "react";
+
+import { NeighborhoodModal } from "./neighborhood-modal";
 
 import { Field } from "../../../../components/form";
 import {
@@ -110,6 +113,8 @@ function Switch({
   );
 }
 
+// TODO(decisão 73/74): trocar o R$/km do localStorage pela RPC `storeSetDeliveryRate` (coluna
+// `delivery_rate_per_km_cents`, migration 0008) quando o Ticket 31-leads entrar na master.
 const PER_KM_KEY = (storeId: string) => `foode.painel.reais-por-km.v1:${storeId}`;
 
 function readPerKm(storage: Storage | null, storeId: string): string {
@@ -206,6 +211,14 @@ export function FulfillmentForm({
   const [mode, setMode] = useState<Mode>(initial.deliveryMode ?? "none");
   const [initialMode] = useState<Mode>(initial.deliveryMode ?? "none");
   const [rows, setRows] = useState<Row[]>(() => initial.neighborhoods.map(toRow));
+  const [addingNeighborhood, setAddingNeighborhood] = useState(false);
+  // Bairro novo do modal: entra na lista e o formulário salva no render seguinte.
+  const [submitAfterAdd, setSubmitAfterAdd] = useState(false);
+  useEffect(() => {
+    if (!submitAfterAdd) return;
+    setSubmitAfterAdd(false);
+    ref.current?.requestSubmit();
+  }, [ref, submitAfterAdd]);
   const headingId = useId();
   const modeId = useId();
   const errors = state.errors;
@@ -457,13 +470,8 @@ export function FulfillmentForm({
                 <Button
                   variant="secondary"
                   type="button"
-                  onClick={() => {
-                    setRows((list) => [
-                      ...list,
-                      { key: ++rowSeq, id: null, name: "", fee: "", active: true },
-                    ]);
-                    touch();
-                  }}
+                  aria-haspopup="dialog"
+                  onClick={() => setAddingNeighborhood(true)}
                 >
                   + Bairro
                 </Button>
@@ -473,6 +481,18 @@ export function FulfillmentForm({
                 {rows.filter((r) => r.active).length} ativos
               </p>
             </div>
+            {addingNeighborhood ? (
+              <NeighborhoodModal
+                existing={rows.map((r) => r.name)}
+                onAdd={(row) => {
+                  setRows((list) => [...list, { key: ++rowSeq, id: null, ...row }]);
+                  setAddingNeighborhood(false);
+                  setSubmitAfterAdd(true);
+                }}
+                onClose={() => setAddingNeighborhood(false)}
+                suggestFee={suggestion.neighborhood}
+              />
+            ) : null}
           </div>
         ) : null}
 

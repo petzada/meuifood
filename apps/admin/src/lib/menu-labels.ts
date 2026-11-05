@@ -43,3 +43,6 @@ export const MENU_CONFLICT_MESSAGES = {
 export function pluralize(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+/** Valor do seletor de categoria do item que pede "nova categoria" (com `newCategoryName`). */
+export const NEW_CATEGORY = "nova";

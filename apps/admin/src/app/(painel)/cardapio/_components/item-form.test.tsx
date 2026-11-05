@@ -49,6 +49,7 @@ function renderItemForm(props: {
       featuredCount={props.featuredCount ?? 0}
       item={props.item ?? null}
       upload={vi.fn()}
+      variant={props.item ? "tab" : "wizard"}
     />,
   );
   return { action, user };
@@ -85,7 +86,7 @@ describe("ItemForm: Destaque e validação", () => {
     );
     const { user } = renderItemForm({ action });
     await user.type(screen.getByLabelText("Preço (R$)"), "12,90");
-    await user.click(screen.getByRole("button", { name: "Criar item" }));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(await screen.findByText("Informe o nome do item.")).toBeInTheDocument();
     expect(screen.getByLabelText("Nome do item")).toHaveAttribute("aria-invalid", "true");

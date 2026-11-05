@@ -119,7 +119,7 @@ describe("FulfillmentForm", () => {
     );
   });
 
-  it("interruptor do bairro e '+ Bairro' vão no envio; sem bairro ativo é erro", async () => {
+  it("interruptor do bairro e '+ Bairro' (modal) vão no envio; sem bairro ativo é erro", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
     render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
@@ -132,10 +132,25 @@ describe("FulfillmentForm", () => {
     ).toHaveAttribute("role", "alert");
     expect(rpc).not.toHaveBeenCalled();
 
+    // Cadastro do bairro em modal (decisão 74): valida aqui e, ao adicionar, salva na hora.
     await user.click(screen.getByRole("button", { name: "+ Bairro" }));
-    await user.type(screen.getByLabelText("Nome do bairro 2"), "Jardins");
-    await user.type(screen.getByLabelText("Taxa do bairro 2 (R$)"), "8,00");
-    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    const dialog = screen.getByRole("dialog", { name: "Novo bairro" });
+    await user.click(within(dialog).getByRole("button", { name: "Adicionar bairro" }));
+    expect(within(dialog).getByLabelText("Nome do bairro")).toHaveAccessibleDescription(
+      "Informe o nome do bairro.",
+    );
+    await user.type(within(dialog).getByLabelText("Nome do bairro"), "centro");
+    await user.type(within(dialog).getByLabelText("Taxa de entrega (R$)"), "8,00");
+    await user.click(within(dialog).getByRole("button", { name: "Adicionar bairro" }));
+    expect(within(dialog).getByLabelText("Nome do bairro")).toHaveAccessibleDescription(
+      "Este bairro já está na lista.",
+    );
+    await user.clear(within(dialog).getByLabelText("Nome do bairro"));
+    await user.type(within(dialog).getByLabelText("Nome do bairro"), "Jardins");
+    await user.click(within(dialog).getByRole("button", { name: "Adicionar bairro" }));
+    expect(screen.queryByRole("dialog", { name: "Novo bairro" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nome do bairro 2")).toHaveValue("Jardins");
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalled());
     expect(rpc).toHaveBeenCalledWith(
       expect.objectContaining({
         neighborhoods: [
@@ -200,15 +215,17 @@ describe("FulfillmentForm", () => {
 
     // Bairro que o geocodificador não acha = R$ 0,00 (falha silenciosa).
     await user.click(screen.getByRole("button", { name: "+ Bairro" }));
-    expect(screen.getByLabelText("Taxa do bairro 2 (R$)")).toHaveAttribute(
+    const dialog = screen.getByRole("dialog", { name: "Novo bairro" });
+    expect(within(dialog).getByLabelText("Taxa de entrega (R$)")).toHaveAttribute(
       "placeholder",
       "R$ 0,00",
     );
 
     // O R$/km não é campo do contrato: só a taxa confirmada vai no envio.
-    await user.type(screen.getByLabelText("Nome do bairro 2"), "Lugar Nenhum");
-    await user.type(screen.getByLabelText("Taxa do bairro 2 (R$)"), "500");
-    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await user.type(within(dialog).getByLabelText("Nome do bairro"), "Lugar Nenhum");
+    await user.type(within(dialog).getByLabelText("Taxa de entrega (R$)"), "500");
+    await user.click(within(dialog).getByRole("button", { name: "Adicionar bairro" }));
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalled());
     expect(rpc).toHaveBeenCalledWith(
       expect.objectContaining({
         neighborhoods: [
