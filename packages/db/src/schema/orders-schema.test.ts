@@ -32,7 +32,12 @@ const tables: SQLiteTable[] = [
 ];
 
 /** Colunas e índices acrescentados depois, por migrations próprias (Ticket 13: 0006). */
-const LATER_COLUMNS = new Set(["orders.customer_account_id"]);
+const LATER_COLUMNS = new Set([
+  "orders.customer_account_id",
+  // Ticket 26 (migration 0007).
+  "orders.payment_status",
+  "orders.service_fee_cents",
+]);
 const LATER_INDEXES = new Set(["orders_store_account_created_idx"]);
 
 function tableSql(name: string): string {

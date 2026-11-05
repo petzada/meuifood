@@ -36,4 +36,12 @@ export type Env = {
   WHATSMIAU_INSTANCE_ID?: string;
   /** Base da API (var; padrão `https://api.whatsmiau.dev/v2`). */
   WHATSMIAU_API_URL?: string;
+  // Ticket 26 (PIX AbacatePay, decisão 60). Secrets OPCIONAIS: sem os três, PIX fica indisponível
+  // no checkout (o Dono cria as chaves no fim). Nunca em arquivo, log ou Sentry.
+  /** Chave de API da conta AbacatePay do Foode (produção; o ambiente é a chave). */
+  ABACATEPAY_API_KEY?: string;
+  /** Nosso segredo do webhook (vai em `?webhookSecret=` da URL cadastrada): prova a origem. */
+  ABACATEPAY_WEBHOOK_SECRET?: string;
+  /** Chave pública de assinatura HMAC publicada pela AbacatePay (header X-Webhook-Signature). */
+  ABACATEPAY_SIGNING_KEY?: string;
 };

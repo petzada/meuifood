@@ -3,6 +3,9 @@
 // Página do Pedido por token (§6 das diretrizes, Ticket 24a): status na linguagem do
 // Consumidor com atualização periódica em `aria-live`, passos do Fulfillment, tempo
 // estimado, itens em snapshot, totais, pagamento (com troco) e `wa.me` "Falar com a Loja".
+// Ticket 26: Pedido PIX ainda não pago mostra o bloco do PIX no lugar dos passos (a Loja só
+// recebe depois do pagamento) e atualiza a cada PIX_POLL_INTERVAL_MS; tarifa de serviço do
+// pagamento online (decisão 71) em linha própria; oferta de conta para quem não entrou.
 import { buildWhatsAppMeUrl } from "@foode/shared";
 import { formatBRL } from "@foode/shared/money";
 import {
@@ -16,6 +19,12 @@ import {
   type OrderStatus,
   type OrderTracking,
 } from "@foode/shared/order";
+import {
+  PIX_POLL_INTERVAL_MS,
+  SERVICE_FEE_LABEL_PT,
+  isPixAwaiting,
+  type OrderPix,
+} from "@foode/shared/payment";
 import { Badge, Button, OutlineContainer } from "@foode/ui";
 import { CheckCircle, Circle, WhatsappLogo } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -26,6 +35,8 @@ import {
   type PixelIds,
   type PixelWindow,
 } from "../../storefront/pixels";
+import { AccountOffer, type AccountOfferProps } from "./account-offer";
+import { PixPayment } from "./pix-payment";
 
 export type OrderTrackingViewProps = {
   initial: OrderTracking;
@@ -34,9 +45,21 @@ export type OrderTrackingViewProps = {
   /** Pixel da Loja: `purchase` uma vez por Pedido neste aparelho (valor e moeda). */
   pixels?: PixelIds | null;
   pollIntervalMs?: number;
+  /** Intervalo enquanto o PIX aguarda pagamento. */
+  pixPollIntervalMs?: number;
+  /** Oferta de conta (decisão 71): só para quem não entrou e com login disponível. */
+  accountOffer?: Omit<AccountOfferProps, "storeSlug"> | null;
+  /** Bloco do PIX: relógio e cópia injetáveis nos testes. */
+  pixNow?: () => number;
+  copy?: (text: string) => Promise<void>;
   storeSlug: string;
   token: string;
 };
+
+/** PIX que ainda não confirmou: a Loja não recebeu o Pedido. */
+function unpaidPix(pix: OrderPix | null): OrderPix | null {
+  return pix && pix.state !== "paid" ? pix : null;
+}
 
 export function trackingPollPath(storeSlug: string, token: string): string {
   return `/loja/${encodeURIComponent(storeSlug)}/pedido/${encodeURIComponent(token)}/acompanhar`;
@@ -76,8 +99,12 @@ function stepLabel(status: OrderStatus, fulfillment: OrderTracking["fulfillment"
 }
 
 export function OrderTrackingView({
+  accountOffer = null,
+  copy,
   initial,
   load,
+  pixNow,
+  pixPollIntervalMs = PIX_POLL_INTERVAL_MS,
   pixels = null,
   pollIntervalMs = ORDER_TRACKING_POLL_INTERVAL_MS,
   storeSlug,
@@ -85,9 +112,12 @@ export function OrderTrackingView({
 }: OrderTrackingViewProps) {
   const [order, setOrder] = useState(initial);
   const final = isFinalStatus(order.status);
+  const pendingPix = unpaidPix(order.pix);
+  const awaitingPix = pendingPix !== null && isPixAwaiting(pendingPix.state);
 
+  // `purchase` só com o Pedido de fato enviado à Loja (PIX pago ou sem pagamento online).
   useEffect(() => {
-    if (!pixels || initial.status === "cancelled") return;
+    if (!pixels || initial.status === "cancelled" || pendingPix) return;
     const key = purchaseSentKey(storeSlug, initial.code);
     try {
       if (window.sessionStorage.getItem(key)) return;
@@ -100,8 +130,9 @@ export function OrderTrackingView({
       orderCode: initial.code,
       valueCents: initial.totalCents,
     });
-  }, [initial.code, initial.status, initial.totalCents, pixels, storeSlug]);
+  }, [initial.code, initial.status, initial.totalCents, pendingPix, pixels, storeSlug]);
 
+  const interval = awaitingPix ? pixPollIntervalMs : pollIntervalMs;
   useEffect(() => {
     if (final) return;
     const loader = load ?? (() => fetchTracking(storeSlug, token));
@@ -110,12 +141,12 @@ export function OrderTrackingView({
       void loader().then((next) => {
         if (next && !cancelled) setOrder(next);
       });
-    }, pollIntervalMs);
+    }, interval);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [final, load, pollIntervalMs, storeSlug, token]);
+  }, [final, interval, load, storeSlug, token]);
 
   const timeline = timelineOf(order);
   const currentIndex = timeline.indexOf(order.status);
@@ -127,6 +158,7 @@ export function OrderTrackingView({
       )
     : null;
   const menuHref = `/loja/${encodeURIComponent(order.store.slug)}`;
+  const chargedCents = order.totalCents + order.serviceFeeCents;
 
   return (
     <main className="min-h-dvh bg-[var(--color-canvas)]">
@@ -147,16 +179,31 @@ export function OrderTrackingView({
       <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6 md:px-8">
         <OutlineContainer as="section" aria-labelledby="pedido-status" className="p-5">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">
-            Status
+            {pendingPix ? "Pagamento" : "Status"}
           </p>
-          <h2
-            aria-live="polite"
-            className="mt-1 text-xl font-bold text-[var(--color-ink)]"
-            id="pedido-status"
-          >
-            {orderStatusConsumerLabelPt(order.fulfillment, order.status)}
-          </h2>
-          {cancelled ? (
+          {pendingPix ? (
+            <div className="mt-1">
+              <PixPayment
+                {...(copy ? { copy } : {})}
+                {...(pixNow ? { now: pixNow } : {})}
+                menuHref={menuHref}
+                pix={pendingPix}
+              />
+            </div>
+          ) : null}
+          {pendingPix ? null : (
+            <h2
+              aria-live="polite"
+              className="mt-1 text-xl font-bold text-[var(--color-ink)]"
+              id="pedido-status"
+            >
+              {orderStatusConsumerLabelPt(order.fulfillment, order.status)}
+            </h2>
+          )}
+          {order.pix?.state === "paid" ? (
+            <p className="mt-1 text-sm text-[var(--color-body)]">Pagamento confirmado.</p>
+          ) : null}
+          {pendingPix ? null : cancelled ? (
             <Badge className="mt-2" tone="error">
               Cancelado
             </Badge>
@@ -188,13 +235,13 @@ export function OrderTrackingView({
               })}
             </ol>
           )}
-          {order.eta && !final ? (
+          {order.eta && !final && !pendingPix ? (
             <p className="mt-4 text-sm text-[var(--color-body)]">
               Previsão: {formatEtaPt(order.eta)}{" "}
               {order.fulfillment === "delivery" ? "para entregar" : "para retirar"}
             </p>
           ) : null}
-          {!final ? (
+          {!final && !pendingPix ? (
             <p className="mt-1 text-xs text-[var(--color-muted)]">Esta página atualiza sozinha.</p>
           ) : null}
         </OutlineContainer>
@@ -256,9 +303,15 @@ export function OrderTrackingView({
                 <dd className="m-0 tabular-nums">−{formatBRL(order.discountCents)}</dd>
               </div>
             ) : null}
+            {order.serviceFeeCents > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-[var(--color-body)]">{SERVICE_FEE_LABEL_PT}</dt>
+                <dd className="m-0 tabular-nums">{formatBRL(order.serviceFeeCents)}</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between text-base font-bold text-[var(--color-ink)]">
               <dt>Total</dt>
-              <dd className="m-0 tabular-nums">{formatBRL(order.totalCents)}</dd>
+              <dd className="m-0 tabular-nums">{formatBRL(chargedCents)}</dd>
             </div>
           </dl>
         </OutlineContainer>
@@ -297,6 +350,8 @@ export function OrderTrackingView({
             </p>
           ) : null}
         </OutlineContainer>
+
+        {accountOffer ? <AccountOffer {...accountOffer} storeSlug={order.store.slug} /> : null}
 
         <div className="grid gap-3">
           {whatsapp ? (

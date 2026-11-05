@@ -50,6 +50,13 @@
       "when": 1793857000151,
       "tag": "0006_conta_consumidor_cupons",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793860775229,
+      "tag": "0007_pix_abacatepay_ledger",
+      "breakpoints": true
     }
   ]
 }

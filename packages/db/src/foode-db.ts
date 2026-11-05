@@ -25,6 +25,7 @@ import {
   recordFunnelEvent,
 } from "./onboarding-db";
 import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
+import { createPaymentOps } from "./payment-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
 import {
@@ -307,6 +308,13 @@ export function createFoodeDb(d1: D1Database) {
      * token, cadastro com nome + CPF e "meus Pedidos" por Loja. Sem StoreContext (não é membro).
      */
     customer: createCustomerOps(d1),
+
+    /**
+     * Pagamento online (Ticket 26): intenção PIX, eventos de webhook (identidade única) e Ledger.
+     * Sem StoreContext: a Loja sai da intenção gravada; quem chama é a criação do Pedido, a página
+     * do Pedido (token conferido) ou o webhook autenticado do provedor.
+     */
+    payments: createPaymentOps(d1),
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {

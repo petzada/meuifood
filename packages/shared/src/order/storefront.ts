@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 import { centsSchema } from "../money.js";
+import { orderPixSchema } from "../payment/pix.js";
 import { storefrontShowcaseSchema } from "../onboarding/showcase.js";
 import { phoneE164Schema, customerPhoneSchema } from "./checkout.js";
 import { civilTimeSchema, storeOpenStateSchema, weekdaySchema } from "./hours.js";
@@ -140,8 +141,16 @@ export const orderTrackingSchema = z.object({
   subtotalCents: centsSchema,
   deliveryFeeCents: centsSchema,
   discountCents: centsSchema,
+  /** Total do Pedido (itens + Delivery − Cupom), sem a tarifa de serviço. */
   totalCents: centsSchema,
+  /**
+   * Tarifa de serviço do pagamento online (decisão 71); 0 no Pagamento na entrega. O Consumidor
+   * paga `totalCents + serviceFeeCents`.
+   */
+  serviceFeeCents: centsSchema.default(0),
   payment: z.object({ method: paymentMethodSchema, changeForCents: centsSchema.nullable() }),
+  /** Cobrança PIX (Ticket 26): só em Pedido `pix`; null nos demais meios. */
+  pix: orderPixSchema.nullable().default(null),
   note: z.string().nullable(),
   address: orderAddressViewSchema.nullable(),
 });

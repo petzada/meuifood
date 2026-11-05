@@ -4,7 +4,7 @@
 
 **Blocked by:** 25 — Domínios, e-mail e remoção do legado; 29 — Área Ops (taxa vigente).
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus (geral); bloco de pagamento PIX no Storefront por Fable, após o contrato da API.
 
@@ -33,3 +33,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: P-4.4 (sem incentivo ao PIX) e o bloco de PIX na página do Pedido entraram no checklist; termo do provedor antigo retirado dos critérios; seam de testes `@cloudflare/vitest-plugin`; critério de UI/`/code-review` do antigo Ticket 20.
 
 - 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
+
+- 2026-11-05 — Done (PR do 26), `79ae56e`; migration `0007_pix_abacatepay_ledger`. PIX desligado até o Dono criar as chaves da AbacatePay (bloco final) e rodar `setup-abacatepay-webhook`. Pendente: PIX expirado sem pagamento deve virar cancelado automaticamente (libera Cupom, fora da faixa) — fica com o Ticket 12; campos não confirmados da doc AbacatePay (TODO 26).

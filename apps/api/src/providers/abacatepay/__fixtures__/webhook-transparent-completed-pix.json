@@ -1,0 +1,18 @@
+{
+  "id": "log_TESTE000000000000000001",
+  "event": "transparent.completed",
+  "apiVersion": 2,
+  "devMode": true,
+  "data": {
+    "transparent": {
+      "id": "pix_char_TESTE000000000000000001",
+      "amount": 5990,
+      "status": "PAID",
+      "method": "PIX",
+      "platformFee": 54,
+      "metadata": { "intentId": "intent_teste_001", "pedidoId": "pedido_teste_001" }
+    },
+    "customer": { "name": "Cliente Teste", "taxId": "***.***.***-**" },
+    "payerInformation": { "method": "PIX" }
+  }
+}

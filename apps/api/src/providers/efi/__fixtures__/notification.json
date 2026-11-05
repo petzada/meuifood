@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 2,
+      "type": "charge",
+      "custom_id": "intent_teste_003",
+      "status": { "current": "approved", "previous": "waiting" },
+      "identifiers": { "charge_id": 900001 },
+      "created_at": "2026-11-04 12:00:02"
+    },
+    {
+      "id": 1,
+      "type": "charge",
+      "custom_id": "intent_teste_003",
+      "status": { "current": "waiting", "previous": "new" },
+      "identifiers": { "charge_id": 900001 },
+      "created_at": "2026-11-04 12:00:01"
+    },
+    {
+      "id": 3,
+      "type": "charge",
+      "custom_id": "intent_teste_003",
+      "status": { "current": "paid", "previous": "approved" },
+      "identifiers": { "charge_id": 900001 },
+      "created_at": "2026-11-05 03:00:00",
+      "value": 5990,
+      "received_by_bank_at": "2026-11-05"
+    }
+  ]
+}

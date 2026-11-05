@@ -23,6 +23,10 @@ export default defineConfig(async () => {
             TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
             MILLIONSEND_API_KEY: "ms_teste_sem_envio",
             EMAIL_FROM: "Foode <nao-responda@foode.test>",
+            // PIX (Ticket 26): chaves fictícias; os testes interceptam a AbacatePay no `fetch`.
+            ABACATEPAY_API_KEY: "abc_teste",
+            ABACATEPAY_WEBHOOK_SECRET: "segredo-webhook-teste",
+            ABACATEPAY_SIGNING_KEY: "chave-publica-teste",
           },
         },
       }),

@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "data": {
+    "installments": 1,
+    "installment_value": 5990,
+    "charge_id": 900002,
+    "status": "unpaid",
+    "total": 5990,
+    "payment": "credit_card",
+    "custom_id": "intent_teste_004",
+    "refusal": {
+      "reason": "Transação recusada pelo emissor.",
+      "retry": true
+    }
+  }
+}

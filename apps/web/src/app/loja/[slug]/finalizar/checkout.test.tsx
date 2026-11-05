@@ -226,6 +226,43 @@ describe("Checkout", () => {
     expect(screen.getByRole("radio", { name: /Cartão de crédito/u })).toBeDisabled();
   });
 
+  it("PIX em 'Pagar agora' sem incentivo; tarifa de serviço só com pagamento online (decisão 71)", async () => {
+    seedCart();
+    const api = fakeApi({
+      quote: vi.fn(async () => ({
+        ...okQuote,
+        paymentMethods: ["pix" as const, "on_delivery" as const],
+      })),
+    });
+    const { user } = setup({ api });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await waitFor(() => expect(screen.getByRole("radio", { name: /PIX/u })).toBeEnabled());
+    const payNow = screen.getByRole("group", { name: "Pagar agora" });
+    expect(
+      within(payNow)
+        .getAllByRole("radio")
+        .map((r) => r.getAttribute("value")),
+    ).toEqual(["pix", "credit"]);
+    expect(
+      within(screen.getByRole("group", { name: "Pagar na entrega" })).getByRole("radio"),
+    ).toHaveAttribute("value", "on_delivery");
+    expect(screen.queryByText(/desconto|recomendado|mais rápido/iu)).toBeNull();
+    expect(screen.queryByText("Tarifa de serviço (pagamento online)")).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /PIX/u }));
+    expect(
+      screen.getByText("Tarifa de serviço (pagamento online)").nextElementSibling,
+    ).toHaveTextContent("R$ 1,50");
+    expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 25,50");
+    expect(cta()).toHaveTextContent("Fazer pedido · R$ 25,50");
+
+    await user.click(screen.getByRole("radio", { name: /Pagamento na entrega/u }));
+    expect(screen.queryByText("Tarifa de serviço (pagamento online)")).toBeNull();
+    expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 24,00");
+  });
+
   it("Pagamento na entrega: bandeiras e 'Troco para' inline validado ≥ total (P-4.2/P-4.3)", async () => {
     seedCart();
     const { api, user } = setup();
