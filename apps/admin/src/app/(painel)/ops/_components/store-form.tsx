@@ -96,12 +96,12 @@ function ProfileFields({
     slugState === "checking"
       ? "Verificando disponibilidade..."
       : slugState === "available"
-        ? "Slug disponível."
+        ? "Link disponível."
         : slugState === "taken"
-          ? "Este Slug já está em uso por outra Loja."
+          ? "Este link já pertence a outra Loja."
           : slugState === "invalid"
             ? "Use 3 a 63 letras minúsculas, números ou hífen; alguns nomes são reservados."
-            : "Endereço público da Loja: foode.delivery/<slug>. Só minúsculas, números e hífen.";
+            : "Endereço público da Loja: foodedelivery.com.br/loja/<link>. Só minúsculas, números e hífen.";
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
@@ -119,7 +119,7 @@ function ProfileFields({
         <Field
           id="slug"
           name="slug"
-          label="Slug"
+          label="Link personalizado"
           defaultValue={initial?.slug ?? ""}
           maxLength={63}
           autoCapitalize="none"
@@ -511,7 +511,7 @@ export function EditStoreForms({
     <div className="space-y-10">
       <EditSection
         action={action}
-        description="Nome, Slug, CNPJ e WhatsApp."
+        description="Nome, Link personalizado, CNPJ e WhatsApp."
         id="loja"
         section="profile"
         storeId={store.id}
