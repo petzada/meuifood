@@ -4,12 +4,14 @@ import { cardPaymentInputSchema } from "@foode/shared/payment";
 import { describe, expect, it } from "vitest";
 
 import {
+  accountCpfAvailable,
   buildCardPaymentInput,
   cardFieldsFor,
   describeCard,
   detectCardBrand,
   emptyCardForm,
   firstCardError,
+  initialCardForm,
   formatCardCvvInput,
   formatCardExpiryInput,
   formatCardNumberInput,
@@ -138,6 +140,38 @@ describe("corpo do contrato", () => {
     });
     expect(cardPaymentInputSchema.safeParse(abacate).success).toBe(true);
     expect("birthDate" in abacate.payer).toBe(false);
+  });
+
+  it("CPF da conta (decisão 65): só na Efí; o corpo leva useAccountCpf e nenhum cpf", () => {
+    expect(accountCpfAvailable("efi", "***.456.789-**")).toBe(true);
+    expect(accountCpfAvailable("efi", "")).toBe(false);
+    expect(accountCpfAvailable("efi", null)).toBe(false);
+    // AbacatePay tokeniza com o CPF no iframe: o da conta não serve.
+    expect(accountCpfAvailable("abacatepay", "***.456.789-**")).toBe(false);
+    expect(initialCardForm("efi", "***.456.789-**").useAccountCpf).toBe(true);
+    expect(initialCardForm("abacatepay", "***.456.789-**").useAccountCpf).toBe(false);
+    expect(initialCardForm(null, "***.456.789-**")).toEqual(emptyCardForm);
+
+    const values = { ...valid, cpf: "", useAccountCpf: true };
+    expect(validateCardForm(values, "efi", NOW)).toEqual({});
+    const efi = buildCardPaymentInput(
+      "efi",
+      { brand: "visa", lastFour: "4242", token: "tok".repeat(8) },
+      values,
+    );
+    expect(efi).toEqual({
+      brand: "visa",
+      lastFour: "4242",
+      payer: { birthDate: "1990-05-10", email: "maria@exemplo.com", useAccountCpf: true },
+      paymentToken: "tok".repeat(8),
+      sdk: "efi",
+    });
+    expect(cardPaymentInputSchema.safeParse(efi).success).toBe(true);
+    expect("cpf" in efi.payer).toBe(false);
+    // "Usar outro CPF" sem digitar volta a exigir o campo.
+    expect(validateCardForm({ ...values, useAccountCpf: false }, "efi", NOW).cpf).toBe(
+      "Informe o CPF do titular.",
+    );
   });
 
   it("descreve o cartão para exibir", () => {

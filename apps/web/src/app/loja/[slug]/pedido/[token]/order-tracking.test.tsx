@@ -3,8 +3,10 @@
 // (que para em estado final). O carregamento periódico entra como função mocada.
 import { orderTrackingSchema, type OrderTracking } from "@foode/shared/order";
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CardRetryApi } from "./card-api";
 import { OrderTrackingView } from "./order-tracking";
 
 const order: OrderTracking = orderTrackingSchema.parse({
@@ -236,8 +238,59 @@ describe("OrderTrackingView", () => {
         />,
       );
       expect(screen.getByRole("heading", { name: "Pagamento recusado" })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Pagar com PIX" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Pagar com PIX" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Tentar outro cartão" })).toBeNull();
+    });
+
+    it("'Pagar com PIX' troca o Pedido na mesma página: o bloco do PIX entra no lugar do Cartão", async () => {
+      vi.useRealTimers();
+      const user = userEvent.setup();
+      const declinedOrder: OrderTracking = {
+        ...cardOrder,
+        card: {
+          ...cardOrder.card!,
+          declineReason: "issuer_declined",
+          retryActions: ["pix"],
+          state: "declined",
+        },
+      };
+      const switched: OrderTracking = {
+        ...declinedOrder,
+        card: null,
+        payment: { changeForCents: null, method: "pix" },
+        pix: {
+          state: "pending",
+          amountCents: 6750,
+          copyPaste: "000201-codigo-troca",
+          qrCodeDataUrl: null,
+          expiresAt: "2026-11-05T22:30:00.000Z",
+        },
+      };
+      const load = vi.fn<() => Promise<OrderTracking | null>>().mockResolvedValue(switched);
+      const cardApi: CardRetryApi = {
+        payWithPix: vi.fn(async () => ({ kind: "ok" as const })),
+        retry: vi.fn(async () => ({ kind: "ok" as const })),
+      };
+      render(
+        <OrderTrackingView
+          cardApi={cardApi}
+          initial={declinedOrder}
+          load={load}
+          pixNow={() => Date.parse("2026-11-05T22:00:00.000Z")}
+          pollIntervalMs={60_000}
+          storeSlug="s"
+          token="t"
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Pagar com PIX" }));
+      expect(await screen.findByRole("heading", { name: "Aguardando pagamento" })).toBeVisible();
+      expect(cardApi.payWithPix).toHaveBeenCalledWith("s", "t");
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("heading", { name: "Pagamento recusado" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
+      // Mesmo Pedido, mesmo total e tarifa: nada foi refeito.
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pedido #17");
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 67,50");
     });
   });
 });

@@ -50,11 +50,15 @@ export default async function OrderTrackingPage({
     session.state !== "signed_in" && siteKey
       ? { siteKey, startAtSignup: session.state === "signup_required" }
       : null;
+  // CPF da conta (decisão 65) para "Tentar outro cartão": só o mascarado chega ao navegador.
+  const accountCpfMasked =
+    session.state === "signed_in" && session.account.cpfMasked ? session.account.cpfMasked : null;
 
   return (
     <>
       <PixelScripts pixels={pixels} />
       <OrderTrackingView
+        accountCpfMasked={accountCpfMasked}
         accountOffer={accountOffer}
         initial={result.data}
         pixels={pixels}

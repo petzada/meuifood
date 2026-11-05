@@ -892,22 +892,144 @@ describe("Checkout · Cartão (Ticket 27)", () => {
     expect(api.createOrder).not.toHaveBeenCalled();
   });
 
-  it("conta Foode: CPF da conta aparece como dica do campo (decisão 65)", async () => {
-    seedCart();
-    const api = fakeApi({ quote: vi.fn(async () => cardQuote) });
-    const { user } = setup({
-      api,
-      session: { account, state: "signed_in" },
-      state: { ...storeState, cardTokenizer: efiTokenizer },
-    });
+  async function chooseCardSignedIn(user: ReturnType<typeof userEvent.setup>) {
     await screen.findByText("Refrigerante lata", { exact: false });
     await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
     await waitFor(() =>
       expect(screen.getByRole("radio", { name: /Cartão de crédito/u })).toBeEnabled(),
     );
     await user.click(screen.getByRole("radio", { name: /Cartão de crédito/u }));
-    expect(screen.getByLabelText("CPF do titular")).toHaveAccessibleDescription(
-      "CPF da sua conta: ***.456.789-**",
+  }
+
+  async function fillEfiCardWithoutCpf(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("Número do cartão"), "4242424242424242");
+    await user.type(screen.getByLabelText("Nome no cartão"), "MARIA SOUZA");
+    await user.type(screen.getByLabelText("Validade"), "1230");
+    await user.type(screen.getByLabelText("CVV"), "123");
+    await user.type(screen.getByLabelText("E-mail"), "maria@exemplo.com");
+    await user.type(screen.getByLabelText("Data de nascimento do titular"), "1990-05-10");
+  }
+
+  it("conta Foode (decisão 65): CPF da conta pré-escolhido; envia useAccountCpf sem cpf", async () => {
+    seedCart();
+    const sdk = fakeSdk();
+    const api = fakeApi({ quote: vi.fn(async () => cardQuote) });
+    const { user } = setup({
+      api,
+      cardSdkFactory: sdk.factory,
+      session: { account, state: "signed_in" },
+      state: { ...storeState, cardTokenizer: efiTokenizer },
+    });
+    await chooseCardSignedIn(user);
+    expect(screen.getByText("CPF da sua conta", { exact: false })).toHaveTextContent(
+      "CPF da sua conta ***.456.789-**",
     );
+    expect(screen.queryByRole("textbox", { name: "CPF do titular" })).toBeNull();
+    await fillEfiCardWithoutCpf(user);
+    expect(cta()).toHaveTextContent("Fazer pedido · R$ 25,50");
+    await user.click(cta());
+    await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+    expect(sdk.tokenize.mock.calls[0]![0]).not.toHaveProperty("holderDocument");
+    const [, body] = vi.mocked(api.createOrder).mock.calls[0]!;
+    expect(body.payment).toEqual({
+      card: {
+        brand: "visa",
+        lastFour: "4242",
+        payer: { birthDate: "1990-05-10", email: "maria@exemplo.com", useAccountCpf: true },
+        paymentToken: "efitoken0123456789abcdef",
+        sdk: "efi",
+      },
+      changeForCents: null,
+      method: "credit",
+    });
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cpf");
+    expect(serialized).not.toContain("4242424242424242");
+    expect(serialized).not.toContain('"123"');
+    expect(serialized).not.toContain("456.789");
+  });
+
+  it("conta Foode: 'Usar outro CPF' mostra o campo e envia o CPF digitado", async () => {
+    seedCart();
+    const sdk = fakeSdk();
+    const api = fakeApi({ quote: vi.fn(async () => cardQuote) });
+    const { user } = setup({
+      api,
+      cardSdkFactory: sdk.factory,
+      session: { account, state: "signed_in" },
+      state: { ...storeState, cardTokenizer: efiTokenizer },
+    });
+    await chooseCardSignedIn(user);
+    await user.click(screen.getByRole("button", { name: "Usar outro CPF" }));
+    expect(screen.getByRole("textbox", { name: "CPF do titular" })).toBeInTheDocument();
+    expect(cta()).toHaveTextContent("Complete os dados do cartão");
+    await fillEfiCard(user);
+    await user.click(cta());
+    await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+    const [, body] = vi.mocked(api.createOrder).mock.calls[0]!;
+    expect(body.payment.card?.payer).toEqual({
+      birthDate: "1990-05-10",
+      cpf: "52998224725",
+      email: "maria@exemplo.com",
+    });
+  });
+
+  it("conta Foode: 422 account_cpf_unavailable volta ao CPF digitável e pede o CPF", async () => {
+    seedCart();
+    const sdk = fakeSdk();
+    const createOrder = vi
+      .fn<CheckoutApi["createOrder"]>()
+      .mockResolvedValueOnce({ ok: false, error: { code: "account_cpf_unavailable" } })
+      .mockResolvedValueOnce({
+        accessToken: "a".repeat(40),
+        ok: true,
+        orderCode: 12,
+        replayed: false,
+        trackingPath: "/loja/lanchonete-do-ze/pedido/aaaa",
+      });
+    const api = fakeApi({ createOrder, quote: vi.fn(async () => cardQuote) });
+    const { user } = setup({
+      api,
+      cardSdkFactory: sdk.factory,
+      session: { account, state: "signed_in" },
+      state: { ...storeState, cardTokenizer: efiTokenizer },
+    });
+    await chooseCardSignedIn(user);
+    await fillEfiCardWithoutCpf(user);
+    await user.click(cta());
+    await waitFor(() =>
+      expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent(
+        "Não encontramos o CPF da sua conta. Digite o CPF do titular do cartão.",
+      ),
+    );
+    const cpf = screen.getByLabelText("CPF do titular");
+    await waitFor(() => expect(cpf).toHaveFocus());
+    await user.type(cpf, "52998224725");
+    await user.click(cta());
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
+    // Token de uso único: tokenizou de novo com chave de idempotência nova.
+    expect(sdk.tokenize).toHaveBeenCalledTimes(2);
+    expect(createOrder.mock.calls[1]![1].idempotencyKey).not.toBe(
+      createOrder.mock.calls[0]![1].idempotencyKey,
+    );
+    expect(createOrder.mock.calls[1]![1].payment.card?.payer).toMatchObject({
+      cpf: "52998224725",
+    });
+    expect(router.push).toHaveBeenCalledWith("/loja/lanchonete-do-ze/pedido/aaaa");
+  });
+
+  it("AbacatePay com conta: o CPF da conta não serve (o SDK tokeniza com o CPF no iframe)", async () => {
+    seedCart();
+    const sdk = fakeSdk();
+    const api = fakeApi({ quote: vi.fn(async () => cardQuote) });
+    const { user } = setup({
+      api,
+      cardSdkFactory: sdk.factory,
+      session: { account, state: "signed_in" },
+      state: { ...storeState, cardTokenizer: abacateTokenizer },
+    });
+    await chooseCardSignedIn(user);
+    expect(screen.getByLabelText("CPF do titular")).toBeInTheDocument();
+    expect(screen.queryByText("CPF da sua conta", { exact: false })).toBeNull();
   });
 });

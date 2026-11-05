@@ -120,6 +120,8 @@ export type CreateCardAttemptInput = {
   foodeFee: { feeId: string; percentBps: number; fixedCents: number };
   brand: CardBrandName | null;
   lastFour: string | null;
+  /** Instante da api (o mesmo relógio do lease e do prazo); padrão = agora. */
+  now?: string;
 };
 
 export type CreateCardAttemptResult =
@@ -193,7 +195,7 @@ export function createCardPaymentOps(d1: D1Database) {
     async createAttempt(input: CreateCardAttemptInput): Promise<CreateCardAttemptResult> {
       const attemptKey = input.attemptKey.toLowerCase();
       const intentId = newId();
-      const now = utcNow();
+      const now = input.now ?? utcNow();
       const [, , found, order] = await d1.batch([
         d1
           .prepare(
@@ -251,7 +253,8 @@ export function createCardPaymentOps(d1: D1Database) {
     /** Última tentativa do Pedido (a que a página do Pedido mostra). */
     latestOfOrder(orderId: string): Promise<CardIntentView | null> {
       return cardWhere(
-        `i.order_id = ? AND i.method = 'credit' ORDER BY c.created_at DESC, i.rowid DESC LIMIT 1`,
+        // Ordem de gravação (rowid), não o relógio: a última tentativa é a última inserida.
+        `i.order_id = ? AND i.method = 'credit' ORDER BY i.rowid DESC LIMIT 1`,
         orderId,
       );
     },
@@ -601,12 +604,14 @@ export function createCardPaymentOps(d1: D1Database) {
     async switchToPix(input: {
       orderId: string;
       foodeFee: { feeId: string; percentBps: number; fixedCents: number };
+      /** Instante da api (o prazo da cobrança PIX conta a partir daqui); padrão = agora. */
+      now?: string;
     }): Promise<
       | { ok: true; intentId: string; replayed: boolean }
       | { ok: false; error: "attempt_active" | "order_not_payable" }
     > {
       const intentId = newId();
-      const now = utcNow();
+      const now = input.now ?? utcNow();
       const [, , found, order] = await d1.batch([
         d1
           .prepare(

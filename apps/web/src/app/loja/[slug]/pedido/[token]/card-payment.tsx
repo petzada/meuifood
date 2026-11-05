@@ -4,7 +4,10 @@
 // processando / em análise / aprovado / recusado em `aria-live`; no recusado, o motivo exibível
 // (código nosso, nunca o texto do provedor) e as ações do contrato: "Tentar outro cartão"
 // (formulário inline, tokenizado no navegador, enviado à rota de nova tentativa com `attemptKey`
-// novo) e "Pagar com PIX". Regras e rótulos vêm de @foode/shared/payment; aqui só a apresentação.
+// novo) e "Pagar com PIX" (troca o Pedido para PIX na mesma página, sem refazer o pedido; o bloco
+// do PIX do Ticket 26 aparece depois que a página recarrega o estado). Com Consumidor logado e SDK
+// que permite, o CPF da conta vem pré-escolhido (decisão 65). Regras e rótulos vêm de
+// @foode/shared/payment; aqui só a apresentação.
 import { formatBRL } from "@foode/shared/money";
 import {
   cardDeclineMessagePt,
@@ -14,15 +17,15 @@ import {
 } from "@foode/shared/payment";
 import { Button } from "@foode/ui";
 import { CheckCircle, SpinnerGap, WarningCircle } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CardFields, type CardFieldsHandle } from "../../finalizar/card-fields";
 import {
   CARD_FIELDS,
   buildCardPaymentInput,
   describeCard,
-  emptyCardForm,
   firstCardError,
+  initialCardForm,
   validateCardForm,
   type CardField,
   type CardFormValues,
@@ -31,6 +34,7 @@ import { CardSdkError, type CardSdkFactory } from "../../finalizar/card-tokenize
 import {
   cardRetryErrorMessagePt,
   createCardRetryApi,
+  pixSwitchErrorMessagePt,
   type CardRetryApi,
   type CardRetryRequestInput,
 } from "./card-api";
@@ -39,13 +43,19 @@ export type CardPaymentProps = {
   /** Injetável nos testes; por padrão fala com `/loja/{slug}/pedido/{token}/cartao`. */
   api?: CardRetryApi;
   card: OrderCard;
+  /** CPF mascarado da conta do Consumidor logado (decisão 65); null = sem conta ou sem CPF. */
+  cpfMasked?: string | null;
   /** Nome do pagador para o SDK hospedado (o Pedido expõe só o primeiro nome). */
   customerName: string;
-  menuHref: string;
   /** Relógio injetável (validade do cartão). */
   now?: () => number;
   /** Chamado depois de uma nova tentativa aceita: a página volta a consultar o estado. */
   onRetried: () => void;
+  /**
+   * Chamado depois de "Pagar com PIX" aceito: a página recarrega o Pedido (agora `pix`) e mostra
+   * o bloco do PIX. Resolve `false` se não conseguiu recarregar (o bloco pede para atualizar).
+   */
+  onPixSwitched: () => Promise<boolean>;
   sdkFactory?: CardSdkFactory;
   storeSlug: string;
   token: string;
@@ -56,9 +66,10 @@ const retryFieldId = (field: CardField) => `retry-card-${field}`;
 export function CardPayment({
   api: apiProp,
   card,
+  cpfMasked = null,
   customerName,
-  menuHref,
   now = Date.now,
+  onPixSwitched,
   onRetried,
   sdkFactory,
   storeSlug,
@@ -66,13 +77,26 @@ export function CardPayment({
 }: CardPaymentProps) {
   const api = apiProp ?? createCardRetryApi();
   const [retrying, setRetrying] = useState(false);
-  const [values, setValues] = useState<CardFormValues>(emptyCardForm);
+  const [values, setValues] = useState<CardFormValues>(() =>
+    initialCardForm(card.tokenizer?.sdk, cpfMasked),
+  );
   const [touched, setTouched] = useState<ReadonlySet<CardField>>(() => new Set());
   const [showAll, setShowAll] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "Pagar com PIX": enquanto troca, e o aviso quando trocou mas a página não recarregou.
+  const [switchingPix, setSwitchingPix] = useState(false);
+  const [pixError, setPixError] = useState<string | null>(null);
+  const [pixSwitched, setPixSwitched] = useState(false);
   // Uma chave por tentativa (idempotência): nasce ao abrir o formulário e troca após cada envio.
   const [attemptKey, setAttemptKey] = useState<string | null>(null);
+  // Foco no CPF depois que o campo digitável volta a existir (422 `account_cpf_unavailable`).
+  const [focusCpf, setFocusCpf] = useState(false);
+  useEffect(() => {
+    if (!focusCpf) return;
+    document.getElementById(retryFieldId("cpf"))?.focus();
+    setFocusCpf(false);
+  }, [focusCpf]);
   const fields = useRef<CardFieldsHandle>(null);
   const alertRef = useRef<HTMLParagraphElement>(null);
 
@@ -88,6 +112,27 @@ export function CardPayment({
     setRetrying(true);
     setAttemptKey(crypto.randomUUID());
     setError(null);
+    setPixError(null);
+  }
+
+  async function payWithPix() {
+    if (switchingPix || sending) return;
+    setSwitchingPix(true);
+    setPixError(null);
+    const result = await api.payWithPix(storeSlug, token);
+    if (result.kind === "ok") {
+      const reloaded = await onPixSwitched();
+      setSwitchingPix(false);
+      // Recarregou: este bloco sai da tela e o do PIX entra. Senão, orienta a atualizar.
+      if (!reloaded) setPixSwitched(true);
+      return;
+    }
+    setSwitchingPix(false);
+    setPixError(
+      result.kind === "error"
+        ? pixSwitchErrorMessagePt(result.error)
+        : "Não conseguimos trocar para PIX agora. Tente de novo em instantes.",
+    );
   }
 
   async function submitRetry() {
@@ -121,10 +166,17 @@ export function CardPayment({
     setAttemptKey(crypto.randomUUID());
     if (result.kind === "ok") {
       setRetrying(false);
-      setValues(emptyCardForm);
+      setValues(initialCardForm(tokenizer.sdk, cpfMasked));
       setTouched(new Set());
       setShowAll(false);
       onRetried();
+      return;
+    }
+    if (result.kind === "error" && result.error === "account_cpf_unavailable") {
+      // CPF da conta indisponível no servidor: volta ao campo digitável e pede o CPF.
+      setValues((current) => ({ ...current, cpf: "", useAccountCpf: false }));
+      setError(cardRetryErrorMessagePt(result.error));
+      setFocusCpf(true);
       return;
     }
     setError(
@@ -195,21 +247,40 @@ export function CardPayment({
           {!retrying ? (
             <div className="flex flex-wrap gap-2">
               {canRetryCard && tokenizer ? (
-                <Button onClick={openRetry}>Tentar outro cartão</Button>
+                <Button disabled={switchingPix} onClick={openRetry}>
+                  Tentar outro cartão
+                </Button>
               ) : null}
               {canPix ? (
                 <Button
-                  href={menuHref}
+                  aria-busy={switchingPix ? true : undefined}
+                  disabled={switchingPix || pixSwitched}
+                  onClick={() => void payWithPix()}
                   variant={canRetryCard && tokenizer ? "secondary" : "primary"}
                 >
-                  Pagar com PIX
+                  <span className="inline-flex items-center gap-2">
+                    {switchingPix ? (
+                      <SpinnerGap aria-hidden className="animate-spin" size={20} />
+                    ) : null}
+                    {switchingPix ? "Trocando para PIX…" : "Pagar com PIX"}
+                  </span>
                 </Button>
               ) : null}
             </div>
           ) : null}
-          {canPix ? (
+          {canPix && !retrying ? (
             <p className="text-xs text-[var(--color-muted)]">
-              Para pagar com PIX, faça o pedido de novo escolhendo PIX no pagamento.
+              Pagar com PIX mantém este Pedido, o total e a tarifa: o código aparece aqui mesmo.
+            </p>
+          ) : null}
+          {pixSwitched ? (
+            <p className="text-sm font-bold text-[var(--color-ink)]" role="status">
+              Trocamos para PIX. Atualize a página para ver o código de pagamento.
+            </p>
+          ) : null}
+          {pixError ? (
+            <p className="text-sm font-bold text-[var(--color-error)]" role="alert">
+              {pixError}
             </p>
           ) : null}
         </>
@@ -227,6 +298,7 @@ export function CardPayment({
         >
           <CardFields
             amountCents={card.amountCents}
+            cpfMasked={cpfMasked}
             errors={visibleErrors}
             fieldId={retryFieldId}
             onBlur={(field) =>

@@ -770,6 +770,8 @@ export function createCardService(deps: CardServiceDeps): CardService {
         foodeFee: { feeId: fee.feeId, percentBps: fee.percentBps, fixedCents: fee.fixedCents },
         brand: card.brand,
         lastFour: card.lastFour,
+        // Mesmo relógio do lease e do prazo da tentativa (`giveUpIfStale`).
+        now: clock().toISOString(),
       });
       if (!created.ok) return { status: 409, body: { error: created.error } };
       if (created.replayed) return { status: 200, body: { ok: true, trackingPath } };
