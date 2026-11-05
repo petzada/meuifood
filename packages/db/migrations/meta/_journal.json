@@ -78,6 +78,13 @@
       "when": 1793870830153,
       "tag": "0010_cancelamento_estorno",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793873243802,
+      "tag": "0011_reconciliacao_cron",
+      "breakpoints": true
     }
   ]
 }
