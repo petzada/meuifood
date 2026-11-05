@@ -274,7 +274,11 @@ export function createPaymentOps(d1: D1Database) {
             .prepare(
               `INSERT INTO payment_webhook_events (id, provider, event_id, event_type,
                  provider_charge_id, intent_id, outcome, dev_mode, received_at)
-               VALUES (?, ?, ?, ?, ?, ?, 'applied', ?, ?)
+               SELECT ?, ?, ?, ?, ?, ?,
+                 CASE WHEN EXISTS (SELECT 1 FROM payment_intents WHERE id = ? AND state = 'paid')
+                   THEN 'already_applied' ELSE 'applied' END,
+                 ?, ?
+               WHERE 1
                ON CONFLICT(provider, event_id) DO NOTHING`,
             )
             .bind(
@@ -283,6 +287,7 @@ export function createPaymentOps(d1: D1Database) {
               input.event.eventId,
               input.event.eventType,
               input.providerChargeId,
+              input.intentId,
               input.intentId,
               input.event.devMode ? 1 : 0,
               now,
