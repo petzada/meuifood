@@ -69,10 +69,7 @@ export {
   type RecalculatedOrderLine,
 } from "./order-recalculate.js";
 
-export {
-  normalizeNeighborhoodKey,
-  sanitizeNeighborhoodDisplayName,
-} from "./neighborhood.js";
+export { normalizeNeighborhoodKey, sanitizeNeighborhoodDisplayName } from "./neighborhood.js";
 
 export {
   previewDeliveryFeeCents,
@@ -84,3 +81,5 @@ export {
   type ResolvedDeliveryFee,
   type StoreDeliveryFeeConfig,
 } from "./delivery-fee.js";
+
+export type { ApiHealth, PainelRpc } from "./painel-rpc.js";

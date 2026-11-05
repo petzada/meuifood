@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+**/.next/
+**/.open-next/
+**/.wrangler/
+**/dist/
+coverage/
+packages/db/migrations/
+apps/api/legacy-fastify/
+packages/db/legacy-prisma/
+supabase/
+reports/
+.scratch/
+*.md

@@ -5,6 +5,11 @@ dist/
 coverage/
 *.tsbuildinfo
 packages/db/src/generated/
+.open-next/
+.wrangler/
+.dev.vars
+.dev.vars.*
+wrangler.ci.json
 
 .env
 .env.*

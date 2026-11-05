@@ -3,8 +3,8 @@ packages:
   - packages/*
 
 onlyBuiltDependencies:
-  - '@prisma/engines'
-  - '@sentry/cli'
+  - "@sentry/cli"
   - esbuild
-  - prisma
+  - lefthook
   - sharp
+  - workerd

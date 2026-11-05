@@ -1,117 +1,148 @@
 name: CI
+# PR e push na master: lint, typecheck, testes sem banco, testes com D1 (workerd, só
+# aqui), build (OpenNext + bundle da api) e prova das migrations num D1 remoto efêmero
+# (criado, aplicado e apagado nesta run). Nada aqui toca o D1 de produção.
+# Repositório público: CI completo sempre (sem modo econômico de draft).
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  quality:
-    runs-on: ubuntu-latest
+  qualidade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrations:validate
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test:quality
-      - run: pnpm build
+      - name: Lint (eslint + migrations expand/contract e imutáveis)
+        run: pnpm lint
+      - name: Schema e migrations em dia
+        run: pnpm --filter @foode/db migrations:check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Testes sem banco
+        run: pnpm test
 
-  migrate:
-    needs: quality
-    runs-on: ubuntu-latest
-    # Existe um único banco (o Supabase de produção, sem staging/local — ver
-    # decisões/55). Duas runs em paralelo (ex.: push em master + PR) escrevem
-    # e apagam fixtures sintéticas no mesmo banco ao mesmo tempo, produzindo
-    # falso positivo de resíduo em verify-production-state.mjs. O grupo é uma
-    # string fixa (não usa github.ref) para valer entre branches diferentes,
-    # e é o mesmo em `migrate` e `integration` para serializar qualquer job
-    # que toque o banco, de qualquer run. `quality` não entra: não toca banco.
-    # cancel-in-progress: false — cancelar no meio deixaria fixtures órfãs.
-    concurrency:
-      group: supabase-producao-migrations
-      cancel-in-progress: false
-      # Sem `queue: max` o GitHub guarda só UM job pendente por grupo: um
-      # terceiro pedido cancela o que estava na fila. Isso poderia cancelar um
-      # `integration` já enfileirado depois de o `migrate` correspondente ter
-      # aplicado a migration em produção — banco alterado, prova não executada.
-      queue: max
+  testes-d1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Aplicar migrations no Foode Delivery
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
-          # Identificador único desta run, usado para marcar as fixtures
-          # sintéticas (ver preflight-production-migrations.ts) e permitir
-          # que a checagem de resíduo seja escopada só a elas.
-          CI_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-        run: |
-          test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$SUPABASE_DB_PASSWORD"
-          test -n "$SUPABASE_POOLER_URL"
-          pnpm db:migrations:validate
-          pnpm run build:packages
-          pnpm --filter @foode/api migrations:preflight
-          pnpm --filter @foode/db migrations:sync-supabase
-          pnpm supabase link --project-ref emdbvwylytduvuzvavgy --password "$SUPABASE_DB_PASSWORD"
-          pnpm supabase db push --linked --dry-run
-          pnpm supabase db push --linked
-          pnpm supabase migration list --linked
+      - run: pnpm build:packages
+      # Rotas, isolamento entre Lojas (fixture com duas Lojas) e RPC do Painel no workerd
+      # com o D1 do Miniflare (@cloudflare/vitest-plugin).
+      - name: Testes com D1 (workerd)
+        run: pnpm test:workers
 
-  integration:
-    needs: migrate
-    runs-on: ubuntu-latest
-    # Mesmo grupo do job `migrate`: é o par que toca o banco de produção
-    # nesta run (fixtures de RLS/RBAC + verificação de resíduo).
-    concurrency:
-      group: supabase-producao-migrations
-      cancel-in-progress: false
-      # Sem `queue: max` o GitHub guarda só UM job pendente por grupo: um
-      # terceiro pedido cancela o que estava na fila. Isso poderia cancelar um
-      # `integration` já enfileirado depois de o `migrate` correspondente ter
-      # aplicado a migration em produção — banco alterado, prova não executada.
-      queue: max
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Provar HTTP, RLS e RBAC no Supabase de produção
-        env:
-          BUSINESS_DATABASE_URL: ${{ secrets.BUSINESS_DATABASE_URL }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_POOLER_URL: ${{ secrets.SUPABASE_POOLER_URL }}
-          # Mesma identidade usada pelo job `migrate`: escopa as fixtures
-          # desta run e a checagem de resíduo (verify-production-state.mjs).
-          CI_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            apps/web/.next/cache
+            apps/admin/.next/cache
+          key: next-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: pnpm build:packages
+      - name: Build OpenNext (web e admin)
+        run: pnpm --filter @foode/web --filter @foode/admin build:cf
+      # Bundle dos três Workers (wrangler --dry-run) contra o teto de 10 MiB gzip.
+      - name: Tamanho dos Workers
+        run: node scripts/worker-size.mjs apps/api apps/web apps/admin
+
+  migrations-d1:
+    # PR de fork não recebe os secrets da Cloudflare.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+      D1_NAME: foode-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    defaults:
+      run:
+        working-directory: packages/db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - name: Criar D1 efêmero
+        id: criar
         run: |
-          test -n "$BUSINESS_DATABASE_URL"
-          test -n "$SUPABASE_DB_PASSWORD"
-          test -n "$SUPABASE_POOLER_URL"
-          set +e
-          pnpm test
-          test_status=$?
-          pnpm db:production:verify
-          verify_status=$?
-          set -e
-          test "$test_status" -eq 0
-          test "$verify_status" -eq 0
+          : "${CLOUDFLARE_API_TOKEN:?secret CLOUDFLARE_API_TOKEN ausente}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID ausente}"
+          out=$(pnpm exec wrangler d1 create "$D1_NAME" 2>&1) || { echo "$out"; exit 1; }
+          # Marca antes de qualquer outra checagem: o passo de limpeza apaga mesmo se algo
+          # abaixo falhar.
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          id=$(printf '%s' "$out" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          test -n "$id" || { echo "$out"; echo "::error::id do D1 não encontrado na saída do wrangler"; exit 1; }
+          jq -n --arg name "$D1_NAME" --arg id "$id" '{
+            name: "foode-ci-migrations",
+            compatibility_date: "2026-11-01",
+            d1_databases: [{ binding: "DB", database_name: $name, database_id: $id, migrations_dir: "migrations" }]
+          }' > wrangler.ci.json
+      - name: Aplicar migrations (do zero)
+        run: pnpm exec wrangler d1 migrations apply "$D1_NAME" --remote -c wrangler.ci.json
+      - name: Reaplicar (idempotente)
+        run: |
+          out=$(pnpm exec wrangler d1 migrations apply "$D1_NAME" --remote -c wrangler.ci.json 2>&1)
+          echo "$out"
+          grep -q "No migrations to apply" <<< "$out"
+      - name: Seed foode_ops duas vezes (idempotente, sem senha)
+        env:
+          FOODE_OPS_EMAILS: ops-ci@foode.test, Ops-CI@foode.test; outro-ops@foode.test
+        run: |
+          node scripts/seed-ops-sql.mjs "$RUNNER_TEMP/seed.sql"
+          pnpm exec wrangler d1 execute "$D1_NAME" --remote -c wrangler.ci.json --file "$RUNNER_TEMP/seed.sql"
+          pnpm exec wrangler d1 execute "$D1_NAME" --remote -c wrangler.ci.json --file "$RUNNER_TEMP/seed.sql"
+      - name: Conferir schema e seed
+        run: |
+          q() { pnpm exec wrangler d1 execute "$D1_NAME" --remote -c wrangler.ci.json --json --command "$1"; }
+          tables=$(q "SELECT group_concat(name) AS t FROM (SELECT name FROM sqlite_master WHERE type='table' AND name IN ('stores','users','store_memberships','audit_events') ORDER BY name)" | jq -r '.[0].results[0].t')
+          test "$tables" = "audit_events,store_memberships,stores,users" || { echo "::error::tabelas: $tables"; exit 1; }
+          ops=$(q "SELECT count(*) AS n FROM users WHERE platform_role = 'foode_ops'" | jq -r '.[0].results[0].n')
+          test "$ops" = "2" || { echo "::error::esperado 2 usuários foode_ops, veio $ops"; exit 1; }
+          others=$(q "SELECT (SELECT count(*) FROM stores) + (SELECT count(*) FROM store_memberships) AS n" | jq -r '.[0].results[0].n')
+          test "$others" = "0" || { echo "::error::o seed não pode criar Loja nem membership"; exit 1; }
+      - name: Apagar D1 efêmero
+        if: always() && steps.criar.outputs.created == 'true'
+        run: pnpm exec wrangler d1 delete "$D1_NAME" -y
