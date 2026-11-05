@@ -4,6 +4,14 @@
 import { z } from "zod";
 
 import { centsSchema } from "../money.js";
+import {
+  type CancellationPreview,
+  type CancelOrderInput,
+  cancelOrderInputSchema,
+  type OrderCancellationView,
+  type OrderRefundView,
+  refundStateSchema,
+} from "./cancellation.js";
 import { phoneE164Schema } from "./checkout.js";
 import { type EtaRange } from "./settings.js";
 import {
@@ -54,14 +62,11 @@ export const orderTransitionInputSchema = z
 export type OrderTransitionInput = z.infer<typeof orderTransitionInputSchema>;
 
 /**
- * Cancelamento sem Estorno (24b): só status `cancelled` + auditoria. O Estorno automático de
- * PIX/Cartão pago e o motivo (lista curta, P-OPE-3) entram no Ticket 12.
+ * Cancelamento (24b; Estorno automático e motivo no Ticket 12): o mesmo contrato de
+ * `cancelOrderInputSchema` (cancellation.ts). Mantido com este nome para o Painel do 24b.
  */
-export const orderCancelInputSchema = z.object({
-  orderId: z.string().uuid(),
-  from: orderStatusSchema,
-});
-export type OrderCancelInput = z.infer<typeof orderCancelInputSchema>;
+export const orderCancelInputSchema = cancelOrderInputSchema;
+export type OrderCancelInput = CancelOrderInput;
 
 /** Card da fila (PED-02): telefone e endereço completos só no detalhe. */
 export type OrderQueueItem = {
@@ -77,6 +82,8 @@ export type OrderQueueItem = {
   totalCents: number;
   /** Transições válidas agora (sem `cancelled`, que fica no detalhe). */
   next: OrderStatus[];
+  /** Selo do Estorno no card de Cancelados (CAN-02); null/ausente = sem Estorno. Ticket 12. */
+  refund?: { state: OrderRefundView["state"] } | null;
 };
 
 export type OrdersList = {
@@ -119,6 +126,15 @@ export type OrderDetail = {
   eta: EtaRange | null;
   next: OrderStatus[];
   cancellable: boolean;
+  /**
+   * Texto e consequência do diálogo de confirmação do Cancelar (CAN-01, Ticket 12); só quando
+   * `cancellable`.
+   */
+  cancelPreview?: CancellationPreview | null;
+  /** Motivo e instante do cancelamento (P-OPE-3); null fora do Cancelado. Ticket 12. */
+  cancellation?: OrderCancellationView | null;
+  /** Estorno do Pedido cancelado (selo separado do status, CAN-02); null = sem Estorno. */
+  refund?: OrderRefundView | null;
   history: OrderStatusHistoryEntry[];
   /** Caminho da página de acompanhamento (o token é derivado no servidor; ver orders.ts do db). */
   trackingPath: string;
@@ -153,4 +169,5 @@ export const orderQueueItemSchema = z.object({
   paymentMethod: paymentMethodSchema,
   totalCents: centsSchema,
   next: z.array(orderStatusSchema),
+  refund: z.object({ state: refundStateSchema }).nullable().optional(),
 });

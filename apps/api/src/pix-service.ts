@@ -12,6 +12,11 @@
 //   intenção `paid`, Pedido `paid` (entra na fila do Painel) e um lançamento no Ledger.
 // - Nada de corpo, URL com segredo, copia-e-cola ou dado do pagador em log/Sentry: os logs levam
 //   só códigos curtos.
+// - Ticket 12: PIX vencido sem pagamento vira Pedido Cancelado (motivo de sistema, libera o
+//   Cupom, sai da faixa de Pedidos) — na página do Pedido e na varredura `expireUnpaidPix(now)` do
+//   Cron. Pagamento tardio de Pedido cancelado converge para Estorno total (o batch da
+//   confirmação grava a obrigação; `refunds.afterPayment` executa). `transparent.refunded`
+//   conclui o Estorno (PIX e Cartão Rápido), idempotente pelo evento.
 import type { FoodeDb, PixIntentView } from "@foode/db";
 import {
   feeCents,
@@ -23,6 +28,7 @@ import {
 
 import type { CardService } from "./card-service";
 import type { Env } from "./env";
+import type { RefundService } from "./refund-service";
 import {
   type AbacatePayPixCharge,
   type AbacatePayPixCheck,
@@ -46,6 +52,13 @@ export const PIX_CHARGE_LEASE_MS = 30_000;
 export const PIX_CREATE_GIVE_UP_MS = 10 * 60_000;
 /** Consulta autenticada no máximo a cada 60 s por Pedido aberto (reconciliação sem webhook). */
 export const PIX_RECONCILE_INTERVAL_MS = 60_000;
+/**
+ * Varredura: provedor fora ao conferir um QR vencido adia o cancelamento por até 1 h (pode ter
+ * sido pago); depois disso cancela mesmo assim — pagamento tardio converge para Estorno total.
+ */
+export const PIX_EXPIRE_PROVIDER_GRACE_MS = 60 * 60_000;
+/** Máximo de PIX vencidos cancelados por rodada da varredura. */
+export const PIX_EXPIRE_BATCH_LIMIT = 50;
 
 /** O que o PIX usa do provedor (o cliente real ou um fake nos testes). */
 export type PixGateway = {
@@ -84,7 +97,21 @@ export type PixServiceDeps = {
    * registrados como `deferred`, sem efeito no dinheiro.
    */
   card?: Pick<CardService, "handleAbacatePayCardEvent"> | null;
+  /**
+   * Estorno (Ticket 12): Estorno tardio depois da confirmação e `transparent.refunded`. Ausente =
+   * a obrigação fica gravada (o Cron executa) e o webhook de Estorno é registrado `deferred`.
+   */
+  refunds?: Pick<RefundService, "afterPayment" | "confirmFromWebhook"> | null;
   now?: () => Date;
+};
+
+export type ExpireUnpaidPixSummary = {
+  /** Pedidos cancelados nesta rodada (motivo `pix_expired`). */
+  cancelled: number;
+  /** Na verdade pagos (conferido no provedor): confirmados em vez de cancelados. */
+  paid: number;
+  /** Adiados (provedor fora dentro da carência). */
+  skipped: number;
 };
 
 export type WebhookReply = {
@@ -158,7 +185,7 @@ export function createPixService(deps: PixServiceDeps) {
       ),
       releasedAt: paidAt,
     });
-    return db.payments.confirmPayment({
+    const result = await db.payments.confirmPayment({
       intentId: intent.intentId,
       providerChargeId: input.providerChargeId,
       amountCents: input.amountCents,
@@ -166,6 +193,25 @@ export function createPixService(deps: PixServiceDeps) {
       providerFeeCents: input.providerFeeCents,
       ledger,
       event: input.event ? { provider: "abacatepay", ...input.event } : null,
+    });
+    if (result === "applied" && deps.refunds) {
+      // Pago depois do cancelamento: o batch gravou a obrigação; executa já (falha = retentável).
+      try {
+        await deps.refunds.afterPayment(intent.intentId);
+      } catch (error) {
+        warn("pix_late_refund_failed", { code: errorCode(error) });
+      }
+    }
+    return result;
+  }
+
+  /** PIX venceu sem pagamento: intenção `expired` e Pedido Cancelado (`pix_expired`). */
+  async function expireAndCancel(intent: PixIntentView): Promise<boolean> {
+    await db.payments.expirePix(intent.intentId);
+    return db.refunds.cancelExpiredPix({
+      intentId: intent.intentId,
+      orderId: intent.orderId,
+      storeId: intent.storeId,
     });
   }
 
@@ -233,7 +279,7 @@ export function createPixService(deps: PixServiceDeps) {
           event: null,
         });
       } else if (check.status === "EXPIRED" || check.status === "CANCELLED") {
-        await db.payments.expirePix(intent.intentId);
+        await expireAndCancel(intent);
       }
     } catch (error) {
       warn("pix_charge_check_failed", { code: errorCode(error) });
@@ -241,6 +287,55 @@ export function createPixService(deps: PixServiceDeps) {
   }
 
   return {
+    /**
+     * Varredura do Cron (Ticket 15) — idempotente: PIX sem pagamento cujo Pedido segue ativo vira
+     * Pedido Cancelado (`pix_expired`), libera o Cupom e sai da faixa de Pedidos. QR vencido com
+     * cobrança é conferido no provedor antes: pago = confirma (não cancela); provedor fora =
+     * adia por até `PIX_EXPIRE_PROVIDER_GRACE_MS`. Uma falha não interrompe os demais.
+     */
+    async expireUnpaidPix(now: Date = clock()): Promise<ExpireUnpaidPixSummary> {
+      const summary: ExpireUnpaidPixSummary = { cancelled: 0, paid: 0, skipped: 0 };
+      const candidates = await db.refunds.expirablePix(
+        now.toISOString(),
+        new Date(now.getTime() - PIX_CREATE_GIVE_UP_MS).toISOString(),
+        PIX_EXPIRE_BATCH_LIMIT,
+      );
+      for (const candidate of candidates) {
+        try {
+          if (candidate.state === "pending" && candidate.providerChargeId && provider) {
+            let status: string | null = null;
+            try {
+              status = (await provider.gateway.checkPixCharge(candidate.providerChargeId)).status;
+            } catch (error) {
+              warn("pix_expire_check_failed", { code: errorCode(error) });
+              const expiredFor = now.getTime() - Date.parse(candidate.expiresAt ?? "");
+              if (!(expiredFor >= PIX_EXPIRE_PROVIDER_GRACE_MS)) {
+                summary.skipped += 1;
+                continue;
+              }
+            }
+            if (status === "PAID") {
+              const intent = await db.payments.intentById(candidate.intentId);
+              if (intent) {
+                await confirm(intent, {
+                  providerChargeId: candidate.providerChargeId,
+                  amountCents: intent.amountCents,
+                  providerFeeCents: null,
+                  event: null,
+                });
+                summary.paid += 1;
+                continue;
+              }
+            }
+          }
+          if (await db.refunds.cancelExpiredPix(candidate)) summary.cancelled += 1;
+        } catch (error) {
+          warn("pix_expire_failed", { code: errorCode(error) });
+        }
+      }
+      return summary;
+    },
+
     /** PIX pode aparecer no checkout (falta ainda a taxa Foode vigente, em checkout-rules). */
     available(): boolean {
       return provider !== null;
@@ -273,7 +368,7 @@ export function createPixService(deps: PixServiceDeps) {
           if (expired) {
             const after = await db.payments.intentById(intent.intentId);
             // Provedor fora ou ainda PENDING depois do prazo: expira mesmo assim (sem QR válido).
-            if (after?.state === "pending") await db.payments.expirePix(intent.intentId);
+            if (after?.state === "pending") await expireAndCancel(after);
           }
         }
       } catch (error) {
@@ -333,6 +428,20 @@ export function createPixService(deps: PixServiceDeps) {
         return { status: 200, body: { ok: true, outcome: "duplicate" } };
       }
       const { charge } = event;
+      // Estorno concluído (Ticket 12), PIX ou Cartão Rápido: idempotente pelo `log_…`.
+      if (event.type === "transparent.refunded" && deps.refunds) {
+        const outcome = await deps.refunds.confirmFromWebhook({
+          providerChargeId: charge.id,
+          event: {
+            provider: "abacatepay",
+            eventId: event.eventId,
+            eventType: event.type,
+            devMode: event.devMode,
+          },
+        });
+        if (outcome === "unmatched") warn("abacatepay_refund_unmatched");
+        return { status: 200, body: { ok: true, outcome } };
+      }
       // Cartão Rápido (Ticket 27): mesmo webhook, idempotente pelo `log_…` (já conferido acima).
       if (charge.method === "CARD" && deps.card) {
         return deps.card.handleAbacatePayCardEvent(event);
@@ -344,8 +453,8 @@ export function createPixService(deps: PixServiceDeps) {
         devMode: event.devMode,
         providerChargeId: charge.id,
       };
-      // Cartão sem serviço, estorno/disputa (Ticket 12) e PIX "completed" sem status PAID:
-      // registrados, sem efeito no dinheiro aqui.
+      // Cartão sem serviço, disputa/perda e PIX "completed" sem status PAID: registrados, sem
+      // efeito no dinheiro aqui.
       if (
         event.type !== "transparent.completed" ||
         charge.method !== "PIX" ||

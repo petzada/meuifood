@@ -2,8 +2,10 @@
 // método valida a entrada com o schema de @foode/shared/order e autoriza pela política única
 // (`can()`) na Loja ATIVA, com StoreContext emitido por @foode/db:
 // - `orders.view` (Dono e Operador): fila, detalhe e leitura da configuração operacional;
-// - `orders.update_status` / `orders.cancel` (Dono e Operador): avançar e cancelar (sem Estorno —
-//   o Estorno automático é do Ticket 12);
+// - `orders.update_status` / `orders.cancel` (Dono e Operador): avançar e cancelar. Cancelar
+//   (Ticket 12) grava Pedido + motivo + obrigação de Estorno + reversão do Ledger num batch e só
+//   depois executa o Estorno no provedor que cobrou (`refunds.execute`, em `defer` quando há);
+//   não existe comando de Estorno avulso;
 // - `store.pause` (Dono e Operador, P-OPE-4): ligar/retomar a Pausa, com auditoria;
 // - `store.settings` (só Dono): horários, entrega, bandeiras e "Imprimir ao aceitar".
 // Ops recebe `forbidden`. As operações ficam em `db.store(context).operation()/.orders()`
@@ -15,6 +17,7 @@ import {
   type OperationResult,
   type OperationSettings,
   type OrderTransitionData,
+  type RefundView,
   type StoreContext,
 } from "@foode/db";
 import {
@@ -25,12 +28,16 @@ import {
 import type { Permission, RpcResult, SessionCtx } from "@foode/shared/auth";
 import {
   allowedTransitions,
+  type CancellationConsequence,
+  cancellationPreview,
+  cancelOrderInputSchema,
+  type CancelOrderResult,
   CARD_BRANDS,
   type Fulfillment,
   isAcceptTransition,
   isCancellable,
   type OrderDetail,
-  orderCancelInputSchema,
+  type OrderRefundView,
   orderRefInputSchema,
   type OrdersList,
   ordersListInputSchema,
@@ -49,19 +56,33 @@ import {
   storeSetDeliveryRateInputSchema,
   storeSetPrintOnAcceptInputSchema,
 } from "@foode/shared/order";
+import { compensationPayoutDate, publicRefundState } from "@foode/shared/payment";
 
 import type { FoodeAuth } from "./auth/auth";
 import { authorizeSession, resolveSessionCtx, rolesWith } from "./auth/guard";
 import { orderAccessToken, requireSecret } from "./order-crypto";
 import { callerHeaders } from "./painel-service";
+import type { RefundService } from "./refund-service";
 
 export type OrderServiceDeps = {
   db: FoodeDb;
   auth: FoodeAuth;
   /** ORDER_TOKEN_SECRET: remonta o link da página do Pedido no detalhe. */
   orderTokenSecret: string | undefined;
+  /** Execução do Estorno depois do cancelamento (Ticket 12). Ausente = só o Cron executa. */
+  refunds?: Pick<RefundService, "execute"> | null;
+  /**
+   * `ctx.waitUntil` do Worker: o Estorno roda depois da resposta (o Painel acompanha pelo selo).
+   * Ausente (testes) = aguarda o provedor antes de responder.
+   */
+  defer?: (promise: Promise<unknown>) => void;
   now?: () => Date;
 };
+
+/** Estado do Estorno como o Painel mostra. */
+function refundView(refund: { state: RefundView["state"]; amountCents: number }): OrderRefundView {
+  return { state: publicRefundState(refund.state), amountCents: refund.amountCents };
+}
 
 /** O que a api usa de um schema Zod (a api não depende de `zod` diretamente). */
 type InputSchema<O> = {
@@ -170,9 +191,10 @@ export function createOrderService(deps: OrderServiceDeps) {
           return {
             ok: true,
             data: {
-              orders: result.orders.map((order) => ({
+              orders: result.orders.map(({ refundState, ...order }) => ({
                 ...order,
                 next: nextOf(order.fulfillment, order.status),
+                refund: refundState ? { state: publicRefundState(refundState) } : null,
               })),
               closedToday: result.closedToday,
               serverTime: now.toISOString(),
@@ -198,6 +220,7 @@ export function createOrderService(deps: OrderServiceDeps) {
             requireSecret(deps.orderTokenSecret, "ORDER_TOKEN_SECRET"),
             order.id,
           );
+          const cancellable = isCancellable(order.fulfillment, order.status);
           return {
             ok: true,
             data: {
@@ -218,7 +241,17 @@ export function createOrderService(deps: OrderServiceDeps) {
               note: order.note,
               eta: order.eta,
               next: nextOf(order.fulfillment, order.status),
-              cancellable: isCancellable(order.fulfillment, order.status),
+              cancellable,
+              cancelPreview: cancellable
+                ? cancellationPreview({
+                    paymentMethod: order.paymentMethod,
+                    paymentStatus: order.paymentStatus,
+                    totalCents: order.totalCents,
+                    serviceFeeCents: order.serviceFeeCents,
+                  })
+                : null,
+              cancellation: order.cancellation,
+              refund: order.refund ? refundView(order.refund) : null,
               history: order.history,
               trackingPath: orderTrackingPath(slug, token),
             },
@@ -247,19 +280,55 @@ export function createOrderService(deps: OrderServiceDeps) {
       );
     },
 
-    /** Cancela (só status + histórico; Estorno no Ticket 12). Estado final ou ≠ `from` = `conflict`. */
-    ordersCancel(caller: PainelCaller, input: unknown): Promise<RpcResult<OrderTransitionResult>> {
+    /**
+     * Cancela (Dono e Operador da própria Loja; Ticket 12) com motivo opcional (P-OPE-3). Um batch
+     * grava Pedido, histórico, motivo, obrigação de Estorno total de cada cobrança paga e a
+     * reversão do Ledger ANTES do provedor; depois o Estorno é executado (falha = `failed`,
+     * retentável; o Pedido nunca reabre). Já final ou ≠ `from` = `conflict` (nenhum 2º Estorno).
+     */
+    ordersCancel(caller: PainelCaller, input: unknown): Promise<RpcResult<CancelOrderResult>> {
       return asStoreMember(
         "orders.cancel",
         caller,
-        orderCancelInputSchema,
+        cancelOrderInputSchema,
         input,
-        async (context, { orderId, from }) => {
-          const outcome = await db.store(context).orders().cancel(orderId, from);
-          if (!outcome.ok && outcome.error === "invalid_input") {
-            return { ok: false, error: "conflict" };
+        async (context, { orderId, from, reason }): Promise<RpcResult<CancelOrderResult>> => {
+          const outcome = await db
+            .store(context)
+            .orders()
+            .cancel({
+              orderId,
+              from: from ?? null,
+              reason: reason ?? null,
+              compensationPayoutDate: compensationPayoutDate(clock()),
+            });
+          if (!outcome.ok) {
+            return { ok: false, error: outcome.error === "not_found" ? "not_found" : "conflict" };
           }
-          return transitionResult(outcome, from);
+          let refund = outcome.data.refund;
+          if (refund && deps.refunds) {
+            const running = deps.refunds.execute(refund.refundId).catch(() => null);
+            if (deps.defer) deps.defer(running);
+            else refund = (await running) ?? refund;
+          }
+          let consequence: CancellationConsequence;
+          if (refund) consequence = { kind: "refund", refund: refundView(refund) };
+          else if (
+            outcome.data.paymentMethod === "on_delivery" ||
+            outcome.data.paymentStatus === "not_required"
+          ) {
+            consequence = { kind: "on_delivery" };
+          } else consequence = { kind: "charge_cancel" };
+          return {
+            ok: true,
+            data: {
+              status: "cancelled",
+              next: [],
+              print: false,
+              reason: reason ?? null,
+              consequence,
+            },
+          };
         },
       );
     },

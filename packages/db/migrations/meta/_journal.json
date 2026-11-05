@@ -71,6 +71,13 @@
       "when": 1793867731601,
       "tag": "0009_cartao_efi_abacatepay",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793870830153,
+      "tag": "0010_cancelamento_estorno",
+      "breakpoints": true
     }
   ]
 }

@@ -575,11 +575,15 @@ describe("transições e Pausa no Painel", () => {
     });
     await orders.advance(orderId, "preparing", "ready_for_pickup");
     await orders.advance(orderId, "ready_for_pickup", "completed");
-    // Final não muda mais (nem cancela).
-    await expect(orders.cancel(orderId, "completed")).resolves.toEqual({
-      ok: false,
-      error: "invalid_input",
-    });
+    // Final não muda mais (nem cancela): Ticket 12 devolve `conflict`, sem gravar.
+    await expect(
+      orders.cancel({
+        orderId,
+        from: "completed",
+        reason: null,
+        compensationPayoutDate: "2026-11-06",
+      }),
+    ).resolves.toEqual({ ok: false, error: "conflict" });
     const detail = await orders.get(orderId);
     expect(detail?.status).toBe("completed");
     expect(detail?.history.map((h) => [h.from, h.to, h.actor?.role ?? null])).toEqual([
@@ -596,7 +600,7 @@ describe("transições e Pausa no Painel", () => {
     expect(closed.closedToday).toEqual({ completed: 1, cancelled: 0 });
   });
 
-  it("cancelamento sem Estorno; aceite devolve Imprimir ao aceitar", async () => {
+  it("cancelamento do Pagamento na entrega (sem Estorno); aceite devolve Imprimir ao aceitar", async () => {
     await (await ownerA()).operation().setPrintOnAccept(true);
     const first = await newOrder();
     const orders = (await operatorA()).orders();
@@ -605,10 +609,14 @@ describe("transições e Pausa no Painel", () => {
       data: { printOnAccept: true },
     });
     const second = await newOrder();
-    await expect(orders.cancel(second, "received")).resolves.toMatchObject({
-      ok: true,
-      data: { status: "cancelled" },
-    });
+    await expect(
+      orders.cancel({
+        orderId: second,
+        from: "received",
+        reason: "customer_request",
+        compensationPayoutDate: "2026-11-06",
+      }),
+    ).resolves.toMatchObject({ ok: true, data: { paymentMethod: "on_delivery", refund: null } });
     const active = await orders.list({ filter: "all", scope: "active", closedSince: NOW });
     expect(active.orders.map((o) => o.id)).toEqual([first]);
   });

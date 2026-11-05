@@ -9,3 +9,4 @@ export * from "./settings.js";
 export * from "./checkout.js";
 export * from "./storefront.js";
 export * from "./painel.js";
+export * from "./cancellation.js";

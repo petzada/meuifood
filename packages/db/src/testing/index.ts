@@ -1,10 +1,18 @@
 // Fixture "app com duas Lojas" para testes com D1 (vitest-plugin, só no CI).
 // Grava direto pelo Drizzle porque é setup de teste; o código de produção passa por
 // createFoodeDb. Só testes importam `@foode/db/testing` (regra de lint).
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { newId } from "../conventions";
-import { auditEvents, storeMemberships, stores, users } from "../schema";
+import {
+  auditEvents,
+  ledgerEntries,
+  ledgerEntryPayouts,
+  storeMemberships,
+  stores,
+  users,
+} from "../schema";
 
 export type TwoStoresFixture = Awaited<ReturnType<typeof seedTwoStores>>;
 
@@ -81,4 +89,20 @@ export function storeProfileFixture() {
       holderDocument: "52998224725",
     },
   };
+}
+
+/**
+ * Marca como repassado ao lojista o lançamento do Ledger da intenção (o que o lote pago do
+ * Ticket 14 fará): base do "Estorno depois do repasse" (débito compensado, Ticket 12).
+ */
+export async function markLedgerPaidOut(d1: D1Database, intentId: string, paidOutAt: string) {
+  const db = drizzle(d1);
+  const [entry] = await db
+    .select({ id: ledgerEntries.id, storeId: ledgerEntries.storeId })
+    .from(ledgerEntries)
+    .where(eq(ledgerEntries.intentId, intentId));
+  if (!entry) throw new Error("lançamento esperado no Ledger");
+  await db
+    .insert(ledgerEntryPayouts)
+    .values({ ledgerEntryId: entry.id, storeId: entry.storeId, paidOutAt });
 }

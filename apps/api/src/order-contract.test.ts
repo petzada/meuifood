@@ -105,9 +105,18 @@ function fakeService(who: "anon" | "ops" | "owner" | "operator", writes: Writes 
         list: async () => ({ orders: [], closedToday: { completed: 0, cancelled: 0 } }),
         get: async () => null,
         advance: write("advance", { ok: true, data: transitioned }),
+        // Ticket 12: Pagamento na entrega (sem Estorno).
         cancel: write("cancel", {
           ok: true,
-          data: { ...transitioned, status: "cancelled", printOnAccept: false },
+          data: {
+            fulfillment: "pickup",
+            paymentMethod: "on_delivery",
+            paymentStatus: "not_required",
+            totalCents: 1000,
+            serviceFeeCents: 0,
+            cancelledAt: "2026-11-05T12:00:00.000Z",
+            refund: null,
+          },
         }),
       }),
       operation: () => ({
@@ -193,7 +202,16 @@ describe("RPCs de Pedido e configuração (contrato)", () => {
     });
     await expect(
       service.ordersCancel(caller, { orderId: ORDER_ID, from: "received" }),
-    ).resolves.toEqual({ ok: true, data: { status: "cancelled", next: [], print: false } });
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        status: "cancelled",
+        next: [],
+        print: false,
+        reason: null,
+        consequence: { kind: "on_delivery" },
+      },
+    });
     await expect(service.storeSetPause(caller, { paused: true })).resolves.toEqual({
       ok: true,
       data: { paused: false },

@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 // Fronteira do D1 (ADR 0006): fora de packages/db ninguém toca o D1 cru nem o Drizzle.
 // Os apps recebem um FoodeDb por `createFoodeDb(env.DB)` (e o adapter do Better Auth por
 // `createAuthDatabase(env.DB)`) e só operam com contexto de
-// Loja/Ops emitido pelo pacote. Testes podem semear a fixture com `seedTwoStores(env.DB)`.
+// Loja/Ops emitido pelo pacote. Testes podem semear a fixture com `seedTwoStores(env.DB)` (e `markLedgerPaidOut(env.DB, …)`).
 const D1_BOUNDARY_MESSAGE =
   "Acesso direto ao D1 é proibido fora de packages/db: use createFoodeDb(env.DB) e as operações com contexto de Loja (ADR 0006).";
 
@@ -19,7 +19,7 @@ const d1BoundaryImports = {
 const d1BoundarySyntax = [
   {
     selector:
-      "MemberExpression[property.name='DB']:not(CallExpression[callee.name=/^(createFoodeDb|createAuthDatabase|seedTwoStores|applyD1Migrations)$/] > MemberExpression)",
+      "MemberExpression[property.name='DB']:not(CallExpression[callee.name=/^(createFoodeDb|createAuthDatabase|seedTwoStores|markLedgerPaidOut|applyD1Migrations)$/] > MemberExpression)",
     message: D1_BOUNDARY_MESSAGE,
   },
   {

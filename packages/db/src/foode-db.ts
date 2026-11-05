@@ -34,6 +34,7 @@ import {
 } from "./ops-db";
 import { createCardPaymentOps } from "./card-payment-db";
 import { createPaymentOps } from "./payment-db";
+import { createRefundOps } from "./refund-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
 import {
@@ -342,6 +343,13 @@ export function createFoodeDb(d1: D1Database) {
      */
     cardPayments: createCardPaymentOps(d1),
 
+    /**
+     * Estorno (Ticket 12): execução idempotente da obrigação gravada no cancelamento, webhooks de
+     * Estorno, retentativa e o cancelamento automático do PIX vencido. Sem StoreContext: a Loja
+     * sai da obrigação/intenção gravada. O cancelamento pelo Painel é `store(ctx).orders().cancel`.
+     */
+    refunds: createRefundOps(d1),
+
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {
       async storeContext(input: { userId: string; storeId: string }): Promise<StoreContext | null> {
@@ -443,7 +451,7 @@ export function createFoodeDb(d1: D1Database) {
         /** Configuração operacional (Ticket 24a): Pausa (Dono e Operador); o resto só Dono. */
         operation: () => createOperationOps(d1, context),
 
-        /** Pedidos no Painel (Ticket 24a/24b): fila, detalhe, avanço e cancelamento sem Estorno. */
+        /** Pedidos no Painel (Ticket 24a/24b): fila, detalhe, avanço e cancelamento (Ticket 12). */
         orders: () => createOrderOps(d1, context),
 
         /** Onboarding, dados, vitrine, Slug, Pixel e funil (Ticket 28): escrita só do Dono. */
