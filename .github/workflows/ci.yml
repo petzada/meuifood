@@ -1,5 +1,5 @@
 name: CI
-# PR e push na master: lint, typecheck, testes sem banco, testes com D1 (workerd, só
+# PR e push na master: lint, typecheck, testes sem banco (com cobertura), testes com D1 (workerd, só
 # aqui), build (OpenNext + bundle da api) e prova das migrations num D1 remoto efêmero
 # (criado, aplicado e apagado nesta run). Nada aqui toca o D1 de produção.
 # Repositório público: CI completo sempre (sem modo econômico de draft).
@@ -37,8 +37,10 @@ jobs:
         run: pnpm --filter @foode/db migrations:check
       - name: Typecheck
         run: pnpm typecheck
-      - name: Testes sem banco
-        run: pnpm test
+      # Inclui os testes de componente (happy-dom) e exige 80% de linhas em
+      # packages/shared e packages/db (decisão 67; limiar no vitest.config.ts).
+      - name: Testes sem banco + cobertura
+        run: pnpm test:coverage
 
   testes-d1:
     runs-on: ubuntu-24.04

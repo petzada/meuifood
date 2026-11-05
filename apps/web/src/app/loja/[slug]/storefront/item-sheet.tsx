@@ -115,6 +115,9 @@ function ComplementGroupFieldset({
         {options.map((option) => {
           const checked = selectedIds.includes(option.id);
           const blocked = !checked && group.maxSelect > 1 && status.atMax;
+          // Radio marcado não dispara `change` ao ser tocado de novo: no grupo opcional de
+          // escolha única o clique é quem desmarca (toggleOption devolve []).
+          const uncheckOnClick = checked && group.maxSelect === 1 && group.minSelect === 0;
           return (
             <Control
               checked={checked}
@@ -122,6 +125,7 @@ function ComplementGroupFieldset({
               key={option.id}
               name={`${itemId}-${group.id}`}
               onChange={() => onToggle(option.id)}
+              onClick={uncheckOnClick ? () => onToggle(option.id) : undefined}
               trailing={option.priceCents > 0 ? `+ ${formatBRL(option.priceCents)}` : undefined}
               value={option.id}
             >
