@@ -153,6 +153,24 @@ body {
   }
 }
 
+/* Impressão do relatório (Ticket 14, decisão 64): só o conteúdo de `/relatorios`, em A4, sem a
+   moldura do Painel (menu, status da Loja, banner, rodapé) nem os controles da tela. */
+@media print {
+  body.foode-print-report aside,
+  body.foode-print-report .foode-print-hide {
+    display: none !important;
+  }
+  body.foode-print-report .md\:grid-cols-\[248px_1fr\] {
+    display: block;
+  }
+  body.foode-print-report main {
+    padding: 0;
+  }
+  body.foode-print-report .foode-print-break {
+    break-inside: avoid;
+  }
+}
+
 /* Transição curta entre passos do tour/diálogos (desligada com reduced-motion). */
 .foode-step-in {
   animation: foode-step-in 200ms ease-out;

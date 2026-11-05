@@ -7,6 +7,10 @@
 // leem daqui; nada mais precisa mudar.
 import { can, type Permission, type Role, type SessionCtx } from "@foode/shared/auth";
 
+/** Grupos do menu do Dono (NAV-02): no máximo 3 grupos e 8 itens. */
+export const NAV_GROUPS = ["Operação", "Loja", "Financeiro"] as const;
+export type NavGroup = (typeof NAV_GROUPS)[number];
+
 export type RouteRule = {
   /** Prefixo da URL (`/` casa só a raiz). */
   prefix: string;
@@ -14,20 +18,26 @@ export type RouteRule = {
   permission: Permission | null;
   /** Rótulo na navegação; ausente = rota sem entrada no menu. */
   label?: string;
+  /** Grupo no menu do Dono (NAV-02); ausente = menu sem grupos (Ops, Operador). */
+  group?: NavGroup;
 };
 
 export const ROUTES: readonly RouteRule[] = [
-  { prefix: "/", permission: "orders.view", label: "Pedidos" },
-  { prefix: "/cardapio", permission: "store.menu", label: "Cardápio" },
+  { prefix: "/", permission: "orders.view", label: "Pedidos", group: "Operação" },
+  { prefix: "/cardapio", permission: "store.menu", label: "Cardápio", group: "Loja" },
   // Cupons (Ticket 13, NAV-01): só o Dono, sob `store.settings`.
-  { prefix: "/cupons", permission: "store.settings", label: "Cupons" },
-  { prefix: "/configuracoes", permission: "store.settings", label: "Configurações" },
-  { prefix: "/equipe", permission: "store.members", label: "Equipe" },
-  // Plano do Dono (decisão 72): só leitura, aberto pelo banner da sidebar (sem item no menu até o
-  // Ticket 14 montar o grupo Financeiro).
-  { prefix: "/plano", permission: "store.settings" },
+  { prefix: "/cupons", permission: "store.settings", label: "Cupons", group: "Loja" },
+  { prefix: "/configuracoes", permission: "store.settings", label: "Configurações", group: "Loja" },
+  { prefix: "/equipe", permission: "store.members", label: "Equipe", group: "Loja" },
+  // Grupo Financeiro (Ticket 14; NAV-01/NAV-02; REL-01..04): só o Dono, sob `store.finance`.
+  // O Operador não vê o grupo nem chega às rotas (matriz de papéis em `@foode/shared/auth`).
+  { prefix: "/relatorios", permission: "store.finance", label: "Relatórios", group: "Financeiro" },
+  { prefix: "/repasses", permission: "store.finance", label: "Repasses", group: "Financeiro" },
+  { prefix: "/plano", permission: "store.finance", label: "Plano", group: "Financeiro" },
   // Área Ops (OPS-01): menu próprio, uma linha por área, todas sob `ops.area`.
   { prefix: "/ops", permission: "ops.area", label: "Lojas" },
+  { prefix: "/ops/repasses", permission: "ops.area", label: "Repasses de hoje" },
+  { prefix: "/ops/margem", permission: "ops.area", label: "Margem" },
   { prefix: "/ops/faixas", permission: "ops.area", label: "Faixas" },
   { prefix: "/ops/taxas", permission: "ops.area", label: "Taxas Foode" },
   { prefix: "/ops/custos", permission: "ops.area", label: "Custos dos provedores" },
@@ -36,6 +46,11 @@ export const ROUTES: readonly RouteRule[] = [
   { prefix: "/ops/leads", permission: "ops.area", label: "Leads" },
   { prefix: "/selecionar-loja", permission: null },
 ];
+
+/** Rotas do grupo Financeiro (só o Dono): usadas pelos testes da matriz de papéis. */
+export const FINANCE_ROUTES = ROUTES.filter((rule) => rule.group === "Financeiro").map(
+  (rule) => rule.prefix,
+);
 
 /** Header interno que o middleware grava com o caminho da request (layouts não veem a URL). */
 export const PATHNAME_HEADER = "x-foode-pathname";
@@ -85,14 +100,32 @@ export function matchRoute(pathname: string): RouteRule | undefined {
   return best;
 }
 
-export type NavItem = { href: string; label: string };
+export type NavItem = { href: string; label: string; group?: NavGroup };
 
 /** Entradas da navegação visíveis para o papel (mesma política do middleware). */
 export function navFor(role: Role): NavItem[] {
   return ROUTES.filter(
     (rule): rule is RouteRule & { label: string } =>
       typeof rule.label === "string" && rule.permission !== null && can(role, rule.permission),
-  ).map(({ prefix, label }) => ({ href: prefix, label }));
+  ).map(({ prefix, label, group }) => ({ href: prefix, label, ...(group ? { group } : {}) }));
+}
+
+export type NavSection = { group: NavGroup | null; items: NavItem[] };
+
+/**
+ * Menu agrupado (NAV-02): seções na ordem de `NAV_GROUPS`, só as que têm item para o papel; itens
+ * sem grupo (Ops) ficam numa seção única sem título. Com uma só seção o menu não mostra títulos.
+ */
+export function navSectionsFor(role: Role): NavSection[] {
+  const items = navFor(role);
+  const sections: NavSection[] = [];
+  for (const group of NAV_GROUPS) {
+    const own = items.filter((item) => item.group === group);
+    if (own.length > 0) sections.push({ group, items: own });
+  }
+  const ungrouped = items.filter((item) => !item.group);
+  if (ungrouped.length > 0) sections.push({ group: null, items: ungrouped });
+  return sections;
 }
 
 function loginRedirect(pathname: string, search: string): string {

@@ -33,6 +33,7 @@ export type SessionCtx = {
 export type Permission =
   | "ops.area"
   | "store.settings"
+  | "store.finance"
   | "store.members"
   | "store.menu"
   | "store.pause"

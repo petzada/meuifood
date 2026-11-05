@@ -182,6 +182,8 @@ export {
   ORDER_STREET_MAX,
   PAUSE_ROLES,
   PAYMENT_PROVIDERS,
+  PAYOUT_ITEM_KINDS,
+  PAYOUT_SOURCE_ACCOUNTS,
   PHONE_LOOKUP_RESULTS,
   PIX_KEY_TYPES,
   PLATFORM_ROLES,
@@ -219,6 +221,25 @@ export {
   type LedgerRetentionInput,
   type RecordCardChargeInput,
 } from "./card-payment-db";
+export {
+  type MarginStoreRow,
+  type MarkPayoutPaidData,
+  type MarkPayoutPaidOutcome,
+  type OpsPayoutOps,
+  type OwnerPayoutLineRow,
+  PAYOUT_AUDIT_ACTIONS,
+  type PayoutAdjustmentData,
+  type PayoutBatchRowView,
+  type PayoutStoreRow,
+  type PendingPayoutItem,
+  type StorePayoutOps,
+} from "./payout-db";
+export {
+  type ReportOps,
+  type ReportQuery,
+  type ReportRows,
+  type ReportUtcRange,
+} from "./report-db";
 export {
   type AbandonedCard,
   type CancelOrderDbData,

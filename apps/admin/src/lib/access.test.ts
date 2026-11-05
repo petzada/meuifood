@@ -1,7 +1,15 @@
 import type { SessionCtx } from "@foode/shared/auth";
 import { describe, expect, it } from "vitest";
 
-import { decideAccess, isCurrentNav, navFor, resolveRole, safeNext } from "./access";
+import {
+  decideAccess,
+  FINANCE_ROUTES,
+  isCurrentNav,
+  navFor,
+  navSectionsFor,
+  resolveRole,
+  safeNext,
+} from "./access";
 
 const store = (role: "owner" | "operator", id = "loja-1"): SessionCtx["stores"][number] => ({
   id,
@@ -103,6 +111,8 @@ describe("resolveRole e navegação", () => {
     expect(navFor("operator").map((item) => item.label)).toEqual(["Pedidos"]);
     expect(navFor("foode_ops").map((item) => item.href)).toEqual([
       "/ops",
+      "/ops/repasses",
+      "/ops/margem",
       "/ops/faixas",
       "/ops/taxas",
       "/ops/custos",
@@ -115,7 +125,34 @@ describe("resolveRole e navegação", () => {
       "Cupons",
       "Configurações",
       "Equipe",
+      "Relatórios",
+      "Repasses",
+      "Plano",
     ]);
+  });
+
+  it("grupo Financeiro (NAV-02): só o Dono vê e acessa; Operador e Ops são negados", () => {
+    expect(FINANCE_ROUTES).toEqual(["/relatorios", "/repasses", "/plano"]);
+    expect(navSectionsFor("owner").map((section) => section.group)).toEqual([
+      "Operação",
+      "Loja",
+      "Financeiro",
+    ]);
+    expect(
+      navSectionsFor("owner")
+        .find((section) => section.group === "Financeiro")
+        ?.items.map((item) => item.label),
+    ).toEqual(["Relatórios", "Repasses", "Plano"]);
+    expect(navSectionsFor("operator")).toEqual([
+      { group: "Operação", items: [{ href: "/", label: "Pedidos", group: "Operação" }] },
+    ]);
+    expect(navSectionsFor("foode_ops")).toHaveLength(1);
+    expect(navSectionsFor("foode_ops")[0]?.group).toBeNull();
+    for (const route of FINANCE_ROUTES) {
+      expect(decideAccess(route, "", owner)).toBeNull();
+      expect(decideAccess(route, "", operator)).toBe("/");
+      expect(decideAccess(route, "", ops)).toBe("/ops");
+    }
   });
 });
 
