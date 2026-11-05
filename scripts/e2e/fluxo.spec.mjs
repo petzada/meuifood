@@ -146,7 +146,10 @@ test("Pedido chega na fila, detalhe com troco, impressão e cancelamento", async
     timeout: 45_000,
   });
 
-  await received.getByRole("button", { name: `Abrir detalhe do Pedido #${orderCode}` }).click();
+  await received
+    .getByRole("button", { name: new RegExp(`^#${orderCode}(?!\\d)`, "u") })
+    .first()
+    .click();
   const payment = page.getByRole("region", { name: "Pagamento" });
   await expect(payment).toContainText(`${CHANGE_FOR},00`);
 
