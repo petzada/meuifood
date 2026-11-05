@@ -55,7 +55,18 @@ function authRequest(path: string, body: unknown): Request {
   });
 }
 
-async function loginAs(user: { id: string; email: string }): Promise<PainelCaller> {
+// Cada login redefine a senha (token de definir senha) e o reset revoga as sessões abertas do
+// usuário: o login é feito uma vez por usuário e reaproveitado.
+const callers = new Map<string, Promise<PainelCaller>>();
+function loginAs(user: { id: string; email: string }): Promise<PainelCaller> {
+  const cached = callers.get(user.id);
+  if (cached) return cached;
+  const created = freshLogin(user);
+  callers.set(user.id, created);
+  return created;
+}
+
+async function freshLogin(user: { id: string; email: string }): Promise<PainelCaller> {
   const token = await auth.createSetPasswordToken(user.id, INVITE_TOKEN_TTL_SECONDS);
   const reset = await auth.handler(
     authRequest("/reset-password", { token, newPassword: PASSWORD }),
