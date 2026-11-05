@@ -56,7 +56,7 @@ async function addBurgerToCart(page) {
     .click();
   const sheet = page.getByRole("dialog", { name: burger.name });
   await sheet.getByRole("button", { name: /^Adicionar · /u }).click();
-  await expect(page.getByRole("button", { name: /Ver carrinho/u })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Ver carrinhos*d+ ite/u })).toBeVisible();
 }
 
 test("fila do Operador: carregando, erro e vazia (T-04)", async () => {
