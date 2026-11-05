@@ -13,6 +13,7 @@
     "@foode/db": "workspace:*",
     "@foode/shared": "workspace:*",
     "@sentry/cloudflare": "^10.78.0",
+    "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.17",
     "hono": "^4.13.16"
   },

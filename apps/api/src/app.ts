@@ -39,6 +39,18 @@ export function createApp() {
     if (!store) return c.json({ error: "store_not_found" }, 404);
     return c.json(store);
   });
+
+  // Cardápio público (Ticket 23). CONTRATO: 200 = `publicMenuSchema` de @foode/shared/menu
+  // (só categorias disponíveis, itens com `available`, opções com `priceCents`, até 4 `featured`;
+  // `imageUrl` = R2_PUBLIC_BASE_URL + chave). A Loja sai SÓ do Slug da URL, nunca de `store_id`
+  // do navegador. 404 `store_not_found` para Slug inexistente ou Loja fora de `active`.
+  // A fatia API do 23 troca o 501 pela leitura em @foode/db.
+  storefront.get("/lojas/:slug/cardapio", (c) => c.json({ error: "not_implemented" }, 501));
+
+  // Recálculo do carrinho no servidor (Ticket 23). CONTRATO: corpo `cartQuoteRequestSchema`
+  // (400 `invalid_input`), 200 = `cartQuoteResponseSchema` (= `cartSubtotalCents` sobre o
+  // Cardápio da Loja do Slug). Preço nunca vem do navegador.
+  storefront.post("/lojas/:slug/carrinho", (c) => c.json({ error: "not_implemented" }, 501));
   app.route("/storefront", storefront);
 
   // `/webhooks/*`: rotas dos provedores (AbacatePay, Efí) entram nos Tickets 26 e 27.

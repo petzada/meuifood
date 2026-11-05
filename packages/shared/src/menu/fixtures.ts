@@ -39,8 +39,8 @@ export const burger: MenuItem = {
       minSelect: 1,
       name: "Ponto da carne",
       options: [
-        { id: ids.optionSteakRare, name: "Mal passado" },
-        { id: ids.optionSteakMedium, name: "Ao ponto" },
+        { id: ids.optionSteakRare, name: "Mal passado", priceCents: 0 },
+        { id: ids.optionSteakMedium, name: "Ao ponto", priceCents: 0 },
       ],
     },
     {
@@ -49,8 +49,8 @@ export const burger: MenuItem = {
       minSelect: 0,
       name: "Pão",
       options: [
-        { id: ids.optionBreadBrioche, name: "Brioche" },
-        { id: ids.optionBreadWhole, name: "Integral" },
+        { id: ids.optionBreadBrioche, name: "Brioche", priceCents: 250 },
+        { id: ids.optionBreadWhole, name: "Integral", priceCents: 0 },
       ],
     },
     {
@@ -59,13 +59,14 @@ export const burger: MenuItem = {
       minSelect: 0,
       name: "Molhos",
       options: [
-        { id: ids.optionSauceBbq, name: "Barbecue" },
-        { id: ids.optionSauceMayo, name: "Maionese" },
-        { id: ids.optionSauceMustard, name: "Mostarda" },
+        { id: ids.optionSauceBbq, name: "Barbecue", priceCents: 150 },
+        { id: ids.optionSauceMayo, name: "Maionese", priceCents: 0 },
+        { id: ids.optionSauceMustard, name: "Mostarda", priceCents: 0 },
       ],
     },
   ],
   description: "Pão, carne 160g e queijo.",
+  featured: true,
   id: ids.burger,
   imageUrl: "https://img.example.com/stores/1/menu/burger.webp",
   name: "X-Burger",
@@ -77,6 +78,7 @@ export const soda: MenuItem = {
   available: true,
   complementGroups: [],
   description: "",
+  featured: false,
   id: ids.soda,
   imageUrl: null,
   name: "Refrigerante lata",

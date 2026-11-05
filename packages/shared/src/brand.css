@@ -2,6 +2,10 @@
   --color-primary: #f35050;
   --color-primary-active: #e04545;
   --color-primary-soft: #ffe8e8;
+  /* P-DS-1 (decisão 63): fills com texto e links. #d63a3a × branco = 4,64:1 (AA). O
+     --color-primary (#f35050, 3,4:1) segue em bordas, ícones, foco e marca. */
+  --color-primary-strong: #d63a3a;
+  --color-primary-strong-active: #b92f2f;
   --color-accent: #ffb800;
   --color-on-primary: #ffffff;
   --color-canvas: #ffffff;

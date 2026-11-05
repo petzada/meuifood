@@ -19,6 +19,10 @@ export {
 } from "./foode-db";
 export {
   MEMBERSHIP_ROLES,
+  MENU_DESCRIPTION_MAX,
+  MENU_MAX_CENTS,
+  MENU_MAX_OPTIONS,
+  MENU_NAME_MAX,
   type MembershipRole,
   PLATFORM_ROLES,
   type PlatformRole,

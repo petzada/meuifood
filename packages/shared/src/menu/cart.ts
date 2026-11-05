@@ -1,5 +1,6 @@
 // Carrinho do Consumidor sobre o contrato público do Cardápio. Puro: valida a seleção de
-// Complementos (min/max por grupo) e Adicionais e calcula o subtotal em centavos inteiros.
+// Complementos (min/max por grupo) e Adicionais e calcula o subtotal em centavos inteiros,
+// somando o preço das opções de Complemento escolhidas (decisão 63, P-1.1).
 // Não é autoridade de preço: a `api` recalcula no Pedido com o mesmo módulo.
 import { z } from "zod";
 
@@ -16,10 +17,23 @@ export const cartLineSchema = z.object({
   quantity: z.number().int().min(1).max(MAX_LINE_QUANTITY),
 });
 
+/** Teto de linhas num carrinho (protege o recálculo no servidor). */
+export const MAX_CART_LINES = 50;
+
 export const cartSchema = z.object({
-  lines: z.array(cartLineSchema),
+  lines: z.array(cartLineSchema).max(MAX_CART_LINES),
   storeSlug: storeSlugSchema,
 });
+
+/**
+ * Corpo de `POST /storefront/lojas/:slug/carrinho` (recálculo no servidor). A Loja vem do Slug
+ * na URL; o corpo não carrega `store_id` nem preço — só ids e quantidades.
+ */
+export const cartQuoteRequestSchema = z.object({
+  lines: z.array(cartLineSchema).min(1).max(MAX_CART_LINES),
+});
+
+export type CartQuoteRequest = z.infer<typeof cartQuoteRequestSchema>;
 
 export type CartLine = z.infer<typeof cartLineSchema>;
 export type Cart = z.infer<typeof cartSchema>;
@@ -132,15 +146,32 @@ export function validateCartLine(
   return { ok: true };
 }
 
-/** Preço unitário da linha (item + Adicionais), em centavos. Pressupõe linha válida. */
-export function lineUnitCents(item: MenuItem, line: Pick<CartLine, "additionalIds">): number {
+/**
+ * Preço unitário da linha em centavos: item + opções de Complemento escolhidas (P-1.1, padrão 0)
+ * + Adicionais. Pressupõe linha válida (`validateCartLine`); escolha que não pertence ao item é
+ * erro de programação e lança.
+ */
+export function lineUnitCents(
+  item: MenuItem,
+  line: Pick<CartLine, "additionalIds" | "complementSelections">,
+): number {
+  const optionsCents: number[] = [];
+  for (const [groupId, optionIds] of Object.entries(line.complementSelections)) {
+    const group = item.complementGroups.find((candidate) => candidate.id === groupId);
+    if (!group) throw new Error(`cart: grupo ${groupId} não pertence ao item ${item.id}`);
+    for (const optionId of optionIds) {
+      const option = group.options.find((candidate) => candidate.id === optionId);
+      if (!option) throw new Error(`cart: opção ${optionId} não pertence ao grupo ${groupId}`);
+      optionsCents.push(option.priceCents);
+    }
+  }
   const additionalsCents = line.additionalIds.map((additionalId) => {
     const additional = item.additionals.find((candidate) => candidate.id === additionalId);
     if (!additional)
       throw new Error(`cart: adicional ${additionalId} não pertence ao item ${item.id}`);
     return additional.priceCents;
   });
-  return sumCents([item.priceCents, ...additionalsCents]);
+  return sumCents([item.priceCents, ...optionsCents, ...additionalsCents]);
 }
 
 /** Subtotal da linha, ou `null` se a linha não passa na validação. */
@@ -156,6 +187,38 @@ export function lineSubtotalCents(
 export type CartSubtotal =
   | { ok: true; subtotalCents: number; lines: Array<{ itemId: string; subtotalCents: number }> }
   | { error: CartLineError; lineIndex: number; ok: false };
+
+const cartLineErrorCodes = [
+  "additional_unavailable",
+  "complement_duplicate_option",
+  "complement_too_few",
+  "complement_too_many",
+  "invalid_additional",
+  "invalid_complement_group",
+  "invalid_complement_option",
+  "item_not_found",
+  "item_unavailable",
+  "quantity_invalid",
+] as const satisfies readonly CartLineErrorCode[];
+
+/**
+ * Resposta do recálculo no servidor (= `CartSubtotal`). O Storefront parseia e, se `ok: false`,
+ * marca a linha `lineIndex` com `cartLineErrorMessagePt[error.code]` (K4).
+ */
+const subtotalSchema = z.number().int().min(0);
+
+export const cartQuoteResponseSchema = z.discriminatedUnion("ok", [
+  z.object({
+    lines: z.array(z.object({ itemId: menuIdSchema, subtotalCents: subtotalSchema })),
+    ok: z.literal(true),
+    subtotalCents: subtotalSchema,
+  }),
+  z.object({
+    error: z.looseObject({ code: z.enum(cartLineErrorCodes) }),
+    lineIndex: z.number().int().min(0),
+    ok: z.literal(false),
+  }),
+]);
 
 /** Subtotal do carrinho inteiro; para na primeira linha inválida e diz qual. */
 export function cartSubtotalCents(

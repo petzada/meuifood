@@ -14,9 +14,20 @@ export const menuNameSchema = z.string().trim().min(1).max(120);
 export const MAX_COMPLEMENT_OPTIONS = 40;
 export const MAX_ADDITIONALS_PER_ITEM = 40;
 
+/** Destaques do topo do Storefront: até 4 itens por Loja (decisão 63, P-5.5). */
+export const MAX_FEATURED_ITEMS = 4;
+
+/** Descrição do item no Cardápio (mesmo teto do CHECK no D1). */
+export const menuDescriptionSchema = z.string().trim().max(600);
+
+/**
+ * Opção de Complemento. `priceCents` é opcional na escrita e vale 0 por padrão (decisão 63,
+ * P-1.1): "Borda Catupiry +R$ 9,90" soma ao preço da linha; opção sem preço não muda nada.
+ */
 export const complementOptionSchema = z.object({
   id: menuIdSchema,
   name: menuNameSchema,
+  priceCents: centsSchema.default(0),
 });
 
 export const complementGroupSchema = z
@@ -62,7 +73,9 @@ export const menuItemSchema = z
     additionals: z.array(additionalSchema).max(MAX_ADDITIONALS_PER_ITEM),
     available: z.boolean(),
     complementGroups: z.array(complementGroupSchema),
-    description: z.string().trim().max(600),
+    description: menuDescriptionSchema,
+    /** Destaque (P-5.5): aparece no carrossel do topo; no máximo MAX_FEATURED_ITEMS por Loja. */
+    featured: z.boolean(),
     id: menuIdSchema,
     imageUrl: z.string().url().nullable(),
     name: menuNameSchema,
@@ -89,6 +102,7 @@ export const menuItemSchema = z
     }
   });
 
+/** Categoria pública: a `api` só emite categorias disponíveis, na ordem do Dono (`position`). */
 export const menuCategorySchema = z.object({
   id: menuIdSchema,
   items: z.array(menuItemSchema),
@@ -107,11 +121,24 @@ export const storeSlugSchema = z
  * Cardápio público de uma Loja, resolvido pelo Slug (nunca por `store_id` do navegador).
  * Operação (aberto/fechado) e Delivery têm contratos próprios nos Tickets 24/26.
  */
-export const publicMenuSchema = z.object({
-  categories: z.array(menuCategorySchema),
-  name: menuNameSchema,
-  slug: storeSlugSchema,
-});
+export const publicMenuSchema = z
+  .object({
+    categories: z.array(menuCategorySchema),
+    name: menuNameSchema,
+    slug: storeSlugSchema,
+  })
+  .superRefine((menu, ctx) => {
+    const featured = menu.categories.flatMap((category) =>
+      category.items.filter((item) => item.featured),
+    );
+    if (featured.length > MAX_FEATURED_ITEMS) {
+      ctx.addIssue({
+        code: "custom",
+        message: `no máximo ${MAX_FEATURED_ITEMS} itens em destaque`,
+        path: ["categories"],
+      });
+    }
+  });
 
 export type ComplementOption = z.infer<typeof complementOptionSchema>;
 export type ComplementGroup = z.infer<typeof complementGroupSchema>;
