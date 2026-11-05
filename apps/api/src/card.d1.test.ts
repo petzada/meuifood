@@ -70,6 +70,8 @@ let pixCharges: Map<string, { amount: number; intentId: string }>;
 /** Histórico de cada token de notificação da Efí. */
 let efiHistory: Map<string, unknown[]>;
 const realFetch = globalThis.fetch;
+/** `charge_id` da Efí fake: nunca reiniciado entre testes (dados únicos por teste). */
+let efiChargeSeq = 900_000 + Math.floor(Math.random() * 1_000_000) * 100;
 
 function randomIp(): string {
   const octet = () => Math.floor(Math.random() * 250) + 1;
@@ -148,7 +150,10 @@ async function fakeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
       items: { value: number }[];
       metadata: { custom_id: string; notification_url: string };
     };
-    const chargeId = 900_000 + efiCharges.size + 1;
+    // Único no arquivo inteiro: o D1 do workerd é compartilhado entre os testes e
+    // `payment_intents (provider, provider_charge_id)` é UNIQUE.
+    efiChargeSeq += 1;
+    const chargeId = efiChargeSeq;
     const amount = body.items[0]!.value;
     efiCharges.set(chargeId, {
       amount,
@@ -171,6 +176,16 @@ async function fakeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   if (url.startsWith(`${EFI_BASE}/v1/notification/`)) {
     const token = decodeURIComponent(url.slice(`${EFI_BASE}/v1/notification/`.length));
     return json({ code: 200, data: efiHistory.get(token) ?? [] });
+  }
+  if (url.startsWith("https://api.abacatepay.com/v2/transparents/get")) {
+    // Consulta autenticada da página do Pedido: segue em análise até o webhook.
+    const id = new URL(url).searchParams.get("id") ?? "";
+    const charge = abacateCharges.get(id);
+    return json({
+      success: true,
+      error: null,
+      data: { id, amount: charge?.amount ?? 0, status: "PENDING", devMode: true, metadata: {} },
+    });
   }
   if (url === "https://api.abacatepay.com/v2/transparents/create") {
     const body = JSON.parse(String(init?.body)) as {
