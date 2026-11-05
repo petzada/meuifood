@@ -19,6 +19,11 @@ export type CardFormValues = {
   expiry: string;
   cvv: string;
   cpf: string;
+  /**
+   * CPF da conta do Consumidor (decisão 65): o servidor usa o da sessão e o navegador nunca vê o
+   * número inteiro. Só com `accountCpfAvailable(...)`; "Usar outro CPF" volta ao digitado.
+   */
+  useAccountCpf: boolean;
   email: string;
   /** `YYYY-MM-DD` (input type="date"); só na Efí. */
   birthDate: string;
@@ -32,9 +37,30 @@ export const emptyCardForm: CardFormValues = {
   expiry: "",
   holderName: "",
   number: "",
+  useAccountCpf: false,
 };
 
-export type CardField = keyof CardFormValues;
+/** Campos digitáveis do formulário (o `useAccountCpf` é um estado, não um campo). */
+export type CardField = Exclude<keyof CardFormValues, "useAccountCpf">;
+
+/**
+ * O CPF da conta só serve quando o SDK não precisa do número no navegador: na Efí o
+ * `holderDocument` é opcional; na AbacatePay o `taxId` vai ao iframe do provedor na tokenização.
+ */
+export function accountCpfAvailable(
+  sdk: CardTokenizerSdk,
+  cpfMasked: string | null | undefined,
+): boolean {
+  return sdk === "efi" && typeof cpfMasked === "string" && cpfMasked.trim().length > 0;
+}
+
+/** Formulário inicial: CPF da conta pré-escolhido quando disponível (decisão 65). */
+export function initialCardForm(
+  sdk: CardTokenizerSdk | null | undefined,
+  cpfMasked: string | null | undefined,
+): CardFormValues {
+  return { ...emptyCardForm, useAccountCpf: !!sdk && accountCpfAvailable(sdk, cpfMasked) };
+}
 
 /** Ordem visual (foco na primeira pendência). */
 export const CARD_FIELDS: readonly CardField[] = [
@@ -194,7 +220,9 @@ export function validateCardForm(
     if (cardDigits(values.cvv).length !== cvvLengthFor(brand)) errors.cvv = CARD_FORM_MESSAGES.cvv;
   }
 
-  if (!cardDigits(values.cpf)) errors.cpf = CARD_FORM_MESSAGES.cpf;
+  if (values.useAccountCpf) {
+    // CPF da conta: o servidor resolve pela sessão; nada a conferir aqui.
+  } else if (!cardDigits(values.cpf)) errors.cpf = CARD_FORM_MESSAGES.cpf;
   else if (!payerCpfSchema.safeParse(values.cpf).success)
     errors.cpf = CARD_FORM_MESSAGES.cpfInvalid;
 
@@ -225,25 +253,28 @@ export type CardTokenized = {
 
 /**
  * Corpo do Cartão no contrato: SÓ o token e os dados do pagador. Número, validade e CVV não têm
- * caminho até aqui (os objetos do contrato são estritos e recusariam).
+ * caminho até aqui (os objetos do contrato são estritos e recusariam). Com o CPF da conta vai
+ * `useAccountCpf: true` e nenhum `cpf` (o servidor usa o da sessão).
  */
 export function buildCardPaymentInput(
   sdk: CardTokenizerSdk,
   tokenized: CardTokenized,
-  values: Pick<CardFormValues, "birthDate" | "cpf" | "email">,
+  values: Pick<CardFormValues, "birthDate" | "cpf" | "email" | "useAccountCpf">,
 ): CardPaymentInputRaw {
   const display = { brand: tokenized.brand, lastFour: tokenized.lastFour };
-  const cpf = cardDigits(values.cpf);
   const email = values.email.trim().toLowerCase();
+  const cpf = values.useAccountCpf
+    ? { useAccountCpf: true as const }
+    : { cpf: cardDigits(values.cpf) };
   if (sdk === "efi") {
     return {
       sdk,
       paymentToken: tokenized.token,
-      payer: { birthDate: values.birthDate, cpf, email },
+      payer: { ...cpf, birthDate: values.birthDate, email },
       ...display,
     };
   }
-  return { sdk, token: tokenized.token, payer: { cpf, email }, ...display };
+  return { sdk, token: tokenized.token, payer: { ...cpf, email }, ...display };
 }
 
 /** "Visa final 4242", para o resumo e a página do Pedido. */

@@ -49,6 +49,7 @@ import { useStoreCart } from "../storefront/use-store-cart";
 import { CardFields, type CardFieldsHandle } from "./card-fields";
 import {
   CARD_FIELDS,
+  accountCpfAvailable,
   buildCardPaymentInput,
   firstCardError,
   type CardField,
@@ -104,6 +105,22 @@ export function fieldId(field: CheckoutField): string {
 
 export function cardFieldId(field: CardField): string {
   return `checkout-card-${field}`;
+}
+
+/** 422 `account_cpf_unavailable` (decisão 65): o formulário volta ao CPF digitável. */
+export const ACCOUNT_CPF_UNAVAILABLE_MESSAGE =
+  "Não encontramos o CPF da sua conta. Digite o CPF do titular do cartão.";
+
+/** CPF da conta pré-escolhido no Cartão (decisão 65) quando o SDK da Loja permite. */
+function withAccountCpf(
+  current: CheckoutForm,
+  signedIn: Pick<CustomerAccountView, "cpfMasked"> | null,
+  state: Pick<StorefrontStoreState, "cardTokenizer">,
+): CheckoutForm {
+  const sdk = state.cardTokenizer?.sdk ?? null;
+  const useAccountCpf = sdk !== null && accountCpfAvailable(sdk, signedIn?.cpfMasked ?? null);
+  if (current.card.useAccountCpf === useAccountCpf) return current;
+  return { ...current, card: { ...current.card, cpf: "", useAccountCpf } };
 }
 
 const QUOTE_DEBOUNCE_MS = 300;
@@ -209,6 +226,13 @@ export function Checkout({
   const [touched, setTouched] = useState<ReadonlySet<CheckoutField>>(() => new Set());
   const [cardTouched, setCardTouched] = useState<ReadonlySet<CardField>>(() => new Set());
   const cardFields = useRef<CardFieldsHandle>(null);
+  // Foco no CPF depois que o campo digitável volta a existir (422 `account_cpf_unavailable`).
+  const [focusCardCpf, setFocusCardCpf] = useState(false);
+  useEffect(() => {
+    if (!focusCardCpf) return;
+    document.getElementById(cardFieldId("cpf"))?.focus();
+    setFocusCardCpf(false);
+  }, [focusCardCpf]);
   const [showAll, setShowAll] = useState(false);
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -245,7 +269,7 @@ export function Checkout({
     if (!stored && !signedIn) return;
     if (stored) setRemembered(stored);
     const base = createCheckoutForm(state, stored);
-    setForm(signedIn ? applyAccount(base, signedIn, state) : base);
+    setForm(signedIn ? withAccountCpf(applyAccount(base, signedIn, state), signedIn, state) : base);
     setLookup({ status: "done" });
   }, [menu.slug, session, state]);
 
@@ -403,7 +427,7 @@ export function Checkout({
   // que está na tela (o Pedido segue como Guest).
   function handleSignedIn(signedIn: CustomerAccountView) {
     setAccount(signedIn);
-    setForm((current) => applyAccount(current, signedIn, state));
+    setForm((current) => withAccountCpf(applyAccount(current, signedIn, state), signedIn, state));
     setLookup({ status: "done" });
     setSubmitError(null);
   }
@@ -411,6 +435,7 @@ export function Checkout({
   async function signOut() {
     await accountApi.signOut();
     setAccount(null);
+    setForm((current) => withAccountCpf(current, null, state));
     setLookup({ status: "done" });
   }
 
@@ -540,6 +565,16 @@ export function Checkout({
       return;
     }
     if (!result.ok) {
+      if (result.error.code === "account_cpf_unavailable") {
+        // CPF da conta indisponível no servidor (sessão expirou ou conta sem CPF): volta ao campo
+        // digitável, com a mensagem, e tokeniza de novo na próxima tentativa (chave nova).
+        setForm((current) => ({ ...current, card: { ...current.card, useAccountCpf: false } }));
+        setCardTouched(new Set());
+        setIdempotencyKey(newIdempotencyKey());
+        setSubmitError(ACCOUNT_CPF_UNAVAILABLE_MESSAGE);
+        setFocusCardCpf(true);
+        return;
+      }
       if (result.error.code === "coupon_invalid") {
         // U4: o Cupom perdeu a validade entre aplicar e enviar. Sai do Pedido, a cotação mostra
         // o novo total e o Consumidor confirma de novo (corpo mudou = chave nova).
