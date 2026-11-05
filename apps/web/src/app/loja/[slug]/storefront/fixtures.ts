@@ -1,6 +1,7 @@
 // Fixture do Storefront nos testes do `web`: Cardápio válido pelo `publicMenuSchema`,
 // com destaque, grupos obrigatório/opcional, opção com preço (P-1.1) e item indisponível.
 import { publicMenuSchema, type MenuItem, type PublicMenu } from "@foode/shared/menu";
+import { storefrontStoreStateSchema, type StorefrontStoreState } from "@foode/shared/order";
 
 export function uuid(seed: string): string {
   const hex = seed.padEnd(8, "0").slice(0, 8);
@@ -102,3 +103,45 @@ export const publicMenu: PublicMenu = publicMenuSchema.parse({
   name: "Lanchonete do Zé",
   slug: "lanchonete-do-ze",
 } satisfies PublicMenu);
+
+// ---- Estado da Loja (Ticket 24a): aberta, com Delivery por bairro, Retirada e bandeiras.
+
+export const neighborhoodIds = {
+  centro: uuid("a1"),
+  jardim: uuid("a2"),
+} as const;
+
+export const storeState: StorefrontStoreState = storefrontStoreStateSchema.parse({
+  availability: { closesAt: "2026-11-05T02:00:00.000Z", state: "open" },
+  cardBrands: { credit: ["visa", "mastercard", "elo"], debit: ["visa", "mastercard"] },
+  delivery: {
+    eta: { maxMinutes: 60, minMinutes: 40 },
+    minimumOrderCents: 2000,
+    mode: "neighborhood",
+    neighborhoods: [
+      { feeCents: 500, id: neighborhoodIds.centro, name: "Centro" },
+      { feeCents: 800, id: neighborhoodIds.jardim, name: "Jardim América" },
+    ],
+  },
+  hours: [
+    { closesAt: "23:00", opensAt: "18:00", weekday: 1 },
+    { closesAt: "23:00", opensAt: "18:00", weekday: 4 },
+    { closesAt: "14:00", opensAt: "11:00", weekday: 5 },
+    { closesAt: "23:00", opensAt: "18:00", weekday: 5 },
+  ],
+  name: "Lanchonete do Zé",
+  paymentMethods: ["on_delivery"],
+  pickup: {
+    address: {
+      city: "São Paulo",
+      complement: null,
+      district: "Centro",
+      number: "100",
+      state: "SP",
+      street: "Rua das Flores",
+    },
+    eta: { maxMinutes: 20, minMinutes: 15 },
+  },
+  slug: "lanchonete-do-ze",
+  whatsapp: "5511987654321",
+} satisfies StorefrontStoreState);

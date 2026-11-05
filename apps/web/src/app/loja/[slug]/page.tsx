@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { getPublicMenu } from "../../../lib/storefront";
+import { getPublicMenu, getStoreState } from "../../../lib/storefront";
 import { Storefront } from "./storefront/storefront";
 
-// O Cardápio vem da api a cada request (binding `API`); nada é pré-renderizado.
+// O Cardápio e o estado da Loja vêm da api a cada request (binding `API`); nada é
+// pré-renderizado. Estado indisponível não derruba o Cardápio: a api recusa o Pedido fora do
+// horário na própria escrita.
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
@@ -22,13 +24,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function StorefrontPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const result = await getPublicMenu(slug);
+  const [result, state] = await Promise.all([getPublicMenu(slug), getStoreState(slug)]);
   if (result.kind === "not_found") notFound();
   if (result.kind === "error") throw new Error(`storefront_unavailable:${result.reason}`);
 
   return (
     <Suspense fallback={null}>
-      <Storefront menu={result.menu} />
+      <Storefront menu={result.menu} state={state.kind === "ok" ? state.data : null} />
     </Suspense>
   );
 }

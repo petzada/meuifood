@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ids, publicMenu } from "./storefront/fixtures";
+import { ids, publicMenu, storeState } from "./storefront/fixtures";
 
 const apiFetch = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>();
 
@@ -93,6 +93,21 @@ describe("storefront /loja/[slug]", () => {
     await expect(render()).rejects.toThrow("storefront_unavailable:api_contract_mismatch");
     apiFetch.mockResolvedValue(jsonResponse({ error: "not_implemented" }, 501));
     await expect(render()).rejects.toThrow("storefront_unavailable:api_status_501");
+  });
+
+  it("carrega o estado da Loja em paralelo e mostra a linha de estado (24a)", async () => {
+    apiFetch.mockImplementation(async (path) =>
+      path.endsWith("/estado")
+        ? jsonResponse({ ...storeState, availability: { state: "paused" } })
+        : jsonResponse(publicMenu),
+    );
+    const html = await render();
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/storefront/lojas/lanchonete-do-ze/estado",
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(html).toContain("Em pausa · pedidos voltam em breve");
+    expect(html).toContain("Sobre a Loja");
   });
 
   it("gera o título com o nome da Loja", async () => {
