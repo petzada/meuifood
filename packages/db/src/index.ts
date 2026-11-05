@@ -65,7 +65,16 @@ export {
   type StoreShowcaseData,
 } from "./onboarding-db";
 export {
+  LEAD_AUDIT_ACTIONS,
+  type LeadCreateData,
+  type LeadOrdersPerDay,
+  type LeadRow,
+  LEADS_LIST_MAX,
+  type OpsLeadOps,
+} from "./lead-db";
+export {
   ACTIVATION_REQUIRED_CHECKS,
+  type DefaultPaymentFee,
   type EffectivePaymentFee,
   ONBOARDING_CHECKS,
   OPS_AUDIT_ACTIONS,
@@ -130,6 +139,9 @@ export {
   ETA_MAX_MINUTES,
   FEE_PAYMENT_METHODS,
   FUNNEL_EVENTS,
+  LEAD_ORDERS_PER_DAY,
+  LEAD_STATUSES,
+  type LeadStatus,
   type FunnelEventName,
   MEMBERSHIP_ROLES,
   MENU_DESCRIPTION_MAX,

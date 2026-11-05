@@ -1265,4 +1265,44 @@ export async function effectivePaymentFeesOf(
   });
 }
 
+/** Taxa padrão Foode vigente (sem Loja): o que a landing mostra (Ticket 31, decisão 70). */
+export type DefaultPaymentFee = {
+  method: FeePaymentMethod;
+  cardMode: CardMode | null;
+  percentBps: number;
+  fixedCents: number;
+};
+
+/**
+ * Tabela padrão vigente em `at` (só `store_id IS NULL`): PIX, Crédito Normal e Crédito Rápido,
+ * cada um só se tiver taxa vigente (nada é inventado). Não lê overrides de Loja.
+ */
+export async function defaultPaymentFeesOf(
+  d1: D1Database,
+  at: string,
+): Promise<DefaultPaymentFee[]> {
+  const { results } = await d1
+    .prepare(`${FEE_SELECT} WHERE store_id IS NULL AND ${EFFECTIVE_SQL} ORDER BY valid_from DESC`)
+    .bind(at, at)
+    .all<OpsPaymentFeeRow>();
+  const wanted: { method: FeePaymentMethod; cardMode: CardMode | null }[] = [
+    { method: "pix", cardMode: null },
+    { method: "credit", cardMode: "normal" },
+    { method: "credit", cardMode: "rapido" },
+  ];
+  return wanted.flatMap((key) => {
+    const fee = results.find((row) => row.method === key.method && row.cardMode === key.cardMode);
+    return fee
+      ? [
+          {
+            method: fee.method,
+            cardMode: fee.cardMode,
+            percentBps: fee.percentBps,
+            fixedCents: fee.fixedCents,
+          },
+        ]
+      : [];
+  });
+}
+
 export type OpsOperations = ReturnType<typeof createOpsOperations>;

@@ -15,6 +15,7 @@ import type {
   CouponUpdateInput,
   WelcomeCouponInput,
 } from "./coupon/admin.js";
+import type { LeadView, OpsListLeadsInput, OpsSetLeadStatusInput } from "./lead/index.js";
 import type {
   OpsCustomerChangePhoneInput,
   OpsCustomerFindInput,
@@ -91,6 +92,7 @@ import type {
   StoreSetFulfillmentInput,
   StoreSetHoursInput,
   StoreSetPauseInput,
+  StoreSetDeliveryRateInput,
   StoreSetPrintOnAcceptInput,
 } from "./order/index.js";
 
@@ -398,6 +400,12 @@ export interface PainelRpc {
     input: StoreSetPrintOnAcceptInput,
   ): Promise<RpcResult<null>>;
 
+  /** R$/km do Delivery (decisão 73; só Dono); `null` limpa. Auditado. */
+  storeSetDeliveryRate(
+    caller: PainelCaller,
+    input: StoreSetDeliveryRateInput,
+  ): Promise<RpcResult<null>>;
+
   // ---- Onboarding do Dono, dados, vitrine, Slug, Pixel e funil (Ticket 28). Só o Dono da Loja
   // ATIVA (`can(role, "store.settings")`); Operador e Ops = `forbidden`, sem efeito. Entradas com
   // `@foode/shared/onboarding` (`invalid_input`). Toda escrita audita (ONBOARDING_AUDIT_ACTIONS).
@@ -491,4 +499,12 @@ export interface PainelRpc {
     caller: PainelCaller,
     input: OpsCustomerChangePhoneInput,
   ): Promise<RpcResult<null>>;
+
+  // ---- Leads da landing (Ticket 31, decisão 70): só `foode_ops`.
+
+  /** Leads mais recentes primeiro (até 200); `status` filtra. */
+  opsListLeads(caller: PainelCaller, input: OpsListLeadsInput): Promise<RpcResult<LeadView[]>>;
+
+  /** Troca o status do lead (auditado); inexistente = `not_found`; mudou no meio = `conflict`. */
+  opsSetLeadStatus(caller: PainelCaller, input: OpsSetLeadStatusInput): Promise<RpcResult<null>>;
 }

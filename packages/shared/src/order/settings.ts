@@ -134,6 +134,16 @@ export type StoreSetCardBrandsInput = z.infer<typeof storeSetCardBrandsInputSche
 export const storeSetPrintOnAcceptInputSchema = z.object({ printOnAccept: z.boolean() });
 export type StoreSetPrintOnAcceptInput = z.infer<typeof storeSetPrintOnAcceptInputSchema>;
 
+/**
+ * R$/km do Delivery (decisão 73): centavos por km (> 0); `null` limpa. Só o Dono grava; a
+ * mudança é auditada (`store.delivery_rate.update`). O cálculo da taxa por distância é do admin
+ * e do checkout em tickets próprios.
+ */
+export const storeSetDeliveryRateInputSchema = z.object({
+  ratePerKmCents: centsSchema.min(1).nullable(),
+});
+export type StoreSetDeliveryRateInput = z.infer<typeof storeSetDeliveryRateInputSchema>;
+
 /** Dono e Operador ligam e desligam a Pausa (P-OPE-4); toda mudança é auditada. */
 export const storeSetPauseInputSchema = z.object({ paused: z.boolean() });
 export type StoreSetPauseInput = z.infer<typeof storeSetPauseInputSchema>;
@@ -173,6 +183,11 @@ export type StoreOperationSettings = {
   pickupEta: EtaRange | null;
   cardBrands: CardBrands;
   printOnAccept: boolean;
+  /**
+   * R$/km do Delivery em centavos (decisão 73); null = não configurado. A api sempre envia;
+   * opcional no tipo só para não quebrar fixtures do Painel anteriores ao campo.
+   */
+  deliveryRatePerKmCents?: number | null;
 };
 
 /** Ações de auditoria da configuração operacional (tabela `audit_events`). */
@@ -183,6 +198,7 @@ export const STORE_OPERATION_AUDIT_ACTIONS = {
   fulfillment: "store.fulfillment.update",
   cardBrands: "store.card_brands.update",
   printOnAccept: "store.print_on_accept.update",
+  deliveryRate: "store.delivery_rate.update",
 } as const;
 
 // ---- Regras puras do checkout sobre a configuração.

@@ -155,3 +155,25 @@ export type OpsEndPaymentFeeInput = z.input<typeof opsEndPaymentFeeInputSchema>;
 export type OpsListPaymentFeesInput = z.input<typeof opsListPaymentFeesInputSchema>;
 export type OpsCreateProviderCostInput = z.input<typeof opsCreateProviderCostInputSchema>;
 export type OpsEndProviderCostInput = z.input<typeof opsEndProviderCostInputSchema>;
+
+// ---- Tabela padrão pública (Ticket 31, decisão 70): o que a landing mostra.
+
+/** Uma taxa padrão Foode vigente, sem vigência nem id (só o necessário para a landing). */
+export const publicDefaultFeeSchema = z
+  .object({
+    method: feePaymentMethodSchema,
+    cardMode: cardModeSchema.nullable(),
+    percentBps: basisPointsSchema,
+    fixedCents: centsSchema,
+  })
+  .refine((fee) => (fee.method === "credit") === (fee.cardMode !== null));
+export type PublicDefaultFee = z.infer<typeof publicDefaultFeeSchema>;
+
+/**
+ * `GET /storefront/taxas`: PIX, Crédito Normal e Crédito Rápido da tabela padrão vigente, cada
+ * um só se cadastrado (lista vazia = a landing mostra "combinada no cadastro").
+ */
+export const publicDefaultFeesResponseSchema = z.object({
+  fees: z.array(publicDefaultFeeSchema).max(3),
+});
+export type PublicDefaultFeesResponse = z.infer<typeof publicDefaultFeesResponseSchema>;

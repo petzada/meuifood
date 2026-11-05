@@ -116,6 +116,7 @@ jobs:
           ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
           ABACATEPAY_WEBHOOK_SECRET: ${{ secrets.ABACATEPAY_WEBHOOK_SECRET }}
           ABACATEPAY_SIGNING_KEY: ${{ secrets.ABACATEPAY_SIGNING_KEY }}
+          SALES_WHATSAPP: ${{ secrets.SALES_WHATSAPP }}
         run: |
           umask 077
           dir="$RUNNER_TEMP/secrets"
@@ -137,7 +138,9 @@ jobs:
                   ABACATEPAY_API_KEY: env.ABACATEPAY_API_KEY, ABACATEPAY_WEBHOOK_SECRET: env.ABACATEPAY_WEBHOOK_SECRET,
                   ABACATEPAY_SIGNING_KEY: env.ABACATEPAY_SIGNING_KEY}
             | with_entries(select(.value != null and .value != ""))' > "$dir/api.json"
-          jq -n '{SENTRY_DSN: env.SENTRY_DSN_WEB} | with_entries(select(.value != null and .value != ""))' > "$dir/web.json"
+          # Ticket 31 (decisão 70): WhatsApp de vendas só no Worker do web (`/falar` redireciona no
+          # servidor). OPCIONAL: sem ele, `/falar` leva ao formulário de contato da landing.
+          jq -n '{SENTRY_DSN: env.SENTRY_DSN_WEB, SALES_WHATSAPP: env.SALES_WHATSAPP} | with_entries(select(.value != null and .value != ""))' > "$dir/web.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_ADMIN} | with_entries(select(.value != null and .value != ""))' > "$dir/admin.json"
           for worker in api web admin; do
             echo "$worker: $(jq -r 'keys | join(", ") | if . == "" then "(nenhum)" else . end' "$dir/$worker.json")"

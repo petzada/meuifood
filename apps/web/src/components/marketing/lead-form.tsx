@@ -1,11 +1,13 @@
 "use client";
 
 // Formulário curto de lead (decisão 70): nome, WhatsApp, loja, cidade, pedidos/dia. Valida
-// no cliente com o mesmo `parseLeadInput` do route handler e envia para `POST /contato/lead`.
-// Enquanto a fatia de leads não existe, a resposta 503 vira uma mensagem com o atalho do
-// WhatsApp (nunca perde o lead em silêncio).
+// no cliente com o mesmo `parseLeadInput` do route handler e envia para `POST /contato/lead`
+// com o token do Turnstile (a api confere o token e o rate limit por IP). Falha vira uma
+// mensagem com o atalho do WhatsApp (nunca perde o lead em silêncio).
 import { Button, Field, Input, Select } from "@foode/ui";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
+
+import { Turnstile, type TurnstileHandle } from "../turnstile";
 
 import { FALAR_PATH, LEAD_PATH } from "../../content/site";
 import {
@@ -22,7 +24,14 @@ export type LeadFormProps = {
   source?: string;
   /** Transporte injetável nos testes; padrão `fetch` global. */
   submit?: (input: unknown) => Promise<LeadResponse>;
+  /**
+   * Site key pública do Turnstile (`turnstileSiteKey()`). Ausente = sem widget (testes); vazia
+   * em produção = o widget avisa "indisponível" e a api recusa sem token.
+   */
+  turnstileSiteKey?: string;
 };
+
+const CAPTCHA_PENDING_MESSAGE = "Conclua a verificação de segurança antes de enviar.";
 
 async function defaultSubmit(input: unknown): Promise<LeadResponse> {
   const response = await fetch(LEAD_PATH, {
@@ -38,10 +47,17 @@ async function defaultSubmit(input: unknown): Promise<LeadResponse> {
 type Status =
   { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "failed"; message: string };
 
-export function LeadForm({ source = "landing", submit = defaultSubmit }: LeadFormProps) {
+export function LeadForm({
+  source = "landing",
+  submit = defaultSubmit,
+  turnstileSiteKey,
+}: LeadFormProps) {
   const [errors, setErrors] = useState<LeadFieldErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstile = useRef<TurnstileHandle>(null);
   const headingId = useId();
+  const withCaptcha = turnstileSiteKey !== undefined;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,9 +70,16 @@ export function LeadForm({ source = "landing", submit = defaultSubmit }: LeadFor
       return;
     }
     setErrors({});
+    if (withCaptcha && !turnstileToken) {
+      setStatus({ kind: "failed", message: CAPTCHA_PENDING_MESSAGE });
+      return;
+    }
     setStatus({ kind: "sending" });
+    const payload = withCaptcha ? { ...parsed.data, turnstileToken } : parsed.data;
+    // Cada token vale uma verificação: pede outro para a próxima tentativa.
+    if (withCaptcha) turnstile.current?.reset();
     try {
-      const result = await submit(parsed.data);
+      const result = await submit(payload);
       if (result.ok) {
         setStatus({ kind: "sent" });
         form.reset();
@@ -132,6 +155,9 @@ export function LeadForm({ source = "landing", submit = defaultSubmit }: LeadFor
           </Select>
         )}
       </Field>
+      {withCaptcha ? (
+        <Turnstile onToken={setTurnstileToken} ref={turnstile} siteKey={turnstileSiteKey} />
+      ) : null}
       {status.kind === "failed" ? (
         <p
           className="foode-outline border-[var(--color-error)] p-3 text-sm text-[var(--color-body)]"

@@ -46,6 +46,7 @@ import {
   storeSetFulfillmentInputSchema,
   storeSetHoursInputSchema,
   storeSetPauseInputSchema,
+  storeSetDeliveryRateInputSchema,
   storeSetPrintOnAcceptInputSchema,
 } from "@foode/shared/order";
 
@@ -346,6 +347,20 @@ export function createOrderService(deps: OrderServiceDeps) {
         input,
         async (context, { printOnAccept }) => {
           await db.store(context).operation().setPrintOnAccept(printOnAccept);
+          return { ok: true, data: null };
+        },
+      );
+    },
+
+    /** R$/km do Delivery (decisão 73; só Dono): `null` limpa; auditado só quando muda. */
+    storeSetDeliveryRate(caller: PainelCaller, input: unknown): Promise<RpcResult<null>> {
+      return asStoreMember(
+        "store.settings",
+        caller,
+        storeSetDeliveryRateInputSchema,
+        input,
+        async (context, { ratePerKmCents }) => {
+          await db.store(context).operation().setDeliveryRate(ratePerKmCents);
           return { ok: true, data: null };
         },
       );

@@ -41,6 +41,9 @@
     // Ticket 23 (decisão 64): base pública das imagens do Cardápio = rota `/media` desta api.
     // Domínio próprio desde o Ticket 25.
     "MEDIA_PUBLIC_BASE_URL": "https://api.foodedelivery.com.br/media",
+    // Ticket 31 (decisão 70): aviso de lead novo da landing pela MillionSend. É o e-mail do
+    // próprio Dono da Foode (não é dado de terceiro nem segredo).
+    "LEADS_NOTIFY_EMAIL": "marciopetigrosso@gmail.com",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).
