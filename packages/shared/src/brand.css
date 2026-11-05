@@ -6,6 +6,11 @@
      --color-primary (#f35050, 3,4:1) segue em bordas, ícones, foco e marca. */
   --color-primary-strong: #d63a3a;
   --color-primary-strong-active: #b92f2f;
+  /* Texto vermelho SOBRE fundos tingidos (primary-soft #ffe8e8 e o #ffd1d1 do CTA final):
+     o primary-strong só chega a 3,97:1 e 3,38:1 ali. #ad2828 × #ffd1d1 = 4,92:1,
+     × #ffe8e8 = 5,77:1, × branco = 6,75:1 (AA). Fill sólido com texto branco segue no
+     primary-strong. */
+  --color-primary-ink: #ad2828;
   --color-accent: #ffb800;
   /* Fill de destaque com texto branco: #b07c00 × branco = 3,67:1 (AA só em texto grande e
      negrito, >= 19px); em texto menor use ink sobre --color-accent. */

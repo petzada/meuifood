@@ -120,7 +120,7 @@ export default async function PostPage({ params }: { params: Params }) {
         </header>
 
         <div className="mx-auto w-full max-w-3xl rounded-[var(--radius-container)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-primary-strong)]">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-primary-ink)]">
             Resposta direta
           </p>
           <p className="mt-2 leading-relaxed text-[var(--color-ink)]">{post.answer}</p>
