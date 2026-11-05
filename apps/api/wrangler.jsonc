@@ -1,17 +1,19 @@
 // Worker `foode-api` (Hono). Decisão 59 / ADR 0006.
 // - fetch público: /health, /storefront/*, /media/* (imagens do Cardápio), /webhooks/* (src/app.ts);
 // - entrypoint RPC `PainelApi` (src/painel.ts): só por service binding (admin).
-// Deploy só pelo CI (.github/workflows/deploy.yml). Sem routes/custom domains até a zona
-// foodedelivery.com.br ficar ativa (Ticket 25): publica em workers.dev.
+// Deploy só pelo CI (.github/workflows/deploy.yml). Custom domain `api.foodedelivery.com.br`
+// (Ticket 25; o deploy cria o registro DNS e o certificado). O workers.dev segue ligado como
+// fallback do smoke.
 // Segredos (SENTRY_DSN, MILLIONSEND_API_KEY, BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY e, do Ticket
 // 24a, ORDER_TOKEN_SECRET e PHONE_LOOKUP_IP_SALT) chegam no deploy (`--secrets-file`,
 // sincronizados dos secrets do GitHub). Nunca em arquivo nem em `vars`.
 // Vars de Auth (Ticket 22): os valores abaixo são o padrão; o deploy sobrescreve com as GitHub
 // variables BETTER_AUTH_URL e EMAIL_FROM quando existirem (`--var`).
 // - BETTER_AUTH_URL: URL pública do Painel (o admin repassa /api/auth/*): base dos links e origem
-//   confiável. Hoje o workers.dev do admin; vira o domínio do Painel no Ticket 25.
-// - EMAIL_FROM: remetente da MillionSend. Enquanto foodedelivery.com.br não estiver verificado lá,
-//   o envio falha de forma controlada (log `email_send_failed` com o status, sem dados pessoais).
+//   confiável. Domínio do Painel desde o Ticket 25.
+// - EMAIL_FROM: remetente da MillionSend. O domínio é cadastrado e verificado pelo workflow
+//   setup-email-dominio (Ticket 25); antes disso o envio falha de forma controlada (log
+//   `email_send_failed` com o status, sem dados pessoais).
 // CPU: o hash de senha padrão do Better Auth (scrypt nativo) custa ~100 ms por login; o teto do
 // Workers Paid (30 s de CPU por request) basta, sem `limits.cpu_ms`.
 {
@@ -21,15 +23,16 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "routes": [{ "pattern": "api.foodedelivery.com.br", "custom_domain": true }],
   "preview_urls": false,
   "observability": { "enabled": true },
   "vars": {
     "ENVIRONMENT": "production",
-    "BETTER_AUTH_URL": "https://foode-admin.marciopetigrosso.workers.dev",
-    "EMAIL_FROM": "Foode <no-reply@foodedelivery.com.br>",
+    "BETTER_AUTH_URL": "https://admin.foodedelivery.com.br",
+    "EMAIL_FROM": "Foode <nao-responda@foodedelivery.com.br>",
     // Ticket 23 (decisão 64): base pública das imagens do Cardápio = rota `/media` desta api.
-    // Hoje o workers.dev; vira `https://api.foodedelivery.com.br/media` no Ticket 25.
-    "MEDIA_PUBLIC_BASE_URL": "https://foode-api.marciopetigrosso.workers.dev/media",
+    // Domínio próprio desde o Ticket 25.
+    "MEDIA_PUBLIC_BASE_URL": "https://api.foodedelivery.com.br/media",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).

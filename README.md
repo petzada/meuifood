@@ -47,6 +47,8 @@ O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [
 | Monorepo | **pnpm workspaces**, **TypeScript** |
 | Front-end | **Next.js 16**, **React 19**, **Tailwind CSS 4** (`apps/web` e `apps/admin`) |
 | Hospedagem | **Cloudflare Workers** (web e admin via **OpenNext**) |
+| Domínios | `foodedelivery.com.br` (Storefront; `www` redireciona), `admin.foodedelivery.com.br` (Painel), `api.foodedelivery.com.br` (api pública: `/health`, `/storefront/*`, `/media/*`, `/webhooks/*`) |
+| E-mail | **MillionSend**, remetente `nao-responda@foodedelivery.com.br` |
 | API | **Hono** em Worker (`apps/api`) |
 | Dados | **Cloudflare D1** + **Drizzle** (`packages/db`) |
 | Arquivos | **Cloudflare R2** (binding) |
