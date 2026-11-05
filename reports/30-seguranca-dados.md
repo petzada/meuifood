@@ -17,8 +17,8 @@ Escopo: os itens da seção "Revisão de segurança dos dados pessoais" do [Tick
 | 7 | Login: 5 tentativas, 5 min, reenvio 30 s | ok |
 | 8 | Login: rate limit por telefone e IP | **corrigido** (teto de 8 códigos/telefone/24 h) |
 | 9 | Login: mensagens não revelam conta | ok (risco residual R1, R2) |
-| 10 | CPF/telefone fora de logs e Sentry | **corrigido** (Sentry da api e do web) |
-| 11 | TOP 10 clientes (Ticket 14, leitura) | ok no código; **achado de UI** para o 14 (K1) |
+| 10 | CPF/telefone fora de logs e Sentry | **corrigido** (Sentry da api, do web e do admin) |
+| 11 | TOP 10 clientes (Ticket 14, leitura) | ok no código; **corrigido** o achado de UI (K1: fora da impressão, 30C) |
 | 12 | Funil sem dado pessoal | ok |
 | 13 | Pixel sem dado pessoal | **corrigido** (token do Pedido ia para Meta/Google) |
 | 14 | CSV de relatórios (Ticket 14, leitura) | ok |
@@ -26,7 +26,7 @@ Escopo: os itens da seção "Revisão de segurança dos dados pessoais" do [Tick
 | 16 | Webhooks (segredo, corpo) | ok + **corrigido** (token da notificação Efí nos breadcrumbs) |
 | 17 | Dados de cartão nunca na api | ok |
 | 18 | Varredura de logs/Sentry de produção pós-smoke | **pendente** (runbook) |
-| 19 | Sentry do Painel (`apps/admin`) | **pendente** (K3, encaminhado) |
+| 19 | Sentry do Painel (`apps/admin`) | **corrigido** (K3, 30C) |
 
 ## 1. Busca por telefone no checkout (P-2.1, decisão 68)
 
@@ -77,7 +77,7 @@ Escopo: os itens da seção "Revisão de segurança dos dados pessoais" do [Tick
 
 **Achado S4 (corrigido): Sentry do Storefront (`apps/web`).** Os três `Sentry.init` (cliente, servidor e edge) não tinham `beforeSend`. A URL `/loja/{slug}/pedido/{token}` ia inteira em `request.url`, na transação e nos breadcrumbs de navegação e de fetch (`/pedido/{token}/acompanhar`). O token dá acesso a nome, endereço e itens do Pedido.
 
-**Correção:** `apps/web/src/lib/sentry-scrub.ts` (URL sem query, hash e token; sem corpo, cookies, headers e usuário; breadcrumbs de console sem mensagem), ligado em `instrumentation-client.ts`, `sentry.server.config.ts` e `sentry.edge.config.ts`. Teste em `apps/web/src/lib/sentry-scrub.test.ts`.
+**Correção:** `apps/web/src/lib/sentry-scrub.ts` (no 30C movido para `packages/shared/src/sentry/scrub.ts`) (URL sem query, hash e token; sem corpo, cookies, headers e usuário; breadcrumbs de console sem mensagem), ligado em `instrumentation-client.ts`, `sentry.server.config.ts` e `sentry.edge.config.ts`. Teste em `apps/web/src/lib/sentry-scrub.test.ts` (hoje `packages/shared/src/sentry/scrub.test.ts`).
 
 ## 4. TOP 10 clientes (P-REL-3), por leitura do Ticket 14
 
@@ -85,7 +85,7 @@ Lido em `origin/feat/14-plano-relatorios-391f`, sem alterar nada:
 
 - `packages/db/src/report-db.ts`: `report()` recusa quem não é `owner` (`FoodeDbError("forbidden")`). A consulta é sempre `o.store_id = ?` da Loja do contexto e só considera Pedidos com `customer_account_id` (Guest nunca aparece). Devolve só `name`, `orders` e `totalCents`, com `LIMIT 10`. Telefone, CPF e endereço não saem da consulta.
 - `apps/api/src/finance-service.ts`: relatórios, CSV e Repasses passam por `asOwner` (`store.finance`, só o Dono). Operador e Ops recebem `forbidden`.
-- **Achado K1 (para o Ticket 14, UI):** a decisão 64 prevê "CSV + impressão do navegador". Se a tela `/relatorios` imprimir a página inteira, o TOP 10 (nomes de Consumidores) sai no papel ou no PDF da impressão, e na prática isso é uma exportação. A P-REL-3 diz "sem exportação". Sugestão: esconder a seção do TOP 10 na impressão (`print:hidden`) e cobrir com teste.
+- **Achado K1 (para o Ticket 14, UI):** a decisão 64 prevê "CSV + impressão do navegador". Se a tela `/relatorios` imprimir a página inteira, o TOP 10 (nomes de Consumidores) sai no papel ou no PDF da impressão, e na prática isso é uma exportação. A P-REL-3 diz "sem exportação". **Corrigido no 30C:** a seção do TOP 10 tem `foode-print-hide` (botão Imprimir) e `print:hidden` (Ctrl+P) em `apps/admin/src/app/(painel)/relatorios/_components/report-body.tsx`, com o aviso "não sai no CSV nem na impressão"; teste em `report-view.test.tsx`.
 
 ## 5. Funil e Pixel (P-REL-4)
 
@@ -131,8 +131,8 @@ Entregue nesta branch (contrato e integração em [`docs/integracao-suporte-agen
 ## 10. Pendências
 
 1. **Varredura de logs/Sentry de produção depois do smoke** (passo do runbook): procurar telefone, CPF, e-mail, endereço, dado de cartão, URL com segredo e corpo de webhook em Workers Logs (`foode-api`, `foode-web`, `foode-admin`) e nos três projetos do Sentry. Inclui a verificação manual do Pixel (§5).
-2. **K3: Sentry do Painel (`apps/admin`)**, encaminhado. `instrumentation-client.ts`, `sentry.server.config.ts` e `sentry.edge.config.ts` não têm `beforeSend`. `/definir-senha?token=…` (convite e redefinição de senha) iria inteira em `request.url`/breadcrumbs. Correção sugerida: aplicar o mesmo `scrubEvent`/`scrubBreadcrumb` de `apps/web/src/lib/sentry-scrub.ts`, redigindo também a query `token`. Não foi aplicada aqui porque o 30B só toca o layout raiz do admin.
+2. ~~K3: Sentry do Painel~~ **corrigido no 30C:** o scrub saiu de `apps/web` para `packages/shared/src/sentry/scrub.ts` (`@foode/shared/sentry`, sem dependência do SDK) e está ligado nos três `Sentry.init` do admin e do web. Além da query (`/definir-senha?token=`), redige o token do link do Better Auth (`/api/auth/reset-password/{token}`). Teste em `packages/shared/src/sentry/scrub.test.ts`.
 3. **R3:** token do Pedido nos Workers Logs (decisão do Dono, mexe em `wrangler`).
 4. **A1:** auditoria da busca com conta como `not_found` (só com migration).
 5. **R1/R2:** riscos residuais aceitos pelas decisões 65 e 68.
-6. `deploy.yml` ainda não repassa `NEXT_PUBLIC_SUPPORT_WIDGET_*` aos builds (ver o documento de integração, §2).
+6. ~~`deploy.yml` repassar `NEXT_PUBLIC_SUPPORT_WIDGET_*`~~ **feito no 30C** (variables `SUPPORT_WIDGET_SRC`/`_ID`, com `_WEB`/`_ADMIN` por app).

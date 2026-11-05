@@ -1,8 +1,49 @@
 import { describe, expect, it } from "vitest";
 
-import { redactUrl, scrubBreadcrumb, scrubEvent } from "./sentry-scrub";
+import { redactUrl, scrubBreadcrumb, scrubEvent } from "./index";
 
 const TOKEN = "abcDEF123_-tokenSecretoDoPedido";
+const RESET = "resetTokenDeUsoUnico987";
+
+describe("Sentry do Painel sem segredo (Ticket 30, K3)", () => {
+  it("convite/redefinição: sem `?token=` em `/definir-senha` e sem token no link do Better Auth", () => {
+    expect(redactUrl(`https://admin.foodedelivery.com.br/definir-senha?token=${RESET}`)).toBe(
+      "https://admin.foodedelivery.com.br/definir-senha",
+    );
+    expect(redactUrl(`/api/auth/reset-password/${RESET}?callbackURL=%2Fdefinir-senha`)).toBe(
+      "/api/auth/reset-password/:token",
+    );
+    expect(redactUrl("/api/auth/reset-password")).toBe("/api/auth/reset-password");
+  });
+
+  it("evento e breadcrumbs do login/definir senha sem token, corpo (e-mail e senha) e headers", () => {
+    const event = scrubEvent({
+      request: {
+        url: `https://admin.foodedelivery.com.br/definir-senha?token=${RESET}`,
+        data: { email: "dono@exemplo.com", password: "segredo" },
+        headers: { authorization: "Bearer x", "cf-connecting-ip": "203.0.113.1" },
+      },
+      transaction: `/definir-senha?token=${RESET}`,
+      user: { email: "dono@exemplo.com" },
+    });
+    expect(JSON.stringify(event)).not.toMatch(new RegExp(`${RESET}|dono@|segredo|203\\.0`, "u"));
+    expect(event.request?.url).toBe("https://admin.foodedelivery.com.br/definir-senha");
+
+    const crumb = scrubBreadcrumb({
+      category: "navigation",
+      data: { from: `/definir-senha?token=${RESET}`, to: "/pedidos" },
+    });
+    expect(crumb).toEqual({
+      category: "navigation",
+      data: { from: "/definir-senha", to: "/pedidos" },
+    });
+    expect(
+      JSON.stringify(
+        scrubBreadcrumb({ category: "xhr", message: `POST /api/auth/reset-password/${RESET}` }),
+      ),
+    ).not.toContain(RESET);
+  });
+});
 
 describe("Sentry do Storefront sem dado pessoal (Ticket 30)", () => {
   it("URL sem token do Pedido, query e hash", () => {
