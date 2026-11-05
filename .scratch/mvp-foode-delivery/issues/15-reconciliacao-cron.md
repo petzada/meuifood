@@ -15,9 +15,11 @@
 - [ ] Evento perdido converge cobrança e Ledger; pagamento tardio de Pedido Cancelado converge para Estorno total.
 - [ ] Estorno pendente ou falho permanece retentável no provider correto.
 - [ ] A reconciliação detecta obrigação de repasse divergente sem promover previsão a pagamento efetivo.
-- [ ] Falha parcial não esconde as demais unidades processadas e não vaza secrets.
-- [ ] Testes invocam o handler real com D1 do pool-workers no CI com adapters controlados; agendador e rede externa ficam fora da suíte.
+- [ ] Falha parcial não esconde as demais unidades processadas e não vaza secrets nem dados pessoais (telefone, CPF, e-mail) em logs ou Sentry.
+- [ ] Testes invocam o handler real com D1 via `@cloudflare/vitest-plugin` no CI e adapters controlados; agendador e rede externa ficam fora da suíte.
 
 ## Comments
 
 - 2026-11-04 — Revisado no pivô ([59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md), [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md)): Railway Cron → Cron Triggers; Woovi/Asaas → Efí/AbacatePay. O nome do arquivo foi mantido para não quebrar links.
+
+- 2026-11-05 — Critérios consolidados com 63–65: nenhum código P-* novo para este ticket; arquivo renomeado de `15-reconciliacao-railway-cron.md` para `15-reconciliacao-cron.md` (links atualizados) e seam de testes renomeado para `@cloudflare/vitest-plugin`.

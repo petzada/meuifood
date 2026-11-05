@@ -15,7 +15,7 @@ Papel do comerciante no painel: acesso total (config, cardápio, pedidos, pagame
 _Avoid_: Admin genérico, owner (salvo campo técnico `owner`)
 
 **Operador**:
-Funcionário da loja com acesso **somente** a pedidos/status; sem cardápio, horários, frete, relatórios, plano, equipe ou fidelidade.
+Funcionário da loja com acesso a pedidos/status e à **Pausa** (ativa e retoma, com auditoria e aviso ao Dono — decisão 63, P-OPE-4); sem cardápio, horários, frete, relatórios, plano, equipe ou fidelidade.
 _Avoid_: Atendente, colaborador, staff (salvo UI)
 
 **Consumidor**:
@@ -29,6 +29,14 @@ _Avoid_: Admin (ambíguo com Painel), suporte, superusuário
 **Guest**:
 Consumidor que conclui pedido sem conta; dados mínimos gravados no pedido.
 _Avoid_: Anônimo, visitante
+
+**Conta do Consumidor**:
+Conta única na Foode, criada após o primeiro Código de acesso com nome + CPF (obrigatório e único); um telefone = uma conta. Vale em qualquer Loja, mas Pedidos, Cupom de boas-vindas e histórico ficam separados por Loja; Pedidos Guest da mesma Loja com o telefone verificado entram na conta ([65](docs/decisoes/65-login-consumidor-codigo-whatsapp.md)).
+_Avoid_: Cadastro por Loja, login por e-mail/magic link, conta do Painel
+
+**Código de acesso**:
+Código de 4 dígitos enviado ao WhatsApp do Consumidor pela whatsmiau.dev ("XXXX é o seu código de acesso ao Foode Delivery."), válido por 5 min, com 5 tentativas e uso único; único meio de login do Consumidor.
+_Avoid_: Magic link, senha do Consumidor, OTP por SMS
 
 ### Tenant e loja
 
@@ -62,9 +70,25 @@ _Avoid_: Extra (ambíguo), variante
 Acréscimo com preço configurável no item.
 _Avoid_: Extra pago (salvo copy)
 
+**Destaque**:
+Item do Cardápio marcado pelo Dono (no máximo 4 por Loja) e exibido em carrossel no topo do Storefront.
+_Avoid_: Promoção, vitrine, mais vendido (é métrica de relatório)
+
 **Pedido**:
 Pedido do consumidor na loja: itens, fulfillment, pagamento e status no painel.
 _Avoid_: Order (salvo código), comanda
+
+**Pedido mínimo**:
+Valor mínimo opcional, só para Delivery, conferido no servidor sobre o subtotal dos itens; o Storefront mostra "Faltam R$ X".
+_Avoid_: Valor mínimo de entrega (salvo copy), taxa de pedido pequeno
+
+**Tempo estimado**:
+Intervalo mín–máx opcional por Fulfillment (Delivery e Retirada), configurado pelo Dono e exibido ao Consumidor; informativo, sem SLA.
+_Avoid_: Prazo garantido, contagem regressiva
+
+**Troco para**:
+Valor opcional informado pelo Consumidor no Pagamento na entrega, validado ≥ total, mostrado no Painel e na impressão.
+_Avoid_: Subtipo de pagamento (o meio continua `on_delivery`)
 
 **Fulfillment**:
 Como o pedido chega ao consumidor: delivery ou retirada no balcão (se a loja ativar).
@@ -105,11 +129,11 @@ Pagamento online via **AbacatePay** (QR dinâmico + copia-e-cola); taxa Foode da
 _Avoid_: OpenPix (marca legacy), boleto
 
 **Crédito online**:
-Pagamento online **à vista** por checkout transparente, via o **Provedor do cartão** da Loja; taxa e prazo comerciais a redefinir pelo Dono.
+Pagamento online **à vista** por checkout transparente, no **Modo do cartão** da Loja: Normal (Efí, liberação em até 21 dias úteis) ou Rápido (AbacatePay, até 1 dia útil); o lojista paga a Taxa Foode vigente do meio/modo, cadastrada no `/ops`, e recebe o repasse D+1 útil após a liberação (decisões 60 e 61).
 _Avoid_: Maquininha (isso é na entrega)
 
 **Débito online**:
-Pagamento online (provedor e taxa futuros). **Fora do MVP.**
+Pagamento online com cartão de débito. **Fora do MVP, salvo** se o Ticket 27 comprovar suporte no checkout transparente da Efí ou da AbacatePay (decisão 60); nesse caso ganha ticket próprio.
 _Avoid_: Débito na maquininha do lojista
 
 **Voucher online**:
@@ -190,6 +214,12 @@ _Avoid_: Rausch Airbnb, purple AI-default
 Bloco de conteúdo com borda fina, sem fill, sem shadow, cantos arredondados.
 _Avoid_: Card com fill+sombra como default
 
+### Medição
+
+**Funil de conversão**:
+Contagem própria da Foode, agregada por Loja e sem dado pessoal, das etapas visita → item → carrinho → checkout → Pedido no Storefront; base do relatório do Dono. O Pixel Meta/Google é apoio às campanhas do lojista, não fonte do funil.
+_Avoid_: Funil do Pixel, analytics por Consumidor, rastreamento individual
+
 ### Fidelidade
 
 **Cupom promocional**:
@@ -209,5 +239,5 @@ Ação no painel que marca o pedido como cancelado; se houver PIX/crédito pago,
 _Avoid_: Void genérico, delete
 
 **Pausa (loja)**:
-Toggle do dono que bloqueia o checkout imediatamente, independente do horário de funcionamento.
+Interruptor do Dono **ou do Operador** que bloqueia o checkout imediatamente, independente do horário de funcionamento; toda ativação/retomada é auditada e o Dono é avisado quando foi o Operador (decisão 63, P-OPE-4).
 _Avoid_: Fechado (é horário), offline genérico

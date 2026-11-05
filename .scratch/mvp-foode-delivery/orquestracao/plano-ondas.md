@@ -1,4 +1,4 @@
-# Plano de ondas (2 subagentes) — Tickets 22→30
+# Plano de ondas (2 subagentes) — Tickets 22→30 (24 dividido em 24a/24b em 2026-11-05)
 
 Fatia "C" = commit de contrato (Zod em `packages/shared/src/<domínio>/*`, `packages/db/src/schema/<domínio>.ts`, assinaturas RPC) e dona da migration do ticket.
 
@@ -10,21 +10,24 @@ Fatia "C" = commit de contrato (Zod em `packages/shared/src/<domínio>/*`, `pack
 | 3 | 23-C (migration menu, R2) | 29-C (Zod ops) |
 | 4 | 23-API | 29-API (migration ops) |
 | 5 | 23-UI | 29-UI |
-| 6 | 24-C (migration pedido/horários/delivery) | 26-pré (adapter AbacatePay, dias úteis) |
-| 7 | 24-API | 28-C+API (migration 28) |
-| 8 | 24-UI | 24-impressão |
-| 9 | 28-UI (lockfile QR) | 25-infra (rotas/domínios) |
-| 10 | 25-legado (lockfile) | 13-C+API (migration 13) |
-| 11 | 25-docs+smoke | 13-UI |
-| 12 | 26-C+API (migration 26) | 27-pré+C |
-| 13 | 26-UI | 27-API |
-| 14 | 27-UI (lockfile Efí) | 12-C+API (migration 12) |
-| 15 | 12-UI | 14-C |
-| 16 | 15-API (migration 15, cron) | 14-API |
-| 17 | 14-migration+lotes | 30-ops (rascunho runbook) |
-| 18 | 14-UI | 30-ops (widget + base agentes.chat) |
-| 19 | 30-E2E (lockfile) | 30-ops final |
+| 6 | 24a-C (migration 0004: Pedido + configuração operacional) | 26-pré (adapter AbacatePay, dias úteis) |
+| 7 | 24a-API (checkout, busca por telefone, criação idempotente) | 28-C+API (migration 0005: perfil, vitrine, Pixel, eventos do funil) |
+| 8 | 24a-UI (checkout, Sobre a Loja, página do Pedido) | 24b-API (RPCs de configuração, Pausa, fila; migration 0006 só se precisar) |
+| 9 | 24b-UI (configurações, fila, chips, tour) | 28-UI (lockfile QR; telas de checkout depois do 24a-UI) |
+| 10 | 24b-impressão (80 mm, Imprimir ao aceitar, Avisar no WhatsApp) | 25-infra (rotas/domínios/DNS/MillionSend/Turnstile) |
+| 11 | 25-legado (lockfile) | 13-C+API (migration 0007, login WhatsApp) |
+| 12 | 25-docs+smoke | 13-UI |
+| 13 | 26-C+API (migration 0008) | 27-pré+C |
+| 14 | 26-UI | 27-API (migration 0009) |
+| 15 | 27-UI (lockfile Efí) | 12-C+API (migration 0010) |
+| 16 | 12-UI | 14-C |
+| 17 | 15-API (migration 0011, cron) | 14-API |
+| 18 | 14-migration 0012 + lotes | 30-ops (rascunho runbook, revisão de segurança) |
+| 19 | 14-UI | 30-ops (widget + base agentes.chat) |
+| 20 | 30-E2E (lockfile) | 30-ops final (bloco humano) |
 
-Regras: numeração de migrations reservada pelo orquestrador (efetivo: 21→0000, 22→0001, 29→0002, 23→0003; seguintes 24→0004, 28→0005, 13→0006, 26→0007, 27→0008, 12→0009, 15→0010, 14→0011; plano original: 22→N+1, 23→N+2, 29→N+3, 24→N+4, 28→N+5, 13→N+6, 26→N+7, 27→N+8, 12→N+9, 15→N+10, 14→N+11; N = última do 21); um dono por onda de lockfile, wrangler.jsonc, CI; schema partido por domínio; subpath exports; navegação do admin é do 22-UI; caminho de escrita do Pedido: 24→13→26→27→12; 25-legado só após 24/28/29 na master.
+Regras: numeração de migrations reservada pelo orquestrador (efetivo: 21→0000, 22→0001, 29→0002, 23→0003; reservadas em 2026-11-05: 24a→0004, 28→0005, 24b→0006 só se precisar, 13→0007, 26→0008, 27→0009, 12→0010, 15→0011, 14→0012; se o 24b não usar a 0006, o próximo ticket a integrar com migration assume o número livre regenerando com `pnpm db:generate`, como foi feito no 23; histórico: a reserva anterior era 24→0004, 28→0005, 13→0006, 26→0007, 27→0008, 12→0009, 15→0010, 14→0011); um dono por onda de lockfile, wrangler.jsonc, CI; schema partido por domínio; subpath exports; navegação do admin é do 22-UI; caminho de escrita do Pedido: 24a→13→26→27→12 (o 24b só lê/transiciona o Pedido); 25-infra após 24a/28/29 e 25-legado só após 24b/28/29 na master.
 
 2026-11-05: Ticket 20 cortado (decisão 64); critérios do 20 entram no /code-review de cada ticket de UI. UI de cada ticket segue docs/referencias/anota-ai/DIRETRIZES-UX-*.md e decisões 63/64.
+
+2026-11-05: Ticket 24 dividido em 24a (Storefront, dono do contrato e da migration 0004) e 24b (Painel); migrations renumeradas a partir da 0006 (reservada ao 24b). Tour de 3 passos (P-ONB-1) passou do 28 para o 24b.
