@@ -1,0 +1,45 @@
+name: Setup e-mail (domínio MillionSend + DNS)
+# Ticket 25: cadastra foodedelivery.com.br na MillionSend (região fixa na criação), cria/atualiza
+# na zona da Cloudflare os registros exigidos (DKIM, SPF = MX + TXT do MAIL FROM, DMARC, CNAME de
+# tracking), todos "DNS only", dispara a verificação e FALHA se DKIM/SPF não verificarem.
+# Idempotente: rodar de novo só confere e reverifica. Lógica em scripts/setup-email-dominio.mjs.
+# Nada sensível no log: a chave é secret (mascarada) e o script só imprime tipo, nome e status.
+on:
+  workflow_dispatch:
+    inputs:
+      regiao:
+        description: Região SES do domínio na MillionSend (fixa na criação; ignorada se já existir)
+        type: choice
+        options: [sa-east-1, us-east-1]
+        default: sa-east-1
+      prazo_min:
+        description: Minutos aguardando a verificação de DKIM/SPF
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+concurrency:
+  group: setup-email-dominio
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Domínio na MillionSend, DNS na Cloudflare e verificação
+        env:
+          MILLIONSEND_API_KEY: ${{ secrets.MILLIONSEND_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          EMAIL_DOMAIN: foodedelivery.com.br
+          MILLIONSEND_REGION: ${{ inputs.regiao }}
+          TRACKING_SUBDOMAIN: tracking
+          VERIFY_TIMEOUT_MIN: ${{ inputs.prazo_min }}
+        run: node scripts/setup-email-dominio.mjs

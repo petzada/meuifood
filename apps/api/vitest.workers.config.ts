@@ -22,7 +22,7 @@ export default defineConfig(async () => {
             BETTER_AUTH_URL: "https://painel.foode.test",
             TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
             MILLIONSEND_API_KEY: "ms_teste_sem_envio",
-            EMAIL_FROM: "Foode <no-reply@foode.test>",
+            EMAIL_FROM: "Foode <nao-responda@foode.test>",
           },
         },
       }),

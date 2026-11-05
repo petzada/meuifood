@@ -7,8 +7,10 @@ name: Deploy (Cloudflare Workers)
 # verde, aviso no resumo): rode o workflow db-migrate (confirmar=aplicar), que aplica e
 # dispara este deploy. Assim o código novo nunca sobe antes do schema (expand/contract).
 #
-# Sem routes/custom domains até a zona foodedelivery.com.br ficar ativa (Ticket 25):
-# workers.dev. Smoke: SMOKE_*_URL (variables) ou workers.dev da conta.
+# Domínios (Ticket 25, `routes` com `custom_domain` nos wrangler.jsonc; o deploy cria DNS e
+# certificado): foodedelivery.com.br (web), admin.foodedelivery.com.br (admin) e
+# api.foodedelivery.com.br (api); www → apex por Redirect Rule da zona. Smoke nos domínios
+# (SMOKE_*_URL sobrescreve) e, depois, no workers.dev da conta (fallback, ainda ligado).
 on:
   push:
     branches: [master]
@@ -150,9 +152,15 @@ jobs:
       - name: Apagar arquivos de secrets
         if: always()
         run: rm -rf "$RUNNER_TEMP/secrets"
-      - name: Smoke (/health, Storefront, login do Painel, bindings)
+      # Domínio novo: o certificado do custom domain pode levar alguns minutos no 1º deploy,
+      # por isso mais tentativas (24 × 10 s).
+      - name: Smoke nos domínios (/health, Storefront, login do Painel, bindings)
         env:
-          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
-          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL }}
-          SMOKE_ADMIN_URL: ${{ vars.SMOKE_ADMIN_URL }}
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL || 'https://api.foodedelivery.com.br' }}
+          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL || 'https://foodedelivery.com.br' }}
+          SMOKE_ADMIN_URL: ${{ vars.SMOKE_ADMIN_URL || 'https://admin.foodedelivery.com.br' }}
+          SMOKE_ATTEMPTS: 24
+          SMOKE_DELAY_MS: 10000
+        run: node scripts/smoke.mjs
+      - name: Smoke no workers.dev (fallback)
         run: node scripts/smoke.mjs
