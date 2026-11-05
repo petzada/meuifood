@@ -17,6 +17,21 @@ import type {
   CouponUpdateInput,
   WelcomeCouponInput,
 } from "./coupon/admin.js";
+import type {
+  FinanceReport,
+  OpsMarginInput,
+  OpsMarginView,
+  OpsPayoutAdjustmentInput,
+  OpsPayoutBatchesInput,
+  OpsPayoutBatchView,
+  OpsPayoutMarkPaidInput,
+  OpsPayoutMarkPaidResult,
+  OpsPayoutsDueView,
+  OwnerPayoutsInput,
+  OwnerPayoutsView,
+  ReportCsvExport,
+  ReportInput,
+} from "./finance/index.js";
 import type { LeadView, OpsListLeadsInput, OpsSetLeadStatusInput } from "./lead/index.js";
 import type {
   OpsCustomerChangePhoneInput,
@@ -535,4 +550,47 @@ export interface PainelRpc {
 
   /** Troca o status do lead (auditado); inexistente = `not_found`; mudou no meio = `conflict`. */
   opsSetLeadStatus(caller: PainelCaller, input: OpsSetLeadStatusInput): Promise<RpcResult<null>>;
+
+  // ---- Financeiro (Ticket 14; NAV-01/02 grupo Financeiro). Dono = `store.finance` (Operador e Ops
+  // = `forbidden`); Ops = `ops.area`. "Hoje" é sempre o dia civil de São Paulo do servidor.
+
+  /**
+   * Relatório da Loja ativa no período (atalho ou Personalizado até hoje): topo com comparativo vs.
+   * período anterior de mesma duração, por status/Fulfillment/meio, GMV, Top 10 itens com Dom–Sáb,
+   * TOP 10 clientes com conta (só nome, quantidade e total) e funil. Fim no futuro = `invalid_input`.
+   */
+  reportsGet(caller: PainelCaller, input: ReportInput): Promise<RpcResult<FinanceReport>>;
+
+  /** CSV (UTF-8 com BOM, `;`, vírgula decimal) dos agregados; sem TOP 10 clientes nem dado pessoal. */
+  reportsExportCsv(caller: PainelCaller, input: ReportInput): Promise<RpcResult<ReportCsvExport>>;
+
+  /** Repasses (só leitura): lançamentos com status, totais e lotes pagos; nunca custo do provedor. */
+  payoutsGet(caller: PainelCaller, input: OwnerPayoutsInput): Promise<RpcResult<OwnerPayoutsView>>;
+
+  /** "A repassar hoje" por Loja: itens com repasse previsto até hoje, chave Pix e titular. */
+  opsPayoutsDue(caller: PainelCaller): Promise<RpcResult<OpsPayoutsDueView>>;
+
+  /**
+   * Marca o lote do dia como pago (idempotente por `idempotencyKey`; imutável depois). Valor
+   * diferente do confirmado, lote vazio/negativo ou Loja sem conta de repasse = `conflict`.
+   */
+  opsPayoutMarkPaid(
+    caller: PainelCaller,
+    input: OpsPayoutMarkPaidInput,
+  ): Promise<RpcResult<OpsPayoutMarkPaidResult>>;
+
+  /** Ajuste auditado (crédito/débito) que entra no próximo lote; lote de outra Loja = `not_found`. */
+  opsPayoutAdjustmentCreate(
+    caller: PainelCaller,
+    input: OpsPayoutAdjustmentInput,
+  ): Promise<RpcResult<{ adjustmentId: string }>>;
+
+  /** Lotes pagos de uma Loja no período (data do Pix), com custo do envio. */
+  opsPayoutBatches(
+    caller: PainelCaller,
+    input: OpsPayoutBatchesInput,
+  ): Promise<RpcResult<OpsPayoutBatchView[]>>;
+
+  /** Margem por Loja: taxa Foode − custo do provedor − custo do envio; tarifa de serviço à parte. */
+  opsMarginReport(caller: PainelCaller, input: OpsMarginInput): Promise<RpcResult<OpsMarginView>>;
 }
