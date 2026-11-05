@@ -17,6 +17,7 @@
 
 - O lojista pode **parcelar o Anual em até 6×** com **juros de 2,99% por parcela** (Tabela Price, ao mês): `parcela = PV × i / (1 − (1 + i)^−n)`, com PV = R$ 1.019,88, i = 2,99%, n = 6 → **6× de R$ 188,20** (total parcelado R$ 1.129,23). O valor é calculado a partir das constantes de preço, nunca fixado à mão.
 - Card do Anual na landing e em `/precos`: **destaque "6× de R$ 188,20"** e, abaixo, sem destaque, o total à vista **R$ 1.019,88/ano**; a badge de desconto do card continua dando o destaque do desconto (substitui o "12× R$ 84,99" da decisão 70).
+- **Esclarecimento ([74](74-padrao-cadastro-modal.md), Dono, 2026-11-05):** o Anual **não tem teto de Pedidos** — é o plano mais completo — e custa a **faixa básica × 12** (R$ 84,99 × 12 = **R$ 1.019,88**), pagável em até 6× com 2,99% a.m. como acima. A badge "66%" da landing compara o Anual com 12 mensalidades da **faixa mais alta** do Mensal (a única que também não limita Pedidos) e está **correta**.
 - A cobrança da assinatura segue **fora do app** (61); o parcelamento entra nos `/termos` e na implementação futura de cobrança da assinatura.
 
 ## Conta do Consumidor após o Pedido
