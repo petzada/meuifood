@@ -496,6 +496,7 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
       const switched = await db.cardPayments.switchToPix({
         orderId: found.order.id,
         foodeFee: { feeId: fee.feeId, percentBps: fee.percentBps, fixedCents: fee.fixedCents },
+        now: clock().toISOString(),
       });
       if (!switched.ok) return { status: 409, body: { error: switched.error } };
       // Cobrança pelo fluxo do 26 (lease + cobrança única; falha não desfaz a troca).

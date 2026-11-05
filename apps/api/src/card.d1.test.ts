@@ -173,6 +173,20 @@ async function fakeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
       },
     });
   }
+  if (url.startsWith(`${EFI_BASE}/v1/charge/`) && (init?.method ?? "GET") === "GET") {
+    // Consulta autenticada da página do Pedido: segue em análise até a notificação.
+    const chargeId = Number(url.slice(`${EFI_BASE}/v1/charge/`.length));
+    const charge = efiCharges.get(chargeId);
+    return json({
+      code: 200,
+      data: {
+        charge_id: chargeId,
+        status: "waiting",
+        total: charge?.amount ?? 0,
+        custom_id: charge?.customId ?? null,
+      },
+    });
+  }
   if (url.startsWith(`${EFI_BASE}/v1/notification/`)) {
     const token = decodeURIComponent(url.slice(`${EFI_BASE}/v1/notification/`.length));
     return json({ code: 200, data: efiHistory.get(token) ?? [] });
@@ -532,9 +546,10 @@ describe("Normal (Efí)", () => {
     ).resolves.toMatchObject({ status: 200 });
     expect(efiCharges.size).toBe(2);
     expect((await track(fx.storeA.slug, created.accessToken)).card?.state).toBe("approved");
+    // Pedido já pago não aceita outra tentativa (`order_not_payable`, como no "Pagar com PIX").
     await expect(retry(fx.storeA.slug, created.accessToken, efiCard())).resolves.toMatchObject({
       status: 409,
-      body: { error: "attempt_active" },
+      body: { error: "order_not_payable" },
     });
     expect(await ledgerOf(fx.storeA.id)).toHaveLength(1);
   });
