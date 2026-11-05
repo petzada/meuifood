@@ -13,6 +13,8 @@ import {
   type StoreContext,
 } from "./context";
 import { newId, utcNow } from "./conventions";
+import { createCouponCheckoutOps, createCouponOps } from "./coupon-db";
+import { createCustomerOps, createOpsCustomerOps } from "./customer-db";
 import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
 import { FoodeDbError } from "./errors";
 import {
@@ -23,6 +25,7 @@ import {
   recordFunnelEvent,
 } from "./onboarding-db";
 import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
+import { createPaymentOps } from "./payment-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
 import {
@@ -291,11 +294,27 @@ export function createFoodeDb(d1: D1Database) {
         return currentSlugForHistorical(d1, slug);
       },
 
+      /** Cupom pelo código e fatos do boas-vindas (Ticket 13), da Loja já resolvida pelo Slug. */
+      ...createCouponCheckoutOps(d1),
+
       /** Funil próprio (Ticket 28): +1 no contador do dia para a Loja `active` do Slug. */
       recordFunnelEvent(slug: string, event: FunnelEventName, day: string): Promise<boolean> {
         return recordFunnelEvent(d1, slug, event, day);
       },
     },
+
+    /**
+     * Conta do Consumidor (Ticket 13): código do WhatsApp (uso único, atômico), sessão por hash do
+     * token, cadastro com nome + CPF e "meus Pedidos" por Loja. Sem StoreContext (não é membro).
+     */
+    customer: createCustomerOps(d1),
+
+    /**
+     * Pagamento online (Ticket 26): intenção PIX, eventos de webhook (identidade única) e Ledger.
+     * Sem StoreContext: a Loja sai da intenção gravada; quem chama é a criação do Pedido, a página
+     * do Pedido (token conferido) ou o webhook autenticado do provedor.
+     */
+    payments: createPaymentOps(d1),
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {
@@ -403,6 +422,9 @@ export function createFoodeDb(d1: D1Database) {
 
         /** Onboarding, dados, vitrine, Slug, Pixel e funil (Ticket 28): escrita só do Dono. */
         onboarding: () => createOnboardingOps(d1, context),
+
+        /** Cupons e boas-vindas (Ticket 13): só o Dono (`forbidden` para Operador). */
+        coupons: () => createCouponOps(d1, context),
 
         async members(): Promise<StoreMember[]> {
           return db
@@ -522,6 +544,9 @@ export function createFoodeDb(d1: D1Database) {
 
       return {
         ...createOpsOperations(d1, context),
+
+        /** Conta do Consumidor (Ticket 13): busca por telefone/CPF e troca de telefone auditada. */
+        ...createOpsCustomerOps(d1, context),
 
         /**
          * Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado).

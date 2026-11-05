@@ -5,14 +5,11 @@
  */
 
 export type PhoneNormalizationResult =
-  | { ok: true; e164: string }
-  | { error: "invalid_phone"; ok: false };
+  { ok: true; e164: string } | { error: "invalid_phone"; ok: false };
 
 const mobileE164 = /^55[1-9][0-9]9[0-9]{8}$/u;
 
-export function normalizeBrazilianMobilePhone(
-  raw: string,
-): PhoneNormalizationResult {
+export function normalizeBrazilianMobilePhone(raw: string): PhoneNormalizationResult {
   const digits = raw.replace(/\D/gu, "");
   if (!digits) return { error: "invalid_phone", ok: false };
 
@@ -35,10 +32,7 @@ export function normalizeBrazilianMobilePhone(
   return { ok: true, e164: candidate };
 }
 
-export function buildWhatsAppMeUrl(
-  phoneE164: string,
-  prefilledText?: string,
-): string | null {
+export function buildWhatsAppMeUrl(phoneE164: string, prefilledText?: string): string | null {
   if (!mobileE164.test(phoneE164)) return null;
   const base = `https://wa.me/${phoneE164}`;
   if (!prefilledText) return base;

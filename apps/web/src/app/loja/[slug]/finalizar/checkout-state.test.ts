@@ -217,6 +217,7 @@ describe("corpo do contrato e totais locais", () => {
         reference: null,
         street: "Rua A",
       },
+      couponCode: null,
       customer: { name: "Maria Souza", phone: "(11) 91234-5678" },
       fulfillment: "delivery",
       idempotencyKey: "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",

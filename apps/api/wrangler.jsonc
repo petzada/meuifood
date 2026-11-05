@@ -7,6 +7,14 @@
 // Segredos (SENTRY_DSN, MILLIONSEND_API_KEY, BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY e, do Ticket
 // 24a, ORDER_TOKEN_SECRET e PHONE_LOOKUP_IP_SALT) chegam no deploy (`--secrets-file`,
 // sincronizados dos secrets do GitHub). Nunca em arquivo nem em `vars`.
+// Ticket 13 (login do Consumidor pelo WhatsApp, decisão 65): WHATSMIAU_API_KEY e
+// WHATSMIAU_INSTANCE_ID são secrets OPCIONAIS (sincronizados se existirem no GitHub); sem eles o
+// login responde "Login pelo WhatsApp indisponível no momento". WHATSMIAU_API_URL (GitHub variable,
+// opcional) troca a base padrão https://api.whatsmiau.dev/v2.
+// Ticket 26 (PIX AbacatePay, decisão 60): ABACATEPAY_API_KEY, ABACATEPAY_WEBHOOK_SECRET e
+// ABACATEPAY_SIGNING_KEY são secrets OPCIONAIS (sincronizados se existirem no GitHub); sem os três,
+// PIX fica indisponível no checkout e `/webhooks/abacatepay` responde 503. O webhook é cadastrado
+// na AbacatePay pelo workflow manual setup-abacatepay-webhook (depois de criar as chaves).
 // Vars de Auth (Ticket 22): os valores abaixo são o padrão; o deploy sobrescreve com as GitHub
 // variables BETTER_AUTH_URL e EMAIL_FROM quando existirem (`--var`).
 // - BETTER_AUTH_URL: URL pública do Painel (o admin repassa /api/auth/*): base dos links e origem

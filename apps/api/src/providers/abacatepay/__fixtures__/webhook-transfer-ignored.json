@@ -1,0 +1,5 @@
+{
+  "event": "transfer.completed",
+  "devMode": true,
+  "data": { "transfer": { "id": "tran_TESTE0001", "status": "COMPLETE", "amount": 1000 } }
+}

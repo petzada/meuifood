@@ -1,0 +1,8 @@
+{
+  "code": 3500034,
+  "error": "validation_error",
+  "error_description": {
+    "property": "/payment/credit_card/customer/cpf",
+    "message": "O campo informado é inválido: 000.000.000-00"
+  }
+}

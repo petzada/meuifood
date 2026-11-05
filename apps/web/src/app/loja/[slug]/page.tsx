@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { getCustomerSession } from "../../../lib/customer-session";
 import { searchString } from "../../../lib/slug-moved";
 import { getPublicMenu, getStoreState } from "../../../lib/storefront";
 import { storefrontMetadata } from "../../../lib/storefront-seo";
+import { turnstileSiteKey } from "../../../lib/turnstile";
 import { PixelScripts } from "./storefront/pixel-scripts";
 import { Storefront } from "./storefront/storefront";
 
@@ -51,6 +53,8 @@ export default async function StorefrontPage({
   }
   if (result.kind === "error") throw new Error(`storefront_unavailable:${result.reason}`);
   const storeState = state.kind === "ok" ? state.data : null;
+  // Conta do Consumidor (Ticket 13): "Entrar" no cabeçalho; falha = anônimo, Cardápio segue.
+  const session = await getCustomerSession();
 
   return (
     <Suspense fallback={null}>
@@ -61,6 +65,8 @@ export default async function StorefrontPage({
           logoUrl: storeState?.showcase?.logoUrl ?? null,
         }}
         menu={result.menu}
+        session={session}
+        siteKey={turnstileSiteKey()}
         state={storeState}
       />
     </Suspense>

@@ -10,10 +10,18 @@ import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
 import { createTurnstileVerifier } from "./auth/turnstile";
+import { type CustomerReply, createCustomerService } from "./customer-service";
 import type { Env } from "./env";
 import { mediaBaseUrl, serveMenuImage, serveStoreImage } from "./media";
+import {
+  ABACATEPAY_SECRET_QUERY_PARAM,
+  ABACATEPAY_SIGNATURE_HEADER,
+  abacatePayFromEnv,
+  createPixService,
+} from "./pix-service";
 import { toPublicMenu } from "./public-menu";
 import { createStorefrontService } from "./storefront-service";
+import { createWhatsMiauSender } from "./whatsapp/whatsmiau";
 
 export { toPublicMenu };
 
@@ -33,6 +41,12 @@ export const CART_QUOTE_MAX_BODY_BYTES = 64 * 1024;
 
 /** Teto do corpo da busca por telefone e do "Sou eu" (token do Turnstile ≤ 2 KiB). */
 export const PHONE_LOOKUP_MAX_BODY_BYTES = 8 * 1024;
+
+/** Teto do corpo das rotas da conta do Consumidor (telefone, código, nome, CPF, Turnstile). */
+export const CUSTOMER_MAX_BODY_BYTES = 8 * 1024;
+
+/** Teto do corpo do webhook da AbacatePay (o envelope tem poucos KiB). */
+export const WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
 
 /** Teto do corpo do evento do funil (`{"event":"checkout_start"}`). */
 export const FUNNEL_EVENT_MAX_BODY_BYTES = 1024;
@@ -72,9 +86,12 @@ export async function storefrontSlugRedirect(
   );
 }
 
-/** Caminho sem o token da página do Pedido (dá acesso a dados pessoais): nunca em log. */
+/**
+ * Caminho sem o token da página do Pedido (dá acesso a dados pessoais) e sem query (o webhook da
+ * AbacatePay leva o segredo em `?webhookSecret=`): nunca em log nem no Sentry.
+ */
 export function redactPath(path: string): string {
-  return path.replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
+  return path.replace(/[?#].*$/su, "").replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
 }
 
 export function createApp() {
@@ -158,14 +175,37 @@ export function createApp() {
   // ---- Ticket 24a: checkout, Pedido e busca por telefone (regras em storefront-service.ts). A
   // Loja sai SÓ do Slug da URL e precisa estar `active` (senão 404 `store_not_found`). Schemas em
   // @foode/shared/order; corpo inválido = 400 `invalid_input`.
+  const customer = (c: Context<AppEnv>) =>
+    createCustomerService({
+      db: c.var.db,
+      turnstile: createTurnstileVerifier(c.env),
+      whatsapp: createWhatsMiauSender(c.env),
+      codeSecret: c.env.BETTER_AUTH_SECRET,
+      ipSalt: c.env.PHONE_LOOKUP_IP_SALT,
+      orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
+    });
+  const pix = (c: Context<AppEnv>) =>
+    createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env) });
   const service = (c: Context<AppEnv>) =>
     createStorefrontService({
+      pix: pix(c),
       db: c.var.db,
       turnstile: createTurnstileVerifier(c.env),
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
       phoneLookupIpSalt: c.env.PHONE_LOOKUP_IP_SALT,
       mediaBaseUrl: mediaBaseUrl(c.env.MEDIA_PUBLIC_BASE_URL, c.req.url),
+      customerSessionOf: async (cookie) =>
+        (await customer(c).currentSession(cookie))?.session ?? null,
     });
+  const cookieOf = (c: Context<AppEnv>) => c.req.header("cookie") ?? null;
+  const ipOf = (c: Context<AppEnv>) => c.req.header("cf-connecting-ip") ?? null;
+  /** Resposta da conta: `no-store` sempre e o `set-cookie` da sessão quando muda. */
+  const customerResponse = (c: Context<AppEnv>, reply: CustomerReply<unknown>) => {
+    c.header("cache-control", "no-store");
+    if (reply.setCookie) c.header("set-cookie", reply.setCookie);
+    if (reply.status === 204) return c.body(null, 204);
+    return c.json(reply.body, reply.status);
+  };
   const jsonBody = (c: Context<AppEnv>): Promise<unknown> =>
     c.req.json<unknown>().catch(() => undefined);
   const limit = (maxSize: number) =>
@@ -182,8 +222,11 @@ export function createApp() {
 
   // Cotação do checkout: corpo `checkoutQuoteRequestSchema`, 200 = `checkoutQuoteResponseSchema`
   // (preços, Delivery, mínimo e meios recalculados no servidor; nada gravado).
+  // Ticket 13: corpo com `couponCode` opcional; o `cookie` da sessão do Consumidor (repassado pelo
+  // Storefront) habilita o Cupom de boas-vindas; a resposta traz `coupon` (aplicado) ou o erro
+  // `coupon_invalid` com o motivo.
   storefront.post("/lojas/:slug/checkout/cotacao", limit(CART_QUOTE_MAX_BODY_BYTES), async (c) => {
-    const reply = await service(c).quote(c.req.param("slug"), await jsonBody(c));
+    const reply = await service(c).quote(c.req.param("slug"), await jsonBody(c), cookieOf(c));
     return c.json(reply.body, reply.status);
   });
 
@@ -191,8 +234,10 @@ export function createApp() {
   // (mesma chave e corpo), erros com `checkoutErrorHttpStatus` = `checkoutCreateResponseSchema`.
   // Loja ativa, Pausa, horário, Retirada, bairro, mínimo e itens conferidos na mesma escrita
   // (`batch` + INSERT … SELECT condicional + constraints).
+  // Ticket 13: Cupom recalculado e contado na mesma escrita; com sessão do Consumidor, o Pedido
+  // nasce ligado à conta.
   storefront.post("/lojas/:slug/pedidos", limit(CART_QUOTE_MAX_BODY_BYTES), async (c) => {
-    const reply = await service(c).create(c.req.param("slug"), await jsonBody(c));
+    const reply = await service(c).create(c.req.param("slug"), await jsonBody(c), cookieOf(c));
     return c.json(reply.body, reply.status);
   });
 
@@ -243,6 +288,26 @@ export function createApp() {
     if (reply.status === 204) return c.body(null, 204);
     return c.json(reply.body, reply.status as 400 | 404 | 429);
   });
+  // ---- Ticket 13: conta do Consumidor (contrato em @foode/shared/customer; regras em
+  // customer-service.ts). Sessão por cookie `__Host-` que o Storefront repassa (`cookie` na ida,
+  // `set-cookie` na volta) e fica no domínio do Storefront. Sem os secrets da whatsmiau, pedido e
+  // verificação respondem 503 `login_unavailable`. Tudo `no-store`.
+  storefront.post("/conta/codigo", limit(CUSTOMER_MAX_BODY_BYTES), async (c) =>
+    customerResponse(c, await customer(c).requestCode(await jsonBody(c), ipOf(c))),
+  );
+  storefront.post("/conta/codigo/verificar", limit(CUSTOMER_MAX_BODY_BYTES), async (c) =>
+    customerResponse(c, await customer(c).verifyCode(await jsonBody(c), ipOf(c))),
+  );
+  storefront.get("/conta", async (c) => customerResponse(c, await customer(c).state(cookieOf(c))));
+  storefront.post("/conta", limit(CUSTOMER_MAX_BODY_BYTES), async (c) =>
+    customerResponse(c, await customer(c).signup(await jsonBody(c), cookieOf(c), ipOf(c))),
+  );
+  storefront.post("/conta/sair", async (c) =>
+    customerResponse(c, await customer(c).signOut(cookieOf(c))),
+  );
+  storefront.get("/lojas/:slug/conta/pedidos", async (c) =>
+    customerResponse(c, await customer(c).orders(c.req.param("slug"), cookieOf(c))),
+  );
   app.route("/storefront", storefront);
 
   // Imagens do Cardápio (decisão 64): leitura pública só de chaves `stores/{uuid}/menu/{uuid}.{ext}`.
@@ -254,7 +319,27 @@ export function createApp() {
     serveStoreImage(c.env.MEDIA, c.req.param("storeId"), "brand", c.req.param("file"), c.req.raw),
   );
 
-  // `/webhooks/*`: rotas dos provedores (AbacatePay, Efí) entram nos Tickets 26 e 27.
+  // Webhook da AbacatePay (Ticket 26): `?webhookSecret=` (prova a origem) + `X-Webhook-Signature`
+  // (HMAC-SHA256 do corpo CRU), ambos conferidos em tempo constante ANTES do parse. Evento com
+  // identidade única: duplicata/reentrega/fora de ordem sem efeito duplo. Corpo, URL e segredo
+  // nunca vão para log/Sentry (redactPath tira a query). Sem as chaves: 503 (PIX indisponível).
+  // Efí (cartão) entra no Ticket 27.
+  app.post(
+    "/webhooks/abacatepay",
+    bodyLimit({
+      maxSize: WEBHOOK_MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: "invalid_payload" }, 413),
+    }),
+    async (c) => {
+      const reply = await pix(c).handleWebhook({
+        rawBody: await c.req.text(),
+        querySecret: c.req.query(ABACATEPAY_SECRET_QUERY_PARAM) ?? null,
+        signature: c.req.header(ABACATEPAY_SIGNATURE_HEADER) ?? null,
+      });
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
+  );
   // Qualquer outro caminho (inclusive operações do Painel) responde 404.
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));

@@ -15,11 +15,14 @@ import {
   type MenuItem,
   type PublicMenu,
 } from "@foode/shared/menu";
+import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { StorefrontStoreState } from "@foode/shared/order";
 import { Button } from "@foode/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { AccountApi } from "../conta/account-api";
+import { LoginSheet } from "../conta/login-sheet";
 import { AboutStoreSheet } from "./about-store-sheet";
 import { CartBar } from "./cart-bar";
 import { CartSheet } from "./cart-sheet";
@@ -38,15 +41,32 @@ import { Toast, useToast } from "./toast";
 import { useStoreCart } from "./use-store-cart";
 
 export type StorefrontProps = {
+  /** Injetável nos testes do login pelo cabeçalho. */
+  accountApi?: AccountApi;
   branding?: StoreBranding;
   menu: PublicMenu;
   /** Instante de referência para "abre hoje/amanhã" (injetável nos testes). */
   now?: number;
+  /**
+   * Sessão do Consumidor lida no servidor (Ticket 13); ausente = sem "Entrar" no cabeçalho
+   * (api indisponível ou testes que não cobrem a conta).
+   */
+  session?: CustomerSessionState;
+  /** Site key pública do Turnstile (login por código). */
+  siteKey?: string;
   /** Estado da Loja (24a); null enquanto a api não responde — o Cardápio segue visível. */
   state?: StorefrontStoreState | null;
 };
 
-export function Storefront({ branding, menu, now, state = null }: StorefrontProps) {
+export function Storefront({
+  accountApi,
+  branding,
+  menu,
+  now,
+  session,
+  siteKey = "",
+  state = null,
+}: StorefrontProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -58,6 +78,11 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
   const [query, setQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [account, setAccount] = useState<CustomerAccountView | null>(() =>
+    session?.state === "signed_in" ? session.account : null,
+  );
+  const accountHref = `/loja/${encodeURIComponent(menu.slug)}/conta`;
   const availability = useMemo(
     () => (state ? describeAvailability(state.availability, now) : null),
     [now, state],
@@ -186,10 +211,12 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
     <main className="min-h-dvh bg-[var(--color-canvas)] pb-28">
       <StoreHeader
         {...(branding ? { branding } : {})}
+        {...(session ? { account: account ? { name: account.name } : null, accountHref } : {})}
         availability={availability}
         description={state?.showcase?.description ?? null}
         name={menu.name}
         {...(state ? { onAbout: () => setAboutOpen(true) } : {})}
+        onSignIn={() => setLoginOpen(true)}
         onShare={() =>
           void share({
             text: `Veja o Cardápio de ${menu.name}`,
@@ -276,6 +303,21 @@ export function Storefront({ branding, menu, now, state = null }: StorefrontProp
 
       {state ? (
         <AboutStoreSheet onClose={() => setAboutOpen(false)} open={aboutOpen} state={state} />
+      ) : null}
+
+      {session ? (
+        <LoginSheet
+          {...(accountApi ? { api: accountApi } : {})}
+          onClose={() => setLoginOpen(false)}
+          onSignedIn={(signedIn) => {
+            setAccount(signedIn);
+            show(`Olá, ${signedIn.name.split(/\s+/u)[0]}! Você entrou na sua conta.`);
+            router.refresh();
+          }}
+          open={loginOpen}
+          siteKey={siteKey}
+          startAtSignup={session.state === "signup_required"}
+        />
       ) : null}
 
       <CartSheet

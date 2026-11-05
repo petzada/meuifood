@@ -51,9 +51,7 @@ describe("recalculateGuestPickupOrder", () => {
       itemsTotalCents: 5600,
       lines: [
         {
-          additionalSnapshots: [
-            { id: additionalId, name: "Bacon", priceCents: 300 },
-          ],
+          additionalSnapshots: [{ id: additionalId, name: "Bacon", priceCents: 300 }],
           complementSnapshots: [
             {
               groupId,

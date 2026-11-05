@@ -31,6 +31,15 @@ const tables: SQLiteTable[] = [
   phoneLookups,
 ];
 
+/** Colunas e índices acrescentados depois, por migrations próprias (Ticket 13: 0006). */
+const LATER_COLUMNS = new Set([
+  "orders.customer_account_id",
+  // Ticket 26 (migration 0007).
+  "orders.payment_status",
+  "orders.service_fee_cents",
+]);
+const LATER_INDEXES = new Set(["orders_store_account_created_idx"]);
+
 function tableSql(name: string): string {
   return migration.match(new RegExp(`CREATE TABLE \`${name}\` \\(([\\s\\S]*?)\\n\\);`))?.[1] ?? "";
 }
@@ -44,11 +53,16 @@ describe("migration 0004 × schema/orders.ts + schema/store-operation.ts", () =>
       expect(body, config.name).not.toBe("");
       for (const check of config.checks) expect(body).toContain(`CONSTRAINT "${check.name}"`);
       const columnsInSql = [...body.matchAll(/^\t`(\w+)` /gm)].map((m) => m[1]);
-      expect(columnsInSql.sort()).toEqual(config.columns.map((c) => c.name).sort());
+      expect(columnsInSql.sort()).toEqual(
+        config.columns
+          .map((c) => c.name)
+          .filter((name) => !LATER_COLUMNS.has(`${config.name}.${name}`))
+          .sort(),
+      );
       expect(body, "store_id em toda tabela").toMatch(/`store_id` text (PRIMARY KEY )?NOT NULL/);
     });
 
-    for (const index of config.indexes) {
+    for (const index of config.indexes.filter((i) => !LATER_INDEXES.has(i.config.name))) {
       it(`cria o índice ${index.config.name}`, () => {
         expect(migration).toContain(`INDEX \`${index.config.name}\` ON \`${config.name}\``);
       });

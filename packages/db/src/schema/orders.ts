@@ -8,6 +8,7 @@
 //   ORDER_TOKEN_SECRET, então o Painel consegue montar o link do "Avisar no WhatsApp").
 //   Idempotência: UNIQUE (store_id, idempotency_key) + hash do corpo normalizado.
 //   `discount_cents` (Cupom, Ticket 13) já existe com 0 para o CHECK do total não precisar mudar.
+//   `customer_account_id` (Ticket 13, 0006): conta do Consumidor; ADD COLUMN nullable (expand).
 //   Status por TEXT + CHECK: um estado novo exigiria recriar a tabela (contract) — estado do
 //   pagamento online entra como coluna própria nos Tickets 26/27, não como status.
 // - `order_lines`: linha com snapshot das escolhas em JSON (arrays de @foode/shared/order).
@@ -29,6 +30,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { customerAccounts } from "./customers";
 import { inList, stores, users, utcCheck, utcNowDefault } from "./fundacao";
 import { MENU_MAX_CENTS, MENU_NAME_MAX } from "./menu";
 import {
@@ -50,6 +52,17 @@ export type OrderStatusValue = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_FULFILLMENTS = ["delivery", "pickup"] as const;
 export const ORDER_PAYMENT_METHODS = ["pix", "credit", "on_delivery"] as const;
+/** Estado do pagamento no Pedido (Ticket 26). Fila do Painel = `not_required` ou `paid`. */
+export const ORDER_PAYMENT_STATUSES = [
+  "not_required",
+  "awaiting",
+  "paid",
+  "expired",
+  "failed",
+] as const;
+export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUSES)[number];
+/** Pedidos que o Painel enxerga (fila, detalhe, avanço): pagos ou sem pagamento online. */
+export const PAINEL_VISIBLE_PAYMENT_SQL = `payment_status IN ('not_required', 'paid')`;
 export const PHONE_LOOKUP_RESULTS = [
   "found",
   "not_found",
@@ -115,8 +128,31 @@ export const orders = sqliteTable(
     etaMaxMinutes: integer("eta_max_minutes"),
     createdAt: text("created_at").notNull().default(utcNowDefault),
     updatedAt: text("updated_at").notNull().default(utcNowDefault),
+    /** Conta do Consumidor (Ticket 13, migration 0006): Pedido autenticado ou Guest vinculado. */
+    customerAccountId: text("customer_account_id").references(() => customerAccounts.id),
+    /**
+     * Estado do pagamento online (Ticket 26, migration 0007, expand): coluna própria em vez de um
+     * status novo (que exigiria recriar `orders`). `not_required` = Pagamento na entrega (default
+     * das linhas antigas); PIX nasce `awaiting` e só entra na fila do Painel em `paid`. Domínio
+     * em ORDER_PAYMENT_STATUSES, conferido pela api e pelas escritas de @foode/db (ADD COLUMN com
+     * CHECK de tabela obrigaria recriar a tabela).
+     */
+    paymentStatus: text("payment_status", { enum: ORDER_PAYMENT_STATUSES })
+      .notNull()
+      .default("not_required"),
+    /**
+     * Tarifa de serviço do pagamento online (decisão 71), FORA de `total_cents` (o CHECK
+     * `orders_total_sum` segue valendo para o total do lojista). O Consumidor paga
+     * `total_cents + service_fee_cents`; 0 no Pagamento na entrega.
+     */
+    serviceFeeCents: integer("service_fee_cents").notNull().default(0),
   },
   (table) => [
+    index("orders_store_account_created_idx").on(
+      table.storeId,
+      table.customerAccountId,
+      table.createdAt,
+    ),
     uniqueIndex("orders_store_id_unique").on(table.storeId, table.id),
     uniqueIndex("orders_store_code_unique").on(table.storeId, table.code),
     uniqueIndex("orders_store_idempotency_unique").on(table.storeId, table.idempotencyKey),

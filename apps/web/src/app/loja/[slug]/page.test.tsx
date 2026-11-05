@@ -9,6 +9,11 @@ vi.mock("../../../lib/api", () => ({
   apiFetch: (...args: [string, RequestInit?]) => apiFetch(...args),
 }));
 
+// Sessão do Consumidor (Ticket 13): sem cookie na request = anônimo; "Entrar" no cabeçalho.
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers(),
+}));
+
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");

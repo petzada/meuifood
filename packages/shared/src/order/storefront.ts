@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 import { centsSchema } from "../money.js";
+import { orderPixSchema } from "../payment/pix.js";
 import { storefrontShowcaseSchema } from "../onboarding/showcase.js";
 import { phoneE164Schema, customerPhoneSchema } from "./checkout.js";
 import { civilTimeSchema, storeOpenStateSchema, weekdaySchema } from "./hours.js";
@@ -140,8 +141,16 @@ export const orderTrackingSchema = z.object({
   subtotalCents: centsSchema,
   deliveryFeeCents: centsSchema,
   discountCents: centsSchema,
+  /** Total do Pedido (itens + Delivery − Cupom), sem a tarifa de serviço. */
   totalCents: centsSchema,
+  /**
+   * Tarifa de serviço do pagamento online (decisão 71); 0 no Pagamento na entrega. O Consumidor
+   * paga `totalCents + serviceFeeCents`.
+   */
+  serviceFeeCents: centsSchema.default(0),
   payment: z.object({ method: paymentMethodSchema, changeForCents: centsSchema.nullable() }),
+  /** Cobrança PIX (Ticket 26): só em Pedido `pix`; null nos demais meios. */
+  pix: orderPixSchema.nullable().default(null),
   note: z.string().nullable(),
   address: orderAddressViewSchema.nullable(),
 });
@@ -177,7 +186,11 @@ export const phoneLookupConfirmTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32
  * de uso único e curto. 429 `rate_limited`; 403 `captcha_failed`.
  */
 export const phoneLookupResponseSchema = z.discriminatedUnion("found", [
-  z.object({ found: z.literal(false) }),
+  /**
+   * `hasAccount: true` (decisão 68, Ticket 13): o telefone tem conta Foode; o checkout oferece
+   * "Entrar com WhatsApp" e NADA da conta nem de Pedidos aparece sem o código (nem mascarado).
+   */
+  z.object({ found: z.literal(false), hasAccount: z.boolean().optional() }),
   z.object({
     found: z.literal(true),
     confirmToken: phoneLookupConfirmTokenSchema,

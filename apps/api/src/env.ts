@@ -27,4 +27,21 @@ export type Env = {
   ORDER_TOKEN_SECRET?: string;
   /** Sal do hash do IP truncado na auditoria/rate limit da busca por telefone (P-2.1). */
   PHONE_LOOKUP_IP_SALT?: string;
+  // Ticket 13 (conta do Consumidor, decisão 65). Secrets OPCIONAIS: sem eles o login pelo WhatsApp
+  // responde "indisponível no momento" e o checkout Guest segue normal. O hash do código de login
+  // usa uma chave derivada de BETTER_AUTH_SECRET (já obrigatório no deploy).
+  /** Chave da API da whatsmiau.dev (header `apikey`). */
+  WHATSMIAU_API_KEY?: string;
+  /** Id da instância da whatsmiau conectada ao número oficial da Foode. */
+  WHATSMIAU_INSTANCE_ID?: string;
+  /** Base da API (var; padrão `https://api.whatsmiau.dev/v2`). */
+  WHATSMIAU_API_URL?: string;
+  // Ticket 26 (PIX AbacatePay, decisão 60). Secrets OPCIONAIS: sem os três, PIX fica indisponível
+  // no checkout (o Dono cria as chaves no fim). Nunca em arquivo, log ou Sentry.
+  /** Chave de API da conta AbacatePay do Foode (produção; o ambiente é a chave). */
+  ABACATEPAY_API_KEY?: string;
+  /** Nosso segredo do webhook (vai em `?webhookSecret=` da URL cadastrada): prova a origem. */
+  ABACATEPAY_WEBHOOK_SECRET?: string;
+  /** Chave pública de assinatura HMAC publicada pela AbacatePay (header X-Webhook-Signature). */
+  ABACATEPAY_SIGNING_KEY?: string;
 };

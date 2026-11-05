@@ -1,7 +1,4 @@
-import {
-  validateCartLineChoices,
-  type CartLineContract,
-} from "./cart-preview.js";
+import { validateCartLineChoices, type CartLineContract } from "./cart-preview.js";
 
 export type ComplementSnapshot = {
   groupId: string;
@@ -103,9 +100,7 @@ export function recalculateGuestPickupOrder(
 
     const additionalSnapshots: AdditionalSnapshot[] = [];
     for (const additionalId of line.additionalIds) {
-      const additional = item.additionals.find(
-        (candidate) => candidate.id === additionalId,
-      );
+      const additional = item.additionals.find((candidate) => candidate.id === additionalId);
       if (!additional) return { ok: false, error: "invalid_additional" };
       if (!additional.available) {
         return { ok: false, error: "additional_unavailable" };

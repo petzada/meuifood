@@ -1,0 +1,17 @@
+{
+  "id": "log_TESTE000000000000000002",
+  "event": "transparent.completed",
+  "apiVersion": 2,
+  "devMode": true,
+  "data": {
+    "transparent": {
+      "id": "card_TESTE000000000000000001",
+      "amount": 5990,
+      "status": "APPROVED",
+      "platformFee": 385,
+      "metadata": { "intentId": "intent_teste_002" }
+    },
+    "customer": { "name": "Cliente Teste", "taxId": "***.***.***-**" },
+    "payerInformation": { "method": "CARD" }
+  }
+}

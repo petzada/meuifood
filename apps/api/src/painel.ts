@@ -51,6 +51,19 @@ import type {
   StoreUploadedBrandImage,
 } from "@foode/shared/onboarding";
 import type {
+  CouponCreateInput,
+  CouponRefInput,
+  CouponSetActiveInput,
+  CouponsOverview,
+  CouponUpdateInput,
+  WelcomeCouponInput,
+} from "@foode/shared/coupon";
+import type {
+  OpsCustomerChangePhoneInput,
+  OpsCustomerFindInput,
+  OpsCustomerView,
+} from "@foode/shared/customer";
+import type {
   OpsActivateStoreInput,
   OpsAuditEntry,
   OpsCreatePaymentFeesInput,
@@ -93,6 +106,8 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { apiHealth } from "./app";
 import { AUTH_BASE_PATH, createAuth, panelUrlOf } from "./auth/auth";
 import { createTurnstileVerifier } from "./auth/turnstile";
+import { createCouponService, type CouponService } from "./coupon-service";
+import { createOpsCustomerService, type OpsCustomerService } from "./customer-service";
 import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
 import { mediaBaseUrl } from "./media";
@@ -157,6 +172,18 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
       media: this.env.MEDIA,
       mediaBaseUrl: mediaBaseUrl(this.env.MEDIA_PUBLIC_BASE_URL),
     });
+  }
+
+  /** Cupons e boas-vindas (Ticket 13): só Dono da Loja ativa; coupon-service.ts. */
+  private coupons(): CouponService {
+    const { auth } = this.deps();
+    return createCouponService({ db: createFoodeDb(this.env.DB), auth });
+  }
+
+  /** Conta do Consumidor no Ops (Ticket 13): busca e troca de telefone; customer-service.ts. */
+  private opsCustomers(): OpsCustomerService {
+    const { auth } = this.deps();
+    return createOpsCustomerService({ db: createFoodeDb(this.env.DB), auth });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */
@@ -591,5 +618,54 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     input: FunnelReportInput,
   ): Promise<RpcResult<FunnelReport>> {
     return this.run("funnelReport", () => this.onboarding().funnelReport(caller, input));
+  }
+
+  async couponsGet(caller: PainelCaller): Promise<RpcResult<CouponsOverview>> {
+    return this.run("couponsGet", () => this.coupons().couponsGet(caller));
+  }
+
+  async couponCreate(
+    caller: PainelCaller,
+    input: CouponCreateInput,
+  ): Promise<RpcResult<{ couponId: string }>> {
+    return this.run("couponCreate", () => this.coupons().couponCreate(caller, input));
+  }
+
+  async couponUpdate(caller: PainelCaller, input: CouponUpdateInput): Promise<RpcResult<null>> {
+    return this.run("couponUpdate", () => this.coupons().couponUpdate(caller, input));
+  }
+
+  async couponSetActive(
+    caller: PainelCaller,
+    input: CouponSetActiveInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("couponSetActive", () => this.coupons().couponSetActive(caller, input));
+  }
+
+  async couponDelete(caller: PainelCaller, input: CouponRefInput): Promise<RpcResult<null>> {
+    return this.run("couponDelete", () => this.coupons().couponDelete(caller, input));
+  }
+
+  async welcomeCouponSet(
+    caller: PainelCaller,
+    input: WelcomeCouponInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("welcomeCouponSet", () => this.coupons().welcomeCouponSet(caller, input));
+  }
+
+  async opsCustomerFind(
+    caller: PainelCaller,
+    input: OpsCustomerFindInput,
+  ): Promise<RpcResult<OpsCustomerView>> {
+    return this.run("opsCustomerFind", () => this.opsCustomers().opsCustomerFind(caller, input));
+  }
+
+  async opsCustomerChangePhone(
+    caller: PainelCaller,
+    input: OpsCustomerChangePhoneInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsCustomerChangePhone", () =>
+      this.opsCustomers().opsCustomerChangePhone(caller, input),
+    );
   }
 }

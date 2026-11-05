@@ -111,6 +111,11 @@ jobs:
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           ORDER_TOKEN_SECRET: ${{ secrets.ORDER_TOKEN_SECRET }}
           PHONE_LOOKUP_IP_SALT: ${{ secrets.PHONE_LOOKUP_IP_SALT }}
+          WHATSMIAU_API_KEY: ${{ secrets.WHATSMIAU_API_KEY }}
+          WHATSMIAU_INSTANCE_ID: ${{ secrets.WHATSMIAU_INSTANCE_ID }}
+          ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
+          ABACATEPAY_WEBHOOK_SECRET: ${{ secrets.ABACATEPAY_WEBHOOK_SECRET }}
+          ABACATEPAY_SIGNING_KEY: ${{ secrets.ABACATEPAY_SIGNING_KEY }}
         run: |
           umask 077
           dir="$RUNNER_TEMP/secrets"
@@ -122,9 +127,15 @@ jobs:
           # Sem eles a criação do Pedido e a busca falham fechadas; trocar o token invalida links.
           : "${ORDER_TOKEN_SECRET:?secret ORDER_TOKEN_SECRET ausente}"
           : "${PHONE_LOOKUP_IP_SALT:?secret PHONE_LOOKUP_IP_SALT ausente}"
+          # Login do Consumidor (Ticket 13, decisão 65): whatsmiau OPCIONAL. Vazio = omitido e o
+          # login responde "indisponível no momento" (o Dono conecta o número no fim).
+          # PIX AbacatePay (Ticket 26): chaves OPCIONAIS. Sem as três, PIX fica fora do checkout.
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_API, MILLIONSEND_API_KEY: env.MILLIONSEND_API_KEY,
                   BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY,
-                  ORDER_TOKEN_SECRET: env.ORDER_TOKEN_SECRET, PHONE_LOOKUP_IP_SALT: env.PHONE_LOOKUP_IP_SALT}
+                  ORDER_TOKEN_SECRET: env.ORDER_TOKEN_SECRET, PHONE_LOOKUP_IP_SALT: env.PHONE_LOOKUP_IP_SALT,
+                  WHATSMIAU_API_KEY: env.WHATSMIAU_API_KEY, WHATSMIAU_INSTANCE_ID: env.WHATSMIAU_INSTANCE_ID,
+                  ABACATEPAY_API_KEY: env.ABACATEPAY_API_KEY, ABACATEPAY_WEBHOOK_SECRET: env.ABACATEPAY_WEBHOOK_SECRET,
+                  ABACATEPAY_SIGNING_KEY: env.ABACATEPAY_SIGNING_KEY}
             | with_entries(select(.value != null and .value != ""))' > "$dir/api.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_WEB} | with_entries(select(.value != null and .value != ""))' > "$dir/web.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_ADMIN} | with_entries(select(.value != null and .value != ""))' > "$dir/admin.json"
@@ -138,10 +149,12 @@ jobs:
         env:
           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          WHATSMIAU_API_URL: ${{ vars.WHATSMIAU_API_URL }}
         run: |
           args=(--secrets-file "$SECRETS_DIR/api.json")
           if [ -n "$BETTER_AUTH_URL" ]; then args+=(--var "BETTER_AUTH_URL:$BETTER_AUTH_URL"); fi
           if [ -n "$EMAIL_FROM" ]; then args+=(--var "EMAIL_FROM:$EMAIL_FROM"); fi
+          if [ -n "$WHATSMIAU_API_URL" ]; then args+=(--var "WHATSMIAU_API_URL:$WHATSMIAU_API_URL"); fi
           pnpm exec wrangler deploy "${args[@]}"
       - name: Deploy web
         working-directory: apps/web

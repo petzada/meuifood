@@ -6,6 +6,7 @@
 // (T-12: confirmação que nomeia o Pedido e a consequência; sem Estorno até o Ticket 12).
 import { Badge, Button } from "@foode/ui";
 import { formatBRL } from "@foode/shared/money";
+import { SERVICE_FEE_LABEL_PT } from "@foode/shared/payment";
 import {
   advanceActionLabelPt,
   formatEtaPt,
@@ -245,6 +246,13 @@ export function OrderDetailPanel({
                 <dt>Total</dt>
                 <dd>{formatBRL(order.totalCents)}</dd>
               </div>
+              {/* Decisão 71: tarifa do pagamento online é da Foode, fora do total da Loja. */}
+              {(order.serviceFeeCents ?? 0) > 0 ? (
+                <div className="flex justify-between text-sm text-[var(--color-muted)]">
+                  <dt>{SERVICE_FEE_LABEL_PT} · Foode</dt>
+                  <dd>{formatBRL(order.serviceFeeCents ?? 0)}</dd>
+                </div>
+              ) : null}
             </dl>
             <p className="text-sm text-[var(--color-body)]">
               {paymentMethodLabelPt(order.payment.method)} ·{" "}

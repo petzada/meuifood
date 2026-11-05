@@ -33,6 +33,11 @@ async function hmac(secret: string, message: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(message)));
 }
 
+/** HMAC-SHA256 em hex (código de login e chave do telefone do Ticket 13). */
+export async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  return toHex((await hmac(secret, message)).buffer as ArrayBuffer);
+}
+
 /** Segredo obrigatório: ausente/curto = erro (nunca um padrão embutido no código). */
 export function requireSecret(value: string | undefined, name: string): string {
   const secret = value?.trim();
