@@ -115,7 +115,53 @@ export async function storefrontSlugRedirect(
  * AbacatePay leva o segredo em `?webhookSecret=`): nunca em log nem no Sentry.
  */
 export function redactPath(path: string): string {
-  return path.replace(/[?#].*$/su, "").replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
+  return path
+    .replace(/[?#].*$/su, "")
+    .replace(/\/pedidos\/[^/]+/u, "/pedidos/:token")
+    .replace(/\/notification\/[^/]+/u, "/notification/:token");
+}
+
+/**
+ * `beforeSend` do Sentry (index.ts): URL sem token/query; sem corpo (checkout: telefone,
+ * endereço; Cartão: token do SDK, CPF, e-mail, nascimento), query, cookies e headers (o `cookie`
+ * da sessão do Consumidor e o `cf-connecting-ip`); sem usuário/IP.
+ */
+export function scrubSentryEvent<
+  T extends {
+    request?: {
+      url?: string;
+      data?: unknown;
+      query_string?: unknown;
+      cookies?: unknown;
+      headers?: unknown;
+    };
+    user?: unknown;
+  },
+>(event: T): T {
+  if (event.request) {
+    if (event.request.url) event.request.url = redactPath(event.request.url);
+    delete event.request.data;
+    delete event.request.query_string;
+    delete event.request.cookies;
+    delete event.request.headers;
+  }
+  delete event.user;
+  return event;
+}
+
+/**
+ * `beforeBreadcrumb` do Sentry: fetch de saída sem query nem token no caminho (ex.: Efí
+ * `GET /v1/notification/:token`, AbacatePay com segredo na query). Os logs de console da api já
+ * são JSON só com campos seguros (nenhum log com dado pessoal).
+ */
+export function scrubSentryBreadcrumb<
+  T extends { category?: string; message?: string; data?: Record<string, unknown> },
+>(breadcrumb: T): T {
+  if (breadcrumb.message && breadcrumb.category !== "console")
+    breadcrumb.message = redactPath(breadcrumb.message);
+  const url = breadcrumb.data?.url;
+  if (breadcrumb.data && typeof url === "string") breadcrumb.data.url = redactPath(url);
+  return breadcrumb;
 }
 
 export function createApp() {

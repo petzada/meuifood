@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import "@fontsource-variable/nunito";
 import "./globals.css";
 
+import { SupportWidget } from "../components/support-widget";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "../content/site";
 
 // Metadados raiz (PROPOSTA-SEO §2): `metadataBase` absoluto, template de título, OG padrão
@@ -31,6 +32,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         {/* Toast padrão do Foode (decisões 72/74): o mesmo do Painel, também no Storefront. */}
         <ToastProvider>{children}</ToastProvider>
+        {/* Widget de suporte (Ticket 30): só com NEXT_PUBLIC_SUPPORT_WIDGET_* no build. */}
+        <SupportWidget />
       </body>
     </html>
   );

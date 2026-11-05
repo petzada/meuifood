@@ -51,6 +51,10 @@
       "types": "./dist/finance/index.d.ts",
       "default": "./dist/finance/index.js"
     },
+    "./sentry": {
+      "types": "./dist/sentry/index.d.ts",
+      "default": "./dist/sentry/index.js"
+    },
     "./zod": {
       "types": "./dist/zod.d.ts",
       "default": "./dist/zod.js"

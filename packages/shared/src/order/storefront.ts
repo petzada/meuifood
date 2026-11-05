@@ -170,6 +170,12 @@ export type OrderTracking = z.infer<typeof orderTrackingSchema>;
 
 /** Máximo de consultas por IP (hash) por janela, por Loja. */
 export const PHONE_LOOKUP_RATE_LIMIT = { max: 5, windowSeconds: 600 } as const;
+/**
+ * Máximo de consultas por IP (hash) na janela, somando TODAS as Lojas (Ticket 30): sem ele, uma
+ * varredura trocando de Loja ganharia +5 consultas por Loja (e o "tem conta Foode" da decisão 68
+ * é global).
+ */
+export const PHONE_LOOKUP_GLOBAL_IP_MAX = 8;
 /** Validade do token que libera os dados completos depois do "Sou eu". */
 export const PHONE_LOOKUP_CONFIRM_TTL_SECONDS = 300;
 

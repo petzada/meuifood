@@ -89,7 +89,9 @@ export function createCustomerOps(d1: D1Database) {
   return {
     /**
      * Grava um código novo para o telefone, se o último foi criado há pelo menos `resendSeconds`
-     * (a condição está no próprio INSERT). Senão, devolve quanto falta para o reenvio.
+     * E o telefone recebeu menos de `daily.max` códigos em `daily.windowSeconds` (as duas
+     * condições estão no próprio INSERT). Senão, diz o motivo: reenvio cedo demais (com quanto
+     * falta) ou teto diário (Ticket 30: contém a força bruta do código de 4 dígitos).
      */
     async issueLoginCode(input: {
       codeId: string;
@@ -98,14 +100,21 @@ export function createCustomerOps(d1: D1Database) {
       now: string;
       expiresAt: string;
       resendSeconds: number;
-    }): Promise<{ issued: true } | { issued: false; retryAfterSeconds: number }> {
+      daily: { max: number; windowSeconds: number };
+    }): Promise<
+      | { issued: true }
+      | { issued: false; reason: "resend_too_soon"; retryAfterSeconds: number }
+      | { issued: false; reason: "daily_limit" }
+    > {
       const nowMs = Date.parse(input.now);
       const boundary = new Date(nowMs - input.resendSeconds * 1000).toISOString();
+      const dayBoundary = new Date(nowMs - input.daily.windowSeconds * 1000).toISOString();
       const result = await d1
         .prepare(
           `INSERT INTO customer_login_codes (id, phone_key, code_hash, attempts, created_at, expires_at)
            SELECT ?, ?, ?, 0, ?, ?
-           WHERE NOT EXISTS (SELECT 1 FROM customer_login_codes WHERE phone_key = ? AND created_at > ?)`,
+           WHERE NOT EXISTS (SELECT 1 FROM customer_login_codes WHERE phone_key = ? AND created_at > ?)
+             AND (SELECT COUNT(*) FROM customer_login_codes WHERE phone_key = ? AND created_at > ?) < ?`,
         )
         .bind(
           input.codeId,
@@ -115,6 +124,9 @@ export function createCustomerOps(d1: D1Database) {
           input.expiresAt,
           input.phoneKey,
           boundary,
+          input.phoneKey,
+          dayBoundary,
+          input.daily.max,
         )
         .run();
       if ((result.meta.changes ?? 0) > 0) return { issued: true };
@@ -124,9 +136,10 @@ export function createCustomerOps(d1: D1Database) {
         )
         .bind(input.phoneKey)
         .first<{ createdAt: string | null }>();
-      const lastMs = last?.createdAt ? Date.parse(last.createdAt) : nowMs;
+      const lastMs = last?.createdAt ? Date.parse(last.createdAt) : Number.NEGATIVE_INFINITY;
       const wait = Math.ceil((lastMs + input.resendSeconds * 1000 - nowMs) / 1000);
-      return { issued: false, retryAfterSeconds: Math.max(1, wait) };
+      if (wait > 0) return { issued: false, reason: "resend_too_soon", retryAfterSeconds: wait };
+      return { issued: false, reason: "daily_limit" };
     },
 
     /** Envio pelo WhatsApp falhou: o código some (não bloqueia o reenvio por 30 s). */

@@ -161,6 +161,18 @@ describe("storefront /loja/[slug]", () => {
     expect(configured).toContain('"123456789012345"');
     expect(configured).toContain("gtag/js?id=G-ABC123");
     expect(configured).not.toContain("phone");
+    // Meta não acompanha troca de rota (a página do Pedido tem o token na URL; Ticket 30).
+    expect(configured).toContain("fbq.disablePushState=true");
+
+    // Página do Pedido: sem fbevents.js; Google com page_location sem o token.
+    const orderPage = renderToStaticMarkup(
+      <PixelScripts
+        pixels={{ googleTagId: "G-ABC123", metaPixelId: "123456789012345" }}
+        safePagePath="/loja/lanchonete-do-ze/pedido"
+      />,
+    );
+    expect(orderPage).not.toContain("fbevents.js");
+    expect(orderPage).toContain('page_location:location.origin+"/loja/lanchonete-do-ze/pedido"');
   });
 
   it("link antigo (decisão 69): 308 para o link atual preservando a query", async () => {

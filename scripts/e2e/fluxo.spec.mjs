@@ -23,7 +23,8 @@ const QUEUE_LIST = /\/api\/pedidos\?.*scope=active/u;
 const PAUSED_MESSAGE = "A Loja pausou os pedidos agora.";
 const CHANGE_FOR = "50";
 
-test.describe.configure({ mode: "serial" });
+// Fluxo com estado (o Pedido criado num teste é usado no seguinte): repetir do zero só mascara o erro.
+test.describe.configure({ mode: "serial", retries: 0 });
 test.skip(!state, "sem SMOKE_E2E_STATE: o fluxo com a Loja de smoke só roda no e2e-producao.yml");
 
 /** @type {{ operator: import("@playwright/test").Page, consumer: import("@playwright/test").Page, ops: import("@playwright/test").Page }} */
@@ -141,9 +142,14 @@ test("Pedido chega na fila, detalhe com troco, impressão e cancelamento", async
   const page = pages.operator;
   const received = page.getByRole("region", { name: /^Recebidos \(\d+\)/u });
   // Polling da fila: 10 s.
-  await expect(received.getByText(`#${orderCode}`)).toBeVisible({ timeout: 45_000 });
+  await expect(received.getByText(`#${orderCode}`, { exact: true })).toBeVisible({
+    timeout: 45_000,
+  });
 
-  await received.getByRole("button", { name: `Abrir detalhe do Pedido #${orderCode}` }).click();
+  await received
+    .getByRole("button", { name: new RegExp(`^#${orderCode}(?!\\d)`, "u") })
+    .first()
+    .click();
   const payment = page.getByRole("region", { name: "Pagamento" });
   await expect(payment).toContainText(`${CHANGE_FOR},00`);
 
@@ -159,7 +165,9 @@ test("Pedido chega na fila, detalhe com troco, impressão e cancelamento", async
   const dialog = page.getByRole("dialog", { name: `Cancelar o Pedido #${orderCode}?` });
   await dialog.getByRole("radio", { name: "Consumidor pediu" }).check();
   await dialog.getByRole("button", { name: "Cancelar o Pedido" }).click();
-  await expect(received.getByText(`#${orderCode}`)).toHaveCount(0, { timeout: 30_000 });
+  await expect(received.getByText(`#${orderCode}`, { exact: true })).toHaveCount(0, {
+    timeout: 30_000,
+  });
 });
 
 test("Pausa pelo Operador bloqueia o checkout e Retomar libera", async () => {

@@ -44,9 +44,9 @@
 
 ### Runbook e pendências
 
-- [ ] `docs/runbook-testes-producao.md`: passo a passo para o Dono criar uma Loja no `/ops`, cadastrar taxas, fazer o onboarding como Dono (perfil, checklist, vitrine, Slug, QR, Pixel), configurar horários, entrega, bandeiras e "Imprimir ao aceitar", pedir por PIX, Cartão (Normal e Rápido) e na entrega (com troco), entrar como Consumidor pelo código no WhatsApp, aplicar Cupom, operar a fila (tour, chips, Pausa pelo Operador, "Avisar no WhatsApp", impressão), cancelar com Estorno, ver relatórios (CSV, imprimir, funil), ver Repasses e marcar um lote pago.
-- [ ] Lista final de pendências manuais (se houver) e de itens pós-MVP (agente de suporte + MCP, débito online se não entrou).
-- [ ] Pendências/riscos registram: **enquanto o widget estiver desligado, o Consumidor bloqueado por conflito de telefone/CPF não tem canal de suporte** (risco aceito na [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md) até a ativação do widget).
+- [x] `docs/runbook-testes-producao.md`: passo a passo para o Dono criar uma Loja no `/ops`, cadastrar taxas, fazer o onboarding como Dono (perfil, checklist, vitrine, Slug, QR, Pixel), configurar horários, entrega, bandeiras e "Imprimir ao aceitar", pedir por PIX, Cartão (Normal e Rápido) e na entrega (com troco), entrar como Consumidor pelo código no WhatsApp, aplicar Cupom, operar a fila (tour, chips, Pausa pelo Operador, "Avisar no WhatsApp", impressão), cancelar com Estorno, ver relatórios (CSV, imprimir, funil), ver Repasses e marcar um lote pago.
+- [x] Lista final de pendências manuais (se houver) e de itens pós-MVP (agente de suporte + MCP, débito online se não entrou).
+- [x] Pendências/riscos registram: **enquanto o widget estiver desligado, o Consumidor bloqueado por conflito de telefone/CPF não tem canal de suporte** (risco aceito na [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md) até a ativação do widget).
 
 ## Comments
 
@@ -63,3 +63,24 @@
 - 2026-11-05 — Critérios consolidados com 63–65: bloqueio corrigido para 14 e 15 (o 20 foi cortado); entraram a revisão de segurança dos dados pessoais (busca por telefone, login, TOP 10, funil, CSV), o widget na forma da 64, o checklist do bloco humano final (whatsmiau, Efí, AbacatePay, Sentry, taxas, PIX e Cartão reais, Política de Privacidade) e o runbook ampliado. P-IMP-1 e P-ONB-2 foram decididos de outra forma (configuração "Imprimir ao aceitar"; sem Pedido de teste), então o runbook não inclui modo quiosque nem Pedido de teste.
 
 - 2026-11-05 — Decisão [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md): o widget de suporte tem espaço também no Storefront (mesma base de integração) e atende o Consumidor bloqueado; sem widget ativo não há canal (risco aceito, registrado nas pendências).
+
+- 2026-11-05 — 30C (branch `feat/30c-391f`): K1 (TOP 10 clientes fora da impressão de `/relatorios`, `foode-print-hide` + `print:hidden`, com teste), K3 (Sentry do admin com o mesmo scrub do web, movido para `@foode/shared/sentry`; redige também `/api/auth/reset-password/:token`), `deploy.yml` repassando `NEXT_PUBLIC_SUPPORT_WIDGET_SRC`/`_ID` (variables `SUPPORT_WIDGET_SRC`/`_ID`, com `_WEB`/`_ADMIN` por app) e o runbook [`docs/runbook-testes-producao.md`](../../../docs/runbook-testes-producao.md). Sem migration. O ticket fica aberto até o smoke de produção verde (o orquestrador marca).
+
+  **Lista final de pendências**
+
+  _Manuais (bloco humano e smoke real, na ordem do runbook):_
+  1. Bloco humano final acima: whatsmiau, Efí, AbacatePay + `setup-abacatepay-webhook`, DSNs do Sentry nos três Workers, taxas no `/ops`, PIX e Cartão reais com Estorno, `/privacidade` e a decisão do widget.
+  2. Confirmar em sandbox ou no smoke real os pontos marcados no código: `TODO(12)` (a Efí estorna cartão `approved` antes de `paid`? `apps/api/src/refund-service.ts`), `TODO(15)` (Efí `paid`/AbacatePay `PAID` = crédito liberado? `apps/api/src/card-service.ts`), `TODO(26)` (corpos não confirmados da AbacatePay: `/transparents/check`, estorno, `data.transparent`, segredo do webhook; feriados facultativos em `packages/shared/src/business-days.ts`) e os campos da Efí `birth`/`billing_address` (`TODO(27)` em `apps/api/src/providers/efi/client.ts`: exigidos em produção?), além do `tds_identifier` (3DS) e do content-type da notificação.
+  3. Varredura de Workers Logs e Sentry depois do smoke real e conferência na aba Rede de que Meta/Google não recebem `/pedido/<token>` (runbook §7); registrar no item 18 de `reports/30-seguranca-dados.md`.
+  4. Sentry no navegador: resolvido — o `deploy.yml` passa `SENTRY_DSN_WEB`/`SENTRY_DSN_ADMIN` como `NEXT_PUBLIC_SENTRY_DSN` no build de cada app (DSN é público por natureza; o scrub de `@foode/shared/sentry` vale no cliente).
+
+  _Decisões do Dono e riscos aceitos:_
+  5. **Token do Pedido nos Workers Logs** (R3): o caminho `/loja/<slug>/pedido/<token>` aparece nos logs de request da Cloudflare; filtrar exige mexer na `observability` do `wrangler` — decisão do Dono.
+  6. **Auditoria `not_found` da busca por telefone** (A1): a busca de telefone com conta Foode fica auditada como `not_found`; um resultado próprio exige migration (enum com CHECK) — melhoria futura.
+  7. **Widget de suporte desligado** (decisão 66): enquanto `SUPPORT_WIDGET_SRC`/`_ID` não estiverem gravadas, o Consumidor bloqueado por conflito de telefone/CPF não tem canal de suporte (risco aceito).
+  8. **Loja `smoke-foode` no `/ops`**: a Loja sintética do `e2e-producao` aparece na lista de Lojas como "Sem Plano" (esperado; escondê-la ou marcá-la como sintética é melhoria futura).
+
+  _Pós-MVP:_
+  9. Agente de suporte do agentes.chat + MCP (pós-lançamento; contrato em `docs/integracao-suporte-agentes-chat.md`).
+  10. **Débito online: fora** por decisão do Dono em 2026-11-05 — a API de cartão transparente da AbacatePay não distingue débito de crédito e a Efí só oferece crédito. Débito segue só na maquininha (Pagamento na entrega).
+  11. Reconciliação (Ticket 15): cobrança com timeout e webhook perdido não é localizável (adapters sem busca por `custom_id`); contagens de divergência varrem tabelas inteiras (limitar por janela quando houver volume).

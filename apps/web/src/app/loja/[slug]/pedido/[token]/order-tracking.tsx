@@ -37,6 +37,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   firePixelEvent,
+  pixelSafeOrderPath,
   purchaseSentKey,
   type PixelIds,
   type PixelWindow,
@@ -156,11 +157,20 @@ export function OrderTrackingView({
     } catch {
       // sem storage: dispara mesmo assim
     }
-    firePixelEvent(window as PixelWindow, pixels, {
-      name: "purchase",
-      orderCode: initial.code,
-      valueCents: initial.totalCents,
-    });
+    // A URL desta página tem o token do Pedido: Meta e Google só recebem a URL sem ele.
+    firePixelEvent(
+      window as PixelWindow,
+      pixels,
+      { name: "purchase", orderCode: initial.code, valueCents: initial.totalCents },
+      {
+        safePageUrl: `${window.location.origin}${pixelSafeOrderPath(storeSlug)}`,
+        beacon: (url) => {
+          const image = new Image();
+          image.referrerPolicy = "no-referrer";
+          image.src = url;
+        },
+      },
+    );
   }, [initial.code, initial.status, initial.totalCents, pendingPayment, pixels, storeSlug]);
 
   const interval = awaitingPayment ? pixPollIntervalMs : pollIntervalMs;
