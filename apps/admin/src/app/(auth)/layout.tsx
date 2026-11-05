@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
         <BrandMark className="mx-auto w-fit">
           <Image src={logo} alt="Foode Delivery" width={112} height={112} priority />
         </BrandMark>
-        <p className="mt-6 text-center text-sm font-bold text-[var(--color-primary-active)]">
+        <p className="mt-6 text-center text-sm font-bold text-[var(--color-primary-strong)]">
           Painel Foode
         </p>
         {children}

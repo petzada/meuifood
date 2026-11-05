@@ -4,7 +4,7 @@
 
 **Blocked by:** 22 — Portar Auth e RBAC para Better Auth.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus para API/dados; Fable para as telas do Painel e do Storefront, após o commit de contrato (schemas em `@foode/shared`).
 
@@ -54,3 +54,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: P-1.1, P-1.2, P-1.3, P-1.4, P-1.5, P-5.4 (item), P-5.5, P-CAR-1, P-CAR-2, P-CAR-3, P-CAR-5, P-ONB-3/P-CAR-4 e P-DS-1 entraram no checklist; o critério de URL pré-assinada saiu (upload pelos bytes via binding `MEDIA`, decisão 64); critério de UI/`/code-review` com os achados do antigo Ticket 20.
 
 - 2026-11-05 — Esclarecimento confirmado pelo Dono no teste visual: o máximo do grupo de Complemento vale também para opções pagas (P-1.1 não cria exceção); extra pago sem limite é Adicional (ex.: "Molho extra"). Critério acrescentado ao checklist.
+
+- 2026-11-05 — Done (PR do Ticket 23). Contrato `e2fe04a`, API `28828b1`, Storefront `dacf710`, Painel `ff79558`; migration `0003_cardapio`. Pendentes: arrastar para reordenar (opcional), limpeza de fotos órfãs no R2, `MEDIA_PUBLIC_BASE_URL` no domínio da api (25), testes de componente (decisão 67).

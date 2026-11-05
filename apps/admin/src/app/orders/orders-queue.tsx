@@ -80,13 +80,7 @@ function playNewOrderBeep() {
   }
 }
 
-export function OrdersQueue({
-  accessToken,
-  apiUrl,
-}: {
-  accessToken: string;
-  apiUrl: string;
-}) {
+export function OrdersQueue({ accessToken, apiUrl }: { accessToken: string; apiUrl: string }) {
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,9 +118,7 @@ export function OrdersQueue({
         const nextOrders = payload.orders.flatMap((order) => {
           const status = orderStatusSchema.safeParse(order.status);
           if (!status.success) return [];
-          const fulfillment = fulfillmentTypeSchema.safeParse(
-            order.fulfillmentType ?? "pickup",
-          );
+          const fulfillment = fulfillmentTypeSchema.safeParse(order.fulfillmentType ?? "pickup");
           if (!fulfillment.success) return [];
           return [
             {
@@ -175,13 +167,10 @@ export function OrdersQueue({
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const response = await fetch(
-        new URL(`/orders/${encodeURIComponent(orderId)}`, apiUrl),
-        {
-          cache: "no-store",
-          headers: { authorization: `Bearer ${accessToken}` },
-        },
-      );
+      const response = await fetch(new URL(`/orders/${encodeURIComponent(orderId)}`, apiUrl), {
+        cache: "no-store",
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
       if (!response.ok) {
         setDetail(null);
         setDetailError("Não foi possível abrir este Pedido.");
@@ -225,10 +214,7 @@ export function OrdersQueue({
     setDetailError(null);
     try {
       const response = await fetch(
-        new URL(
-          `/orders/${encodeURIComponent(detail.id)}/transitions`,
-          apiUrl,
-        ),
+        new URL(`/orders/${encodeURIComponent(detail.id)}/transitions`, apiUrl),
         {
           body: JSON.stringify({ to }),
           headers: {
@@ -274,9 +260,7 @@ export function OrdersQueue({
   return (
     <OutlineContainer className="mt-8 p-6 md:p-8">
       <h2 className="text-xl font-bold text-[var(--color-ink)]">Pedidos</h2>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Fila atualizada a cada 10 segundos.
-      </p>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">Fila atualizada a cada 10 segundos.</p>
 
       {loading ? (
         <p className="mt-4 text-sm text-[var(--color-muted)]">Carregando Pedidos…</p>
@@ -287,9 +271,7 @@ export function OrdersQueue({
         </p>
       ) : null}
       {!loading && !error && orders.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--color-muted)]">
-          Nenhum Pedido em andamento.
-        </p>
+        <p className="mt-4 text-sm text-[var(--color-muted)]">Nenhum Pedido em andamento.</p>
       ) : null}
 
       {orders.length > 0 ? (
@@ -316,7 +298,7 @@ export function OrdersQueue({
                       {fulfillment === "delivery" ? "Delivery" : "Retirada"}
                     </span>
                   </span>
-                  <strong className="shrink-0 text-[var(--color-primary-active)]">
+                  <strong className="shrink-0 text-[var(--color-primary-strong)]">
                     {formatPrice(order.totalCents)}
                   </strong>
                 </button>
@@ -324,15 +306,10 @@ export function OrdersQueue({
                 {expanded ? (
                   <div className="mt-2 rounded-xl border border-[var(--color-hairline-soft)] px-4 py-4">
                     {detailLoading ? (
-                      <p className="text-sm text-[var(--color-muted)]">
-                        Carregando detalhe…
-                      </p>
+                      <p className="text-sm text-[var(--color-muted)]">Carregando detalhe…</p>
                     ) : null}
                     {detailError ? (
-                      <p
-                        className="text-sm font-bold text-[var(--color-error)]"
-                        role="alert"
-                      >
+                      <p className="text-sm font-bold text-[var(--color-error)]" role="alert">
                         {detailError}
                       </p>
                     ) : null}
@@ -345,9 +322,7 @@ export function OrdersQueue({
                         ) : null}
                         {detail.deliveryAddress ? (
                           <div className="rounded-xl border border-[var(--color-hairline)] px-3 py-3 text-sm text-[var(--color-body)]">
-                            <p className="font-bold text-[var(--color-ink)]">
-                              Endereço
-                            </p>
+                            <p className="font-bold text-[var(--color-ink)]">Endereço</p>
                             <p className="mt-1">{detail.deliveryAddress.streetLine}</p>
                             <p>{detail.deliveryAddress.neighborhood}</p>
                             {detail.deliveryAddress.complement ? (
@@ -357,9 +332,7 @@ export function OrdersQueue({
                               <p>Ref.: {detail.deliveryAddress.reference}</p>
                             ) : null}
                             {typeof detail.deliveryFeeCents === "number" ? (
-                              <p className="mt-2">
-                                Taxa: {formatPrice(detail.deliveryFeeCents)}
-                              </p>
+                              <p className="mt-2">Taxa: {formatPrice(detail.deliveryFeeCents)}</p>
                             ) : null}
                           </div>
                         ) : null}
