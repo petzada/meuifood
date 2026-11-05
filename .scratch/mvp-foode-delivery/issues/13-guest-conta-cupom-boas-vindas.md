@@ -1,18 +1,23 @@
-# 13 — Converter Guest em conta e aplicar Cupom de boas-vindas
+# 13 — Conta do Consumidor, Cupom de boas-vindas e Cupons promocionais
 
-**What to build:** O Guest cria conta por magic link após o Pedido, comprova o vínculo e recupera Pedidos elegíveis da mesma Loja; o Dono configura um Cupom de boas-vindas opt-in que pode ser emitido e aplicado com segurança.
+**What to build:** O Guest cria conta por magic link após o Pedido e recupera Pedidos da mesma Loja; o Dono configura o Cupom de boas-vindas e Cupons promocionais, aplicados e recalculados no servidor no checkout.
 
-**Blocked by:** 08 — Concluir o primeiro Pedido Guest na Retirada.
+**Blocked by:** 24 — Portar horários, Pausa, Pedido Guest, Delivery e impressão.
 
 **Status:** ready-for-agent
 
-- [ ] Conta de Consumidor usa magic link por e-mail e permanece separada da identidade de membro da Loja.
-- [ ] O fluxo coleta e-mail, confirma o telefone e vincula o `order_id` sem recriar ou apagar o Pedido.
-- [ ] Apenas Pedidos elegíveis da mesma Loja e telefone normalizado podem ser recuperados.
-- [ ] Novo Pedido autenticado já nasce ligado à conta correta sem impedir Guest checkout.
-- [ ] Dono liga/desliga o programa e configura desconto em R$ ou %, com limites válidos.
-- [ ] Operador não vê nem altera o Cupom de boas-vindas.
-- [ ] O incentivo é emitido somente quando o programa está ativo e aplicado uma única vez conforme sua regra.
-- [ ] A API recalcula o desconto e rejeita adulteração do navegador.
-- [ ] Fidelidade por quantidade de Pedidos, item grátis, pontos e cashback não entram.
+**Agente:** Opus para API/regras; Fable para telas de cupom (Painel) e conta (Storefront), após o contrato.
 
+- [ ] Conta de Consumidor por magic link do Better Auth via MillionSend, separada da identidade de membro; rate limit e Turnstile.
+- [ ] Vínculo do Pedido por e-mail + confirmação do telefone, sem recriar o Pedido; recuperação só de Pedidos da mesma Loja e telefone normalizado.
+- [ ] Novo Pedido autenticado já nasce ligado à conta, sem impedir Guest.
+- [ ] Cupom de boas-vindas opt-in (R$ ou %), emitido só com programa ativo, uso único.
+- [ ] Cupons promocionais: código único por Loja, % ou R$, validade, limite total de usos, pedido mínimo, ativo/inativo.
+- [ ] Um Cupom por Pedido; desconto recalculado no servidor, nunca abaixo de zero, não incide sobre a taxa de Delivery; adulteração rejeitada; uso contado de forma atômica com o Pedido.
+- [ ] Ledger e taxa Foode usam o total efetivamente pago.
+- [ ] Operador não vê nem altera Cupons.
+- [ ] Testes: limite de usos sob concorrência, validade, pedido mínimo, cross-Loja.
+
+## Comments
+
+- 2026-11-04 — Revisado: Better Auth + MillionSend ([59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md)); Cupons promocionais por [62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md). Pode correr em paralelo ao 26/27.

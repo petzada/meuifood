@@ -1,5 +1,7 @@
 # Decisão: UI de billing no painel (MVP read-only + pós-MVP cobrança)
 
+> **Atualizada em 2026-11-04 por [61](61-monetizacao-faixas-taxas-anota.md):** o Painel mostra Plano, faixa atual e contagem de Pedidos do mês; valores de R$ 179/ano antigos estão superseded.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #P  
 **Depende de:** [22](22-auth-lojista-e-consumidor.md), [32](32-taxas-e-assinatura-fixa-unica.md), [33](33-teto-gmv-comercial-fora-do-produto.md)
 

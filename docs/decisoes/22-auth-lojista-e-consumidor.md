@@ -1,5 +1,7 @@
 # Decisão: auth lojista e consumidor
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #5  
 **Depende de:** [10](10-checkout-guest-e-conta.md), [21](21-banco-orm-multitenant.md)  
 **Produto:** guest + conta ([10](10-checkout-guest-e-conta.md)); dono vs operador ([11](11-planos-por-faturamento-features-completas.md), [20](20-tenant-mvp-sem-workspaces.md))

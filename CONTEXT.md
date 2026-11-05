@@ -1,6 +1,6 @@
 # Foode Delivery
 
-SaaS web mobile-first de canal próprio (cardápio + pedidos + gestão) para PME de delivery local. A loja traz o consumidor; a plataforma cobra assinatura fixa (com teto de GMV online) e taxas de pagamento (PIX/cartão/débito/voucher), sem comissão de marketplace.
+SaaS web mobile-first de canal próprio (cardápio + pedidos + gestão) para PME de delivery local. A loja traz o consumidor; a plataforma cobra Mensalidade por faixa de Pedidos e taxas de pagamento online, sem comissão de marketplace.
 
 ## Language
 
@@ -22,6 +22,10 @@ _Avoid_: Atendente, colaborador, staff (salvo UI)
 Pessoa que pede pelo link/QR da loja (guest ou com conta).
 _Avoid_: Cliente final, usuário (salvo auth), comprador
 
+**Ops Foode**:
+Pessoa da equipe Foode com papel global `foode_ops`: cadastra Lojas, convida Donos, define Plano, faixas, taxas e modo do cartão, e opera os lotes de repasse na área `/ops` do Painel.
+_Avoid_: Admin (ambíguo com Painel), suporte, superusuário
+
 **Guest**:
 Consumidor que conclui pedido sem conta; dados mínimos gravados no pedido.
 _Avoid_: Anônimo, visitante
@@ -29,7 +33,7 @@ _Avoid_: Anônimo, visitante
 ### Tenant e loja
 
 **Loja**:
-Unidade operacional e tenant de dados no MVP: um CNPJ, um slug, um cardápio, um painel. Isolamento multi-tenant via `store_id`.
+Unidade operacional e tenant de dados: um CNPJ, um slug, um cardápio. Isolamento multi-tenant via `store_id`. Estados: `onboarding` → `active` (só esta recebe Pedidos) → `suspended`. Um usuário pode ser membro de várias Lojas e escolhe a Loja no Painel.
 _Avoid_: Workspace, unidade, estabelecimento (salvo copy), merchant como tenant
 
 **Slug**:
@@ -76,55 +80,70 @@ _Avoid_: Pickup (salvo código), balcão-only
 
 ### Pagamento e receita
 
+**Faixa (de Pedidos)**:
+Intervalo de quantidade de Pedidos não cancelados do Canal próprio no mês civil que define o valor da Mensalidade mensal.
+_Avoid_: Tier de GMV, limite de pedidos
+
 **GMV**:
-Soma do total pago pelo consumidor em pedidos **Concluídos** no mês (itens + adicionais + taxa de delivery), só em meios **online** (PIX, crédito, débito, voucher). Exclui pagamento na entrega e cancelados. Usado para o teto da assinatura.
+Soma do total pago pelo consumidor em pedidos **Concluídos** no mês (itens + adicionais + taxa de delivery), só em meios **online** (PIX, crédito, débito, voucher). Exclui pagamento na entrega e cancelados. Usado só em relatórios.
 _Avoid_: Receita da plataforma, faturamento do CNPJ fora do canal, GMV de marketplace, GMV com maquininha na entrega
 
 **Mensalidade**:
-Assinatura SaaS fixa **R$ 179**/mês (ou anual com 20% OFF). No painel há UI de plano; no MVP a ativação é por flag após pagamento fora. Teto de GMV R$ 15k é âncora comercial, sem meter no app.
-_Avoid_: Três faixas 129/179/229, comissão, take-rate de vitrine, barra GMV vs teto
+Assinatura SaaS por **faixa de Pedidos do mês** (valores no `/ops`; iniciais R$ 84,99 / 169,99 / 254,99) ou anual com preço fixo e Pedidos ilimitados. Cobrada fora do app; o Ops ativa o Plano.
+_Avoid_: R$ 179 fixo, teto de GMV, comissão, trial
 
 **Plano (assinatura Foode)**:
-Produto comercial contratado pela loja (mensal ou anual). No MVP: tela no painel + ativação por flag ops; cobrança self-serve (PIX Woovi recorrente ou cartão Asaas) = pós-MVP.
-_Avoid_: Meter de GMV, overage automático
+Produto comercial contratado pela loja (mensal ou anual). No MVP: tela no Painel com faixa atual e contagem do mês + ativação pelo Ops; cobrança self-serve = pós-MVP.
+_Avoid_: Overage automático, bloqueio por faixa
 
 **Taxa de pagamento**:
 MDR cobrado do comerciante no PIX/crédito/débito/voucher online (markup de gateway), distinto de mensalidade e de comissão de marketplace.
 _Avoid_: Comissão, take-rate (salvo conversa de marketplace)
 
 **PIX**:
-Pagamento online via Woovi; taxa ao lojista **1,19%** D+1.
+Pagamento online via **AbacatePay** (QR dinâmico + copia-e-cola); taxa Foode da Loja cadastrada no `/ops`.
 _Avoid_: OpenPix (marca legacy), boleto
 
 **Crédito online**:
-Pagamento online via Asaas; **3,29% + R$ 0,79** D+33, qualquer bandeira à vista.
+Pagamento online **à vista** por checkout transparente, via o **Provedor do cartão** da Loja; taxa e prazo comerciais a redefinir pelo Dono.
 _Avoid_: Maquininha (isso é na entrega)
 
 **Débito online**:
-Pagamento online via Asaas (taxa futura na tabela comercial). **Fora do MVP.**
+Pagamento online (provedor e taxa futuros). **Fora do MVP.**
 _Avoid_: Débito na maquininha do lojista
 
 **Voucher online**:
-Pagamento online via Asaas / vale (taxa futura na tabela comercial). **Fora do MVP.**
+Pagamento online / vale (provedor e taxa futuros). **Fora do MVP.**
 _Avoid_: Cupom de fidelidade Foode (é outro conceito)
+
+**Modo do cartão**:
+Condição contratada pela Loja e configurada pelo Ops: **Normal** (Efí, taxa menor, ~21 dias úteis) ou **Rápido** (AbacatePay, taxa maior, D+1). Define o provedor do Crédito; não há troca automática.
+_Avoid_: Kill switch, fallback automático, escolha do Consumidor, antecipação
+
+**Taxa Foode**:
+Taxa de pagamento cobrada do lojista por meio/modo (% + fixo), com vigência, definida no `/ops` (padrão + override por Loja). Meio sem taxa vigente fica fora do checkout. Diferente do custo do provedor, que só o Ops vê.
+_Avoid_: Taxa da Efí/AbacatePay (para o lojista), MDR do provedor
 
 **Pagamento na entrega**:
 Consumidor paga fora da plataforma (maquininha/dinheiro do lojista); sem take da Foode e **fora do GMV**.
 _Avoid_: COD genérico sem contexto
 
 **Modo de cobrança**:
-Config da loja que define custódia/gateway: `pilot_platform`, `baas` ou `merchant_own_account` (este último = enum só; **não** política comercial vigente).
-_Avoid_: Gateway mode genérico, split (é mecanismo dentro de baas), “fallback conta do lojista” como plano se BaaS atrasar
+Config da loja que define custódia: só existe `pilot_platform` (dinheiro nas contas únicas Efí/AbacatePay da Foode, repasse manual via Ledger) e vale para todas as Lojas. O modo de escala pós-piloto é decisão aberta; `baas` e `merchant_own_account` estão arquivados ([60](docs/decisoes/60-pagamentos-efi-abacatepay.md)).
+_Avoid_: Gateway mode genérico, split, BaaS como caminho decidido
 
 **Tomadora BaaS**:
+_(Arquivado em 2026-11-04 — histórico da trilha Asaas; não usar em código novo.)_
 PJ da Foode (alvo: **LTDA** pós-piloto) que orquestra subcontas/split Asaas para comerciantes; não é instituição autorizada pelo Bacen.
 _Avoid_: White label (termo legado), Foode como “banco”, MEI como Tomadora de escala
 
 **Prestadora BaaS**:
+_(Arquivado em 2026-11-04 — histórico da trilha Asaas; não usar em código novo.)_
 Instituição autorizada que processa/custodia — no arranjo Foode, o **Asaas** (marca obrigatória em onboarding/comprovantes).
 _Avoid_: Gateway genérico, PSP sem distinguir do papel Bacen
 
 **Homologação BaaS**:
+_(Arquivado em 2026-11-04 — histórico da trilha Asaas; não usar em código novo.)_
 Liberação comercial/compliance com gerente Asaas (playbook marca, docs, Res. Conjunta 16/17) para operar subcontas sem o teto do período de avaliação.
 _Avoid_: “Ativar subcontas” sem homologação, sandbox como equivalente
 
@@ -133,16 +152,21 @@ Julgamento manual do founder de que o comerciante-modelo opera a plataforma de p
 _Avoid_: Go/no-go automático, “4 semanas = validado” como regra
 
 **Comerciante-modelo**:
-Único comerciante do piloto (`pilot_platform`); próximos só após homologação BaaS, via onboarding de subconta no `admin`.
+_(Superseded em 2026-11-04: toda Loja criada pelo Ops é tratada como cliente real; não há Loja única de piloto.)_
 _Avoid_: “Primeiro cliente” ambíguo, beta multi-loja
 
 **Onboarding de subconta**:
+_(Arquivado em 2026-11-04 — histórico da trilha Asaas; não usar em código novo.)_
 Fluxo no `admin` (pós-BaaS) para criar/acompanhar subconta Asaas do comerciante (`apiKey`, `walletId`, docs); ativação assistida pela Foode — modelo único pós-validação.
 _Avoid_: Self-serve aberto pré-homologação, script-only como único caminho, custódia MEI eterna
 
 **Ledger de repasse**:
-Registro pedido ↔ cobrança ↔ líquido ↔ data prevista ↔ data pago — obrigatório no modo piloto.
+Registro pedido ↔ cobrança ↔ provedor ↔ taxa Foode ↔ líquido ↔ liberação no provedor ↔ repasse previsto (D+1 útil) ↔ lote pago. Para o Dono é a tela **Repasses** (só leitura).
 _Avoid_: Extrato bancário, settlement genérico
+
+**Lote de repasse**:
+Conjunto diário, por Loja, dos lançamentos com repasse previsto até hoje; o Ops paga um Pix por fora e marca o lote como pago (conta de saída, comprovante, custo do envio).
+_Avoid_: Saque, transferência automática, split
 
 ### Apps e superfície
 
@@ -155,7 +179,7 @@ App Next do lojista: pedidos, cardápio, configs, equipe, UI de plano. Mesma lin
 _Avoid_: Dashboard genérico, backoffice
 
 **API (`api`)**:
-Serviço Fastify: domínio, webhooks, jobs leves; fonte de verdade de pedidos/pagamentos.
+Worker Cloudflare em Hono: domínio, webhooks, Cron Triggers; fonte de verdade de pedidos/pagamentos. O Painel a chama por service binding.
 _Avoid_: BFF (salvo exceção fina), serverless routes de produção no Next
 
 **Primary Foode**:
@@ -167,6 +191,10 @@ Bloco de conteúdo com borda fina, sem fill, sem shadow, cantos arredondados.
 _Avoid_: Card com fill+sombra como default
 
 ### Fidelidade
+
+**Cupom promocional**:
+Código criado pelo Dono: % ou R$, validade, limite total de usos, pedido mínimo, ativo/inativo; recalculado no servidor.
+_Avoid_: Cashback, pontos
 
 **Cupom de boas-vindas**:
 Desconto em R$ ou % configurável pelo dono, oferecido ao criar conta se o programa estiver ligado (opt-in).

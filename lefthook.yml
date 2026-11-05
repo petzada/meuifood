@@ -1,0 +1,28 @@
+# Gates locais (padrão de ~/.claude/CLAUDE.md): pre-commit só nos arquivos em stage
+# (< 10 s) e pre-push só no diff do branch (< 2 min). Suíte completa, testes com D1
+# (vitest-plugin), prova de migrations no D1 efêmero e build OpenNext ficam no CI.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc,css,yml,yaml}"
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: "*.{ts,tsx,js,mjs,cjs}"
+      run: pnpm exec eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings=0 --no-warn-ignored {staged_files}
+    - name: lint-migrations
+      # Expand/contract e imutabilidade (AGENTS.md §Migrations).
+      glob: "packages/db/migrations/*.sql"
+      run: node scripts/lint-migrations.mjs {staged_files}
+
+pre-push:
+  # Sequencial e para no 1º erro: typecheck e depois só os testes ligados ao diff,
+  # sem testes com D1 (scripts/test-related.mjs).
+  piped: true
+  jobs:
+    - name: 1_typecheck
+      run: pnpm typecheck
+    - name: 2_related
+      run: node scripts/test-related.mjs

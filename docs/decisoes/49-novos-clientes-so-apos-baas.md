@@ -1,5 +1,7 @@
 # Decisão: novos comerciantes só após BaaS homologado
 
+> **Arquivada em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md):** a trilha BaaS Asaas não é mais o caminho de escala; o modo pós-piloto é decisão aberta. Mantida só como histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling BaaS #3  
 **Depende de:** [47](47-tomadora-baas-ltda-apos-piloto.md) · [48](48-gatilho-piloto-validado-ltda.md) · [24](24-arquitetura-pagamentos.md) · [54](54-implicacoes-minimas-modo-baas.md)
 

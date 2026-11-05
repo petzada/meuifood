@@ -1,5 +1,7 @@
 # Decisão: monorepo + âncora de infra
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #1 (revisado)  
 **Pesquisa:** [13 síntese](../pesquisa/13-sintese-stack-mvp.md)
 

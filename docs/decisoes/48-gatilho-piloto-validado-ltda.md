@@ -1,5 +1,7 @@
 # Decisão: gatilho de piloto validado (abertura da LTDA)
 
+> **Arquivada em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md):** a trilha BaaS Asaas não é mais o caminho de escala; o modo pós-piloto é decisão aberta. Mantida só como histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling BaaS #2  
 **Depende de:** [47](47-tomadora-baas-ltda-apos-piloto.md) · [46](46-grilling-homologacao-baas-mei-ltda.md)
 

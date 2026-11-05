@@ -1,5 +1,7 @@
 # Decisão: banco, ORM e multi-tenant (MVP)
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #4  
 **Depende de:** [17](17-monorepo-e-infra-preferencias.md), [19](19-stack-backend-api.md), [20](20-tenant-mvp-sem-workspaces.md)  
 **Pesquisa:** [11](../pesquisa/11-stack-backend-multitenant-concorrentes.md), [13](../pesquisa/13-sintese-stack-mvp.md)

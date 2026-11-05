@@ -1,5 +1,7 @@
 # Decisão: definição operacional de GMV
 
+> **Nota 2026-11-04:** GMV continua só como métrica de relatório; não define mais Plano nem teto ([61](61-monetizacao-faixas-taxas-anota.md)).
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #A  
 **Depende de:** [30](30-grilling-lacunas-e-contrapontos.md) · **Usado por:** [32](32-taxas-e-assinatura-fixa-unica.md)
 

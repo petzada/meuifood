@@ -1,5 +1,7 @@
 # Decisão: Cloudflare R2 para imagens do Cardápio
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** GATE-DOC-R2 (desbloqueio Ticket 05)  
 **Depende de:** [25](25-hospedagem-ci-ops.md) · [28](28-tese-stack-mvp.md) · [29](29-libs-ops-acrescimos-mvp.md) · [38](38-rbac-dono-operador-mvp.md) · ADR [0002](../adr/0002-railway-supabase-nao-vercel.md)
 

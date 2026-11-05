@@ -1,5 +1,7 @@
 # Decisão: espera sem limite até BaaS (sem escape hatch comercial)
 
+> **Arquivada em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md):** a trilha BaaS Asaas não é mais o caminho de escala; o modo pós-piloto é decisão aberta. Mantida só como histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling BaaS #6  
 **Depende de:** [49](49-novos-clientes-so-apos-baas.md) · [24](24-arquitetura-pagamentos.md)
 

@@ -1,5 +1,7 @@
 # Decisão: arquitetura de pagamentos (Woovi + Asaas)
 
+> **Superseded parcialmente em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md)** (PIX Efí; Crédito Efí ou AbacatePay, fixo por Loja). Menções a Woovi/Asaas abaixo são históricas.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #7  
 **Produto (números):** [32](32-taxas-e-assinatura-fixa-unica.md) · **Pesquisa ops:** [12](../pesquisa/12-stack-pagamentos-infra-integracoes.md)
 

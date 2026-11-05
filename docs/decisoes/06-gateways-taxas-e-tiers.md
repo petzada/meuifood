@@ -1,5 +1,7 @@
 # Decisão: gateways, taxas ao lojista e tiers
 
+> **Superseded parcialmente em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md)** (PIX Efí; Crédito Efí ou AbacatePay, fixo por Loja). Menções a Woovi/Asaas abaixo são históricas.
+
 **Data:** jul/2026 · **Status:** superseded (taxas → [32](32-taxas-e-assinatura-forma-unica.md); caminho BaaS/MEI/LTDA → [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md)) · **Sessão:** grilling #6 (fechamento)  
 
 > **Números abaixo são históricos.** Vigente: PIX **1,19% D+1** · crédito **3,29%+R$0,79 D+33** · débito/voucher · assinatura **R$ 179** até R$ 15k GMV — ver [32](32-taxas-e-assinatura-forma-unica.md) e GMV [31](31-definicao-operacional-gmv.md).  

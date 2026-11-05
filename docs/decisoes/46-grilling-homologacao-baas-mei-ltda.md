@@ -1,5 +1,7 @@
 # Grilling (grill-with-docs) — homologação BaaS Asaas · MEI vs LTDA
 
+> **Arquivada em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md):** a trilha BaaS Asaas não é mais o caminho de escala; o modo pós-piloto é decisão aberta. Mantida só como histórico.
+
 **Data:** jul/2026 · **Status:** fronteira **fechada** · entendimento compartilhado **confirmado** · **Último:** #8 → [54](54-implicacoes-minimas-modo-baas.md)  
 **Glossário:** [`CONTEXT.md`](../../CONTEXT.md) · **Âncoras:** [24](24-arquitetura-pagamentos.md) · [06](06-gateways-taxas-e-tiers.md) · [30](30-grilling-lacunas-e-contrapontos.md) item M  
 **Não reabre:** tese produto/stack, taxas [32], meios MVP [34], UI geral

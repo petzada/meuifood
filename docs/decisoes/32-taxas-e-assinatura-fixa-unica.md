@@ -1,5 +1,7 @@
 # Decisão: taxas Foode + assinatura fixa (supersede faixas)
 
+> **Superseded em 2026-11-04 por [61](61-monetizacao-faixas-taxas-anota.md)** (faixas por Pedidos 15% abaixo do Anota AI, taxas por Loja no `/ops`). Histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas (resposta #A + pacote comercial)  
 **Supersede:** números e faixas em [04](04-modelo-receita-saas-tiers-pagamento.md), [06](06-gateways-taxas-e-tiers.md), [12](12-faixas-mensalidade-por-gmv.md); tabela comercial em [16](16-tese-produto-fechada.md)  
 **GMV:** [31](31-definicao-operacional-gmv.md) · **Gateways:** Woovi (PIX) + Asaas (cartão/débito/voucher) — arquitetura [24](24-arquitetura-pagamentos.md)

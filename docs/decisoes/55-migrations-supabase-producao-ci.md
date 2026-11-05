@@ -1,5 +1,7 @@
 # Decisão: migrations no Supabase de produção após CI verde, sem apagar dados
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** implementação ticket 02
 **Depende de:** [44](44-producao-only-sandbox-migrations-ci.md) · [25](25-hospedagem-ci-ops.md) · [21](21-banco-orm-multitenant.md)
 

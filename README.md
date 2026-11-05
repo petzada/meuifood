@@ -1,6 +1,6 @@
 # Foode Delivery
 
-![Status](https://img.shields.io/badge/status-pausado-lightgrey) ![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js) ![Fastify](https://img.shields.io/badge/Fastify-5-000000?logo=fastify) ![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)
+![Status](https://img.shields.io/badge/status-pausado-lightgrey) ![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js) ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-F38020?logo=cloudflare&logoColor=white) ![Node](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-monorepo-F69220?logo=pnpm&logoColor=white)
 
 SaaS de **canal próprio de delivery** para pequenos restaurantes: cardápio digital, pedidos e gestão da loja, cobrando assinatura fixa em vez de comissão de marketplace.
 
@@ -35,8 +35,8 @@ A loja divulga o próprio link ou QR code e o consumidor pede direto, sem market
 - Configuração de **entrega** e da **equipe**.
 
 **API**
-- Isolamento por loja garantido no banco com **Row Level Security**: cada transação recebe o `store_id` confiável do usuário autenticado (JWT verificado contra o JWKS do Supabase).
-- Pedidos idempotentes e health check em `GET /health`.
+- Isolamento por loja garantido pela camada de dados (`packages/db`): só há operações com contexto de Loja emitido pelo servidor, e testes de vazamento com duas Lojas rodam em todo PR.
+- Fetch público só para Storefront, webhooks e `GET /health`; o Painel fala com a API por service binding (RPC).
 
 O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [`docs/`](docs/).
 
@@ -46,19 +46,22 @@ O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [
 |---|---|
 | Monorepo | **pnpm workspaces**, **TypeScript** |
 | Front-end | **Next.js 16**, **React 19**, **Tailwind CSS 4** (`apps/web` e `apps/admin`) |
-| API | **Fastify 5**, **Zod**, Pino (`apps/api`) |
-| Dados | **Prisma 7** + **Postgres (Supabase)** com RLS (`packages/db`) |
-| Arquivos | **Cloudflare R2** (SDK S3) |
-| Observabilidade | **Sentry** |
-| Qualidade | **Vitest**, ESLint, GitHub Actions |
+| Hospedagem | **Cloudflare Workers** (web e admin via **OpenNext**) |
+| API | **Hono** em Worker (`apps/api`) |
+| Dados | **Cloudflare D1** + **Drizzle** (`packages/db`) |
+| Arquivos | **Cloudflare R2** (binding) |
+| Observabilidade | **Sentry** (opcional), Workers Logs |
+| Qualidade | **Vitest** (+ `@cloudflare/vitest-plugin` no CI), ESLint, Prettier, lefthook, GitHub Actions |
+
+> Migração em andamento (decisão 59): o código Fastify/Prisma/Supabase em `apps/api/legacy-fastify` e `packages/db/legacy-prisma` é só referência e sai no Ticket 25.
 
 ## Pré-requisitos e instalação
 
 **Pré-requisitos**
 
-- **Node.js 24** ou superior
+- **Node.js 24**
 - **pnpm 10**
-- Um projeto Supabase apenas para usar banco e autenticação reais
+- Nenhum banco local nem Docker: testes com D1 rodam só no CI
 
 **Instalação**
 
@@ -68,7 +71,7 @@ cd meuifood
 pnpm install
 ```
 
-Copie os arquivos `.env.example` (raiz, `apps/api`, `apps/admin`, `apps/web`) só quando precisar configurar banco, autenticação, R2 ou Sentry: nenhum DSN é obrigatório para subir os apps.
+O `pnpm install` instala os hooks do lefthook (pre-commit: formatação e lint dos arquivos em stage; pre-push: typecheck e testes ligados ao diff). Nenhum DSN do Sentry é obrigatório.
 
 ## Como utilizar
 
@@ -80,27 +83,28 @@ pnpm dev
 |---|---|
 | Storefront (`apps/web`) | http://localhost:3000 |
 | Painel da loja (`apps/admin`) | http://localhost:3001 |
-| API (`apps/api`) | http://localhost:3333 (`GET /health`) |
+| API (`apps/api`) | `wrangler dev` (`GET /health`) |
 
 **Banco**
 
 ```bash
-pnpm db:generate               # gera o Prisma Client
-pnpm db:migrations:validate    # valida as migrations canônicas
-pnpm db:seed                   # dados iniciais (usa DATABASE_URL)
+pnpm db:generate -- --name <nome>   # gera a migration SQL a partir de packages/db/src/schema.ts
 ```
 
-A API exige `BUSINESS_DATABASE_URL` com um login sem `BYPASSRLS`, membro da role `foode_business`; ela se recusa a iniciar com credencial privilegiada.
+As migrations são aplicadas só pelo CI: num D1 efêmero em todo PR e em produção pelo workflow manual `db-migrate` (veja `AGENTS.md`).
 
 ## Testes
 
 ```bash
-pnpm test:quality     # suíte de qualidade de API, painel, storefront e pacotes
+pnpm lint             # ESLint + lint das migrations (expand/contract)
 pnpm typecheck
-pnpm lint
+pnpm test             # testes sem banco
+pnpm test:related     # só os testes ligados ao diff (o pre-push roda este)
+pnpm test:ci          # + testes com D1 no workerd (rodam no CI)
+pnpm build            # bundle da api e next build
 ```
 
-Cada app e pacote também roda `pnpm test` (Vitest) isoladamente. O GitHub Actions executa as verificações em todo PR.
+O GitHub Actions roda tudo em todo PR, inclusive o build OpenNext e a prova das migrations num D1 remoto efêmero; o deploy dos três Workers sai pelo CI a cada push na `master`, seguido de smoke.
 
 ## Contribuição
 

@@ -1,5 +1,7 @@
 # Decisão: checklist de evidências e sequência BaaS Asaas
 
+> **Arquivada em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md):** a trilha BaaS Asaas não é mais o caminho de escala; o modo pós-piloto é decisão aberta. Mantida só como histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling BaaS #7  
 **Depende de:** [47](47-tomadora-baas-ltda-apos-piloto.md)–[52](52-espera-sem-limite-ate-baas.md) · docs Asaas BaaS / avaliação / Res. 16/17
 

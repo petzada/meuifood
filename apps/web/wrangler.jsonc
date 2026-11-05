@@ -1,0 +1,28 @@
+// Worker `foode-web` (Storefront, Next via OpenNext). Decisão 59.
+// Build: `pnpm build:cf` (opennextjs-cloudflare build). Deploy só pelo CI (deploy.yml).
+// Sem routes/custom domains até a zona foodedelivery.com.br ficar ativa (Ticket 25).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "foode-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "vars": {
+    "SENTRY_ENVIRONMENT": "production",
+  },
+  // API: fetch público da api (Storefront) por service binding, sem sair da Cloudflare.
+  // A api precisa estar publicada antes (deploy.yml publica api → web → admin).
+  // WORKER_SELF_REFERENCE: revalidação do OpenNext.
+  "services": [
+    { "binding": "API", "service": "foode-api" },
+    { "binding": "WORKER_SELF_REFERENCE", "service": "foode-web" },
+  ],
+  "images": { "binding": "IMAGES" },
+}

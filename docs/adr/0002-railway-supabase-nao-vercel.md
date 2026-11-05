@@ -1,5 +1,7 @@
 # Railway + Supabase (não Vercel)
 
+> **Superseded em 2026-11-04 por [ADR 0006](0006-cloudflare-workers-d1-sem-rls.md) / [59](../decisoes/59-pivo-cloudflare-d1-workers.md).** Histórico.
+
 Apps e cron na **Railway**; Postgres, Auth e RLS no **Supabase**. Vercel não é o host padrão do Foode.
 
 **Supersessão parcial (jul/2026 — GATE-DOC-R2):** o escopo original incluía **Storage** no mesmo fornecedor do banco. Objetos de imagem do **Cardápio** passam a **Cloudflare R2** (PUT pré-assinado; leitura pública via `R2_PUBLIC_BASE_URL`) — ver [57](../decisoes/57-cloudflare-r2-imagens-cardapio.md). Supabase **permanece** Postgres + Auth + RLS; hospedagem Railway e rejeição de Vercel como default **não** são reabertas. O parágrafo seguinte preserva o contexto histórico da âncora.
