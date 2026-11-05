@@ -21,6 +21,7 @@
 - [ ] Testes com adapter AbacatePay fake no limite HTTP; parsers com fixtures sanitizadas; rotas e webhook com D1 via `@cloudflare/vitest-plugin` só no CI.
 - [ ] Smoke manual mínimo: o orquestrador pede ao humano um PIX real de valor baixo numa Loja de teste e confere Pedido + Ledger.
 - [ ] UI segue as [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) aplicáveis (X5, X6, G3, G4, §6 PIX) e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, regra separada da apresentação, testes que afirmam comportamento).
+- [ ] Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md): tarifa de serviço R$ 1,50 no PIX (após Cupom, fora da base da taxa Foode, receita só da Foode no Ledger, só na última etapa do checkout); oferta de criar conta na página do Pedido.
 
 ## Comments
 
@@ -30,3 +31,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-4.4 (sem incentivo ao PIX). Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Critérios consolidados com 63–65: P-4.4 (sem incentivo ao PIX) e o bloco de PIX na página do Pedido entraram no checklist; termo do provedor antigo retirado dos critérios; seam de testes `@cloudflare/vitest-plugin`; critério de UI/`/code-review` do antigo Ticket 20.
+
+- 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.

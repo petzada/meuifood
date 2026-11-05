@@ -20,6 +20,7 @@
 - [ ] Estados aprovado / pendente / recusado distintos na página do Pedido, com ação clara no recusado ("Tentar outro cartão" ou "Pagar com PIX") (DIRETRIZES-UX-CLIENTE §6).
 - [ ] Testes com adapters fakes dos dois provedores, rotas e webhooks com D1 via `@cloudflare/vitest-plugin` só no CI; credenciais de produção só no smoke manual (cartão real, valor baixo, seguido de cancelamento no Ticket 12).
 - [ ] UI segue as [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) aplicáveis (X5, G2–G6, §6 Cartão) e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, regra separada da apresentação, testes que afirmam comportamento).
+- [ ] Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md): tarifa de serviço R$ 1,50 também no Cartão; Consumidor só à vista.
 
 ## Comments
 
@@ -29,3 +30,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-4.5 (sem carteiras). Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Critérios consolidados com 63–65: P-4.5 (sem carteiras) fecha a avaliação de carteiras; débito online segue em avaliação; CPF da conta (65) pré-preenche o Cartão; estados do Cartão na página do Pedido; seam de testes `@cloudflare/vitest-plugin`; critério de UI/`/code-review` do antigo Ticket 20.
+
+- 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
