@@ -278,7 +278,7 @@ describe("QueueBoard (fila de Pedidos)", () => {
 
     await user.click(screen.getByRole("button", { name: "Começar preparo" }));
     expect(transition).toHaveBeenCalledWith({ orderId: "a", from: "received", to: "preparing" });
-    const preparing = screen.getByRole("region", { name: "Em preparo (1)" });
+    const preparing = await screen.findByRole("region", { name: "Em preparo (1)" });
     expect(
       within(preparing).getByRole("button", { name: "Marcar como Saiu para entrega" }),
     ).toBeInTheDocument();
