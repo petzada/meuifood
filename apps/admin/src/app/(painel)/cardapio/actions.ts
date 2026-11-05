@@ -129,7 +129,7 @@ const ITEM_FAILURES = {
 
 export const createItem: MenuAction = async (_prev, formData) => {
   const parsed = parseCreateItem(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.menuCreateItem(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("A categoria") });
   revalidateMenu();
@@ -138,7 +138,7 @@ export const createItem: MenuAction = async (_prev, formData) => {
 
 export const updateItem: MenuAction = async (_prev, formData) => {
   const parsed = parseUpdateItem(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.menuUpdateItem(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("Este item") });
   revalidateMenu();
@@ -190,7 +190,7 @@ export const reorderItems: MenuAction = async (_prev, formData) => {
 
 export const createComplementGroup: MenuAction = async (_prev, formData) => {
   const parsed = parseCreateComplementGroup(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) =>
     api.menuCreateComplementGroup(caller, parsed.data),
   );
@@ -201,7 +201,7 @@ export const createComplementGroup: MenuAction = async (_prev, formData) => {
 
 export const updateComplementGroup: MenuAction = async (_prev, formData) => {
   const parsed = parseUpdateComplementGroup(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) =>
     api.menuUpdateComplementGroup(caller, parsed.data),
   );

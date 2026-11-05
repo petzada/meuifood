@@ -30,7 +30,7 @@ function revalidateSettings() {
 
 export const saveHours: SettingsAction = async (_prev, formData) => {
   const parsed = parseSetHours(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os períodos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.storeSetHours(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error);
   revalidateSettings();
@@ -39,7 +39,7 @@ export const saveHours: SettingsAction = async (_prev, formData) => {
 
 export const saveFulfillment: SettingsAction = async (_prev, formData) => {
   const parsed = parseSetFulfillment(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.storeSetFulfillment(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error);
   revalidateSettings();

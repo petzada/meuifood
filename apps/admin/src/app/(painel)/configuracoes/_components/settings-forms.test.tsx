@@ -2,7 +2,9 @@
 // inline por período e "Copiar para todos os dias"; Entrega com um modo de Delivery, aviso ao
 // trocar e interruptor por bairro; bandeiras e Imprimir ao aceitar salvos com o parser real.
 import type { StoreOperationSettings } from "@foode/shared/order";
-import { render, screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -40,7 +42,7 @@ function actionWith<T>(
   const rpc = vi.fn<(data: T) => Promise<void>>(async () => undefined);
   const action = async (_prev: FormState, formData: FormData): Promise<FormState> => {
     const parsed = parse(formData);
-    if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+    if (!parsed.ok) return formError(parsed.errors);
     await rpc(parsed.data);
     return formSuccess("Salvo.");
   };
@@ -99,7 +101,7 @@ describe("FulfillmentForm", () => {
   it("trocar para Taxa fixa avisa o que deixa de valer e exige o valor", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} />);
+    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
     await user.click(screen.getByRole("radio", { name: "Taxa fixa" }));
     expect(screen.getByRole("status")).toHaveTextContent("a lista de bairros deixa de valer");
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -109,6 +111,8 @@ describe("FulfillmentForm", () => {
     expect(rpc).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText("Taxa fixa (R$)"), "6,00");
+    expect(screen.getByLabelText("Taxa fixa (R$)")).toHaveValue("R$ 6,00");
+    expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
     expect(rpc).toHaveBeenCalledWith(
       expect.objectContaining({ deliveryMode: "fixed", fixedFeeCents: 600, pickupEnabled: true }),
@@ -118,7 +122,7 @@ describe("FulfillmentForm", () => {
   it("interruptor do bairro e '+ Bairro' vão no envio; sem bairro ativo é erro", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} />);
+    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
     const table = screen.getByRole("table", { name: "Bairros atendidos" });
     await user.click(within(table).getByRole("switch", { name: "Ativo" }));
     expect(within(table).getByRole("switch", { name: "Inativo" })).not.toBeChecked();
@@ -145,13 +149,75 @@ describe("FulfillmentForm", () => {
   it("tempo estimado com mínimo maior que o máximo é erro no campo", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} />);
+    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
     const max = screen.getByLabelText("Tempo estimado do Delivery: máximo em minutos");
     await user.clear(max);
     await user.type(max, "10");
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
     expect(max).toHaveAccessibleDescription("O mínimo não pode passar do máximo.");
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("R$/km sugere as taxas como placeholder (bairro, Taxa fixa e mínimo) sem ir no envio", async () => {
+    const user = userEvent.setup();
+    const { action, rpc } = actionWith(parseSetFulfillment);
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    } as unknown as Storage;
+    // Sé (Loja) → Paulista ("Centro" do teste): ~2,5 km em linha reta, ~3,3 km de rota.
+    const locate = vi.fn(async (query: string) =>
+      query.startsWith("Sé")
+        ? { lat: -23.5503, lng: -46.6339 }
+        : query.startsWith("Centro")
+          ? { lat: -23.5614, lng: -46.6559 }
+          : null,
+    );
+    render(
+      <FulfillmentForm
+        action={action}
+        area={{ district: "Sé", city: "São Paulo", state: "SP" }}
+        initial={SETTINGS}
+        locate={locate}
+        storage={storage}
+        storeId="loja-a"
+      />,
+    );
+    const perKm = screen.getByLabelText("Quanto você cobra por km (R$)");
+    await user.type(perKm, "200");
+    expect(perKm).toHaveValue("R$ 2,00");
+    expect(store.get("foode.painel.reais-por-km.v1:loja-a")).toBe("R$ 2,00");
+
+    const fee = screen.getByLabelText("Taxa do bairro 1 (R$)");
+    await waitFor(() => expect(fee.getAttribute("placeholder")).toMatch(/^R\$ 6,\d\d$/u), {
+      timeout: 3000,
+    });
+    // Mínimo = 3× a Taxa fixa sugerida (aqui a média de um bairro só).
+    const minimum = screen.getByLabelText("Pedido mínimo do Delivery (R$)");
+    expect(minimum.getAttribute("placeholder")).toMatch(/^R\$ 1\d,\d\d$/u);
+
+    // Bairro que o geocodificador não acha = R$ 0,00 (falha silenciosa).
+    await user.click(screen.getByRole("button", { name: "+ Bairro" }));
+    expect(screen.getByLabelText("Taxa do bairro 2 (R$)")).toHaveAttribute(
+      "placeholder",
+      "R$ 0,00",
+    );
+
+    // O R$/km não é campo do contrato: só a taxa confirmada vai no envio.
+    await user.type(screen.getByLabelText("Nome do bairro 2"), "Lugar Nenhum");
+    await user.type(screen.getByLabelText("Taxa do bairro 2 (R$)"), "500");
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    expect(rpc).toHaveBeenCalledWith(
+      expect.objectContaining({
+        neighborhoods: [
+          expect.objectContaining({ name: "Centro", feeCents: 500 }),
+          { name: "Lugar Nenhum", feeCents: 500, active: true },
+        ],
+      }),
+    );
+    expect(JSON.stringify(rpc.mock.calls[0])).not.toContain("km");
   });
 });
 

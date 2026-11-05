@@ -23,6 +23,7 @@ import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
 import type { MenuAction } from "../actions";
 import { ConfirmDialogForm, ReorderButtons } from "./quick-actions";
+import { ActionForm } from "../../../../components/action-form";
 
 export type ComplementActions = {
   copyComplementGroups: MenuAction;
@@ -172,7 +173,13 @@ function GroupForm({
   }
 
   return (
-    <form ref={ref} action={formAction} onChange={onChange} className="space-y-5">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      onChange={onChange}
+      className="space-y-5"
+    >
       {editing ? (
         <input type="hidden" name="groupId" value={group.id} />
       ) : (
@@ -269,8 +276,9 @@ function GroupForm({
                 label="Acréscimo (R$)"
                 value={row.price}
                 onChange={(event) => updateRow(row.key, { price: event.currentTarget.value })}
-                placeholder="0,00"
-                inputMode="decimal"
+                placeholder="R$ 0,00"
+                inputMode="numeric"
+                data-money=""
                 autoComplete="off"
                 error={state.errors[`options.${index}.priceCents`]}
               />
@@ -324,7 +332,7 @@ function GroupForm({
           ) : null}
         </div>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -422,7 +430,7 @@ function CopyGroupsForm({
   const id = useId();
   const source = sources.find((item) => item.id === sourceId) ?? null;
   return (
-    <form action={formAction} className="space-y-4">
+    <ActionForm action={formAction} state={state} className="space-y-4">
       <input type="hidden" name="targetItemId" value={targetItemId} />
       <SelectField
         id={`${id}-source`}
@@ -474,7 +482,7 @@ function CopyGroupsForm({
       <SubmitButton disabled={!source} pendingLabel="Copiando...">
         Copiar grupos escolhidos
       </SubmitButton>
-    </form>
+    </ActionForm>
   );
 }
 

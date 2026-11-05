@@ -10,6 +10,7 @@ import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, SectionHeading } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -51,7 +52,13 @@ export function CardBrandsForm({ action, initial }: { action: Action; initial: C
   const { dirty, onChange, ref } = useDirtyForm(state);
   const headingId = useId();
   return (
-    <form ref={ref} action={formAction} onChange={onChange} className="space-y-5">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      onChange={onChange}
+      className="space-y-5"
+    >
       <SectionHeading
         id={headingId}
         description="Bandeiras que a maquininha aceita no Pagamento na entrega. Aparecem no Storefront; nenhuma marcada = nada é exibido."
@@ -69,7 +76,7 @@ export function CardBrandsForm({ action, initial }: { action: Action; initial: C
           <p className="text-sm text-[var(--color-muted)]">Nenhuma alteração para salvar.</p>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -79,7 +86,13 @@ export function PrintOnAcceptForm({ action, initial }: { action: Action; initial
   const headingId = useId();
   const id = useId();
   return (
-    <form ref={ref} action={formAction} onChange={onChange} className="space-y-5">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      onChange={onChange}
+      className="space-y-5"
+    >
       <SectionHeading
         id={headingId}
         description="Ligado, o clique em Começar preparo muda o status e abre a impressão do cupom 80 mm na mesma hora. Desligado, você imprime pelo detalhe do Pedido."
@@ -106,6 +119,6 @@ export function PrintOnAcceptForm({ action, initial }: { action: Action; initial
           <p className="text-sm text-[var(--color-muted)]">Nenhuma alteração para salvar.</p>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }

@@ -3,7 +3,7 @@
 // Status da Loja no shell (NAV-04) e Pausa a um clique (CFG-02, P-OPE-4): selo texto + símbolo
 // (T-03) para todos; Dono e Operador ligam e retomam. Ligar pede confirmação curta; com Pausa
 // ativa, faixa persistente "Loja em Pausa — Retomar" com quem ativou e quando.
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import type { PauseState, StoreOpenState } from "@foode/shared/order";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
@@ -63,20 +63,21 @@ export function pausedByText(pause: PauseState): string | null {
 function usePauseAction(setPause: SetPause) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  // Feedback no Toast (decisão 72): nada inline empurrando a sidebar ou a faixa.
   const run = (paused: boolean, after?: () => void) => {
-    setError(null);
     start(async () => {
       const result = await setPause(paused);
       if (!result.ok) {
-        setError(result.message);
+        toast.error(result.message);
         return;
       }
+      toast.success(paused ? "Pedidos pausados: o checkout está bloqueado." : "Pedidos retomados.");
       after?.();
       router.refresh();
     });
   };
-  return { error, pending, run };
+  return { pending, run };
 }
 
 /**
@@ -122,11 +123,6 @@ export function StoreStatusControl({
             Pausar Pedidos
           </Button>
         )
-      ) : null}
-      {action.error ? (
-        <p role="alert" className="basis-full text-sm font-bold text-[var(--color-error)]">
-          {action.error}
-        </p>
       ) : null}
       {confirming && !paused ? (
         <div
@@ -186,11 +182,6 @@ export function PauseBand({
           <span aria-hidden="true">❚❚ </span>Loja em Pausa — o checkout está bloqueado.
         </p>
         <p className="text-sm text-[var(--color-body)]">{pausedByText(pause)}</p>
-        {action.error ? (
-          <p role="alert" className="text-sm font-bold text-[var(--color-error)]">
-            {action.error}
-          </p>
-        ) : null}
       </div>
       {canPause && setPause ? (
         <Button

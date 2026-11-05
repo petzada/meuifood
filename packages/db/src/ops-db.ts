@@ -14,6 +14,7 @@
 // Os tipos de entrada/saída repetem, estruturalmente, os de @foode/shared/ops (este pacote não
 // depende de `@foode/shared`); a api valida a entrada com o Zod antes de chegar aqui.
 import type { OpsContext } from "./context";
+import { monthOrderCounts, saoPauloMonth } from "./month-orders";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError, isUniqueViolation } from "./errors";
 import {
@@ -228,20 +229,6 @@ type OpsAuditAction = (typeof OPS_AUDIT_ACTIONS)[number];
 
 // ---- Funções puras ----
 
-const SAO_PAULO_MONTH = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Sao_Paulo",
-  year: "numeric",
-  month: "2-digit",
-});
-
-/** Mês civil `YYYY-MM` em America/Sao_Paulo do instante ISO `at`. */
-export function saoPauloMonth(at: string): string {
-  const parts = SAO_PAULO_MONTH.formatToParts(new Date(at));
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  return `${year}-${month}`;
-}
-
 function effectiveAt(period: { validFrom: string; validTo: string | null }, at: string): boolean {
   return period.validFrom <= at && (period.validTo === null || at < period.validTo);
 }
@@ -342,21 +329,6 @@ function profileOf(
 /** Estado auditável da Loja (o `before`/`after` de store.*). */
 function storeSnapshot(row: StoreJoinRow) {
   return { slug: row.slug, name: row.name, status: row.status, profile: profileOf(row) };
-}
-
-/**
- * Fonte da contagem de Pedidos do mês (decisão 61: Pedidos não cancelados do Canal próprio no
- * mês civil de America/Sao_Paulo).
- * TODO(24): a tabela de Pedidos nasce no Ticket 24; até lá a contagem é 0 para toda Loja. O
- * contrato (Loja → contagem do mês `YYYY-MM`) já é o definitivo.
- */
-async function monthOrderCounts(
-  _d1: D1Database,
-  storeIds: readonly string[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO(24): filtro do mês na query de Pedidos
-  _month: string,
-): Promise<Map<string, number>> {
-  return new Map(storeIds.map((id) => [id, 0]));
 }
 
 export function createOpsOperations(d1: D1Database, context: OpsContext) {
@@ -1218,7 +1190,7 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
       });
     },
 
-    /** Pedidos do mês civil (America/Sao_Paulo) da Loja. TODO(24): 0 até existir Pedido. */
+    /** Pedidos do mês civil (America/Sao_Paulo) da Loja, não cancelados. */
     async monthOrderCount(storeId: string, month = saoPauloMonth(utcNow())): Promise<number> {
       const counts = await monthOrderCounts(d1, [storeId], month);
       return counts.get(storeId) ?? 0;

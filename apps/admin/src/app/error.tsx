@@ -12,7 +12,9 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
         <p className="mt-3 text-[var(--color-body)]">
           Tente novamente. Se o problema continuar, verifique a conexão da Loja.
         </p>
-        <Button className="mt-6" onClick={reset}>Tentar novamente</Button>
+        <Button className="mt-6" onClick={reset}>
+          Tentar novamente
+        </Button>
       </OutlineContainer>
     </main>
   );

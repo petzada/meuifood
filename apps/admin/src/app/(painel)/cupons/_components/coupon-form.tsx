@@ -27,6 +27,7 @@ import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, SectionHeading } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
+import { ActionForm } from "../../../../components/action-form";
 
 export type CouponFormAction = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -109,7 +110,14 @@ export function CouponForm({
   }
 
   return (
-    <form ref={ref} action={formAction} noValidate onChange={onChange} className="space-y-8">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      noValidate
+      onChange={onChange}
+      className="space-y-8"
+    >
       {mode === "create" && templates.length > 0 ? (
         <OutlineContainer as="section" aria-labelledby={`${headingId}-modelos`} className="p-5">
           <SectionHeading
@@ -216,13 +224,14 @@ export function CouponForm({
                 id="maxDiscountCents"
                 name="maxDiscountCents"
                 label="Teto do desconto em R$ (opcional)"
-                inputMode="decimal"
+                inputMode="numeric"
+                data-money=""
                 value={money.max}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => {
                   setMoney((m) => ({ ...m, max: event.target.value }));
                   patch({ maxDiscountCents: moneyValue(event.target.value) });
                 }}
-                placeholder="20,00"
+                placeholder="R$ 20,00"
                 hint="O desconto nunca passa deste valor."
                 error={errors.maxDiscountCents}
               />
@@ -232,13 +241,14 @@ export function CouponForm({
               id="amountCents"
               name="amountCents"
               label="Desconto em R$"
-              inputMode="decimal"
+              inputMode="numeric"
+              data-money=""
               value={money.amount}
               onChange={(event: ChangeEvent<HTMLInputElement>) => {
                 setMoney((m) => ({ ...m, amount: event.target.value }));
                 patch({ amountCents: moneyValue(event.target.value) });
               }}
-              placeholder="5,00"
+              placeholder="R$ 5,00"
               error={errors.amountCents}
             />
           )}
@@ -246,13 +256,14 @@ export function CouponForm({
             id="minOrderCents"
             name="minOrderCents"
             label="Pedido mínimo em R$ (opcional)"
-            inputMode="decimal"
+            inputMode="numeric"
+            data-money=""
             value={money.min}
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
               setMoney((m) => ({ ...m, min: event.target.value }));
               patch({ minOrderCents: moneyValue(event.target.value) });
             }}
-            placeholder="30,00"
+            placeholder="R$ 30,00"
             hint="Sobre o subtotal dos itens, sem a taxa de entrega."
             error={errors.minOrderCents}
           />
@@ -381,6 +392,6 @@ export function CouponForm({
           </div>
         </div>
       </OutlineContainer>
-    </form>
+    </ActionForm>
   );
 }

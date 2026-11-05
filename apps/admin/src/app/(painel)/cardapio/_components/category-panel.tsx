@@ -15,6 +15,7 @@ import { ActionNotice } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import type { MenuAction } from "../actions";
 import { ReorderButtons } from "./quick-actions";
+import { ActionForm } from "../../../../components/action-form";
 
 export function NewCategoryForm({
   action,
@@ -28,7 +29,7 @@ export function NewCategoryForm({
   const [state, formAction] = useActionState(action, IDLE_FORM);
   const id = useId();
   return (
-    <form action={formAction} className="space-y-3">
+    <ActionForm action={formAction} state={state} className="space-y-3">
       <Field
         id={`${id}-name`}
         name="name"
@@ -43,7 +44,7 @@ export function NewCategoryForm({
       <SubmitButton className="w-full" pendingLabel="Criando...">
         Criar categoria
       </SubmitButton>
-    </form>
+    </ActionForm>
   );
 }
 

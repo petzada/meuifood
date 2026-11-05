@@ -47,6 +47,7 @@ import type {
   FunnelReport,
   FunnelReportInput,
   OwnerOnboardingState,
+  OwnerPlanView,
   OwnerProfileInput,
   OwnerStoreSettings,
   SlugAvailability,
@@ -413,6 +414,12 @@ export interface PainelRpc {
 
   /** Checklist calculado no servidor (sem ordem forçada; "Plano ativo" não acionável), perfil e link. */
   onboardingGet(caller: PainelCaller): Promise<RpcResult<OwnerOnboardingState>>;
+
+  /**
+   * Plano vigente, faixa do mês e Pedidos não cancelados do mês civil de São Paulo (decisão 72:
+   * banner da sidebar do Dono e `/plano`, só leitura). Só Dono.
+   */
+  storePlanGet(caller: PainelCaller): Promise<RpcResult<OwnerPlanView>>;
 
   /** Duas perguntas de perfil (culinária, objetivo; uso interno da Foode): uma vez, depois `conflict`. */
   onboardingAnswerProfile(caller: PainelCaller, input: OwnerProfileInput): Promise<RpcResult<null>>;

@@ -10,6 +10,7 @@ import { centsToInput, utcIsoToZonedInput } from "../../../../lib/ops-format";
 import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -77,7 +78,7 @@ export function TiersForm({
   const tiersError = state.errors.monthlyTiers;
 
   return (
-    <form action={formAction} noValidate className="space-y-6">
+    <ActionForm action={formAction} state={state} noValidate className="space-y-6">
       <input type="hidden" name="tierCount" value={rows.length} />
       <div className="overflow-x-auto">
         <table
@@ -143,7 +144,8 @@ export function TiersForm({
                     <input
                       id={`${tableId}-price-${index}`}
                       name={`tiers.${index}.priceCents`}
-                      inputMode="decimal"
+                      inputMode="numeric"
+                      data-money=""
                       value={row.price}
                       placeholder="84,99"
                       aria-invalid={priceError ? true : undefined}
@@ -195,7 +197,8 @@ export function TiersForm({
           id="annual-price"
           name="annualPriceCents"
           label="Anual, Pedidos ilimitados (R$ no ano)"
-          inputMode="decimal"
+          inputMode="numeric"
+          data-money=""
           defaultValue={centsToInput(initialAnnualCents)}
           hint="Ex.: 12 × R$ 84,99 = R$ 1.019,88."
           error={state.errors.annualPriceCents}
@@ -212,6 +215,6 @@ export function TiersForm({
       </div>
       <ActionNotice state={state} />
       <SubmitButton pendingLabel="Publicando...">Publicar tabela</SubmitButton>
-    </form>
+    </ActionForm>
   );
 }

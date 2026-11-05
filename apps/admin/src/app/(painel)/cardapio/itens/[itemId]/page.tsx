@@ -2,7 +2,6 @@ import { Badge, OutlineContainer } from "@foode/ui";
 import { formatBRL } from "@foode/shared/money";
 import { notFound } from "next/navigation";
 
-import { Notice } from "../../../../../components/form";
 import { painelRead } from "../../../../../lib/painel-rpc";
 import { requirePermission } from "../../../../../lib/session";
 import { SectionHeading } from "../../../ops/_components/fields";
@@ -26,6 +25,7 @@ import { ComplementGroupsSection, type CopySource } from "../../_components/comp
 import { ItemForm } from "../../_components/item-form";
 import { CardapioPageHeader } from "../../_components/page-header";
 import { ConfirmDialogForm } from "../../_components/quick-actions";
+import { ToastNotice } from "../../../../../components/toast-notice";
 
 // Item numa página só, em seções independentes (CAR-05, T-07): Dados (com foto, disponibilidade
 // e Destaque) · Complementos · Adicionais · Apagar. Breadcrumb Cardápio › Categoria (NAV-06).
@@ -80,7 +80,7 @@ export default async function ItemPage({
         }
       />
 
-      {aviso && NOTICES[aviso] ? <Notice tone="success">{NOTICES[aviso]}</Notice> : null}
+      {aviso && NOTICES[aviso] ? <ToastNotice message={NOTICES[aviso]} /> : null}
 
       <OutlineContainer as="section" className="p-5 md:p-8" aria-labelledby="dados">
         <SectionHeading

@@ -1,7 +1,6 @@
 import { Button, OutlineContainer } from "@foode/ui";
 import Link from "next/link";
 
-import { Notice } from "../../../components/form";
 import { pluralize } from "../../../lib/menu-labels";
 import { painelRead } from "../../../lib/painel-rpc";
 import { requirePermission } from "../../../lib/session";
@@ -18,6 +17,7 @@ import {
 } from "./actions";
 import { CategoryPanel, NewCategoryForm } from "./_components/category-panel";
 import { ItemsPanel } from "./_components/items-panel";
+import { ToastNotice } from "../../../components/toast-notice";
 
 // Gestor do Cardápio (Ticket 23, CAR-01): categorias à esquerda, itens da categoria à direita;
 // no celular, empilhado. Só o Dono (`store.menu`); a api confere de novo em cada RPC.
@@ -99,11 +99,7 @@ export default async function CardapioPage({
         ) : null}
       </header>
 
-      {aviso && NOTICES[aviso] ? (
-        <div className="mt-6">
-          <Notice tone="success">{NOTICES[aviso]}</Notice>
-        </div>
-      ) : null}
+      {aviso && NOTICES[aviso] ? <ToastNotice message={NOTICES[aviso]} /> : null}
 
       {aviso === "categoria-criada" && selected ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-primary)] px-4 py-3">

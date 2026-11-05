@@ -20,6 +20,7 @@ import {
   InlinePrice,
   ReorderButtons,
 } from "./quick-actions";
+import { ActionForm } from "../../../../components/action-form";
 
 export type ItemsPanelActions = {
   deleteCategory: MenuAction;
@@ -65,7 +66,7 @@ function RenameForm({
   const [state, formAction] = useActionState(action, IDLE_FORM);
   const id = useId();
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3">
+    <ActionForm action={formAction} state={state} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="categoryId" value={category.id} />
       <div className="min-w-[16rem] flex-1">
         <Field
@@ -85,7 +86,7 @@ function RenameForm({
       <div className="basis-full">
         <ActionNotice state={state} />
       </div>
-    </form>
+    </ActionForm>
   );
 }
 

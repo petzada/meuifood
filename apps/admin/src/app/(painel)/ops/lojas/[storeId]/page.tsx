@@ -2,7 +2,6 @@ import { OutlineContainer } from "@foode/ui";
 import { STORE_CUISINE_LABELS, STORE_GOAL_LABELS } from "@foode/shared/onboarding";
 import type { PaymentFeeView } from "@foode/shared/ops";
 
-import { Notice } from "../../../../../components/form";
 import {
   formatCep,
   formatCnpj,
@@ -34,6 +33,7 @@ import {
   suspendStore,
   updateStore,
 } from "../../actions";
+import { ToastNotice } from "../../../../../components/toast-notice";
 
 // Detalhe da Loja no Ops: estado e ativação, cadastro por seções, Dono, Plano e cartão,
 // taxas Foode da Loja (override) e auditoria (OPS-02..05).
@@ -101,11 +101,7 @@ export default async function OpsStorePage({
         }
       />
 
-      {notice ? (
-        <div className="mt-6">
-          <Notice tone="success">{notice}</Notice>
-        </div>
-      ) : null}
+      {notice ? <ToastNotice message={notice} /> : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
         <div className="space-y-6">

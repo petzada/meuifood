@@ -194,7 +194,7 @@ describe("Slug", () => {
     });
     const state = data(await onboarding.onboardingGet(owner));
     expect(state.slug).toBe(slug);
-    expect(state.checklist.items.find((entry) => entry.item === "slug")?.done).toBe(true);
+    expect(state.checklist.items.map((entry) => entry.item)).not.toContain("slug");
     const trail = await db
       .store(
         (await db.access.storeContext({
@@ -370,7 +370,7 @@ describe("checklist e perfil", () => {
     expect(data(await onboarding.onboardingGet(owner)).checklist.showReadyMessage).toBe(false);
     // A Loja B não foi tocada.
     const ownerB = await loginAs(fx.ownerB);
-    expect(data(await onboarding.onboardingGet(ownerB)).checklist.pendingCount).toBe(5);
+    expect(data(await onboarding.onboardingGet(ownerB)).checklist.pendingCount).toBe(4);
   });
 
   it("perfil uma vez, visível ao Ops e só da própria Loja", async () => {

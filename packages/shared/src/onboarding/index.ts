@@ -4,6 +4,7 @@
 // novo na api.
 export * from "./checklist.js";
 export * from "./funnel.js";
+export * from "./plan.js";
 export * from "./profile.js";
 export * from "./showcase.js";
 export * from "./views.js";
