@@ -20,3 +20,4 @@
 ## Comments
 
 - 2026-11-04 — Revisado por [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md) e [61](../../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md): faixas por Pedidos, lote diário D+1 útil.
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) REL-01 a REL-04, NAV-01/NAV-02 (rotas `/relatorios`, `/repasses`, `/plano` no grupo Financeiro; sugestão de permissão `store.finance`) e OPS-01/OPS-04 para os lotes; mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §1, §7 e §15. Em aberto: P-REL-1 a P-REL-5 e P-PLN-1 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).

@@ -107,4 +107,5 @@ Concluir o que o Ticket 18 deixou pela metade por decisão deliberada:
 - 2026-07-29 — Ticket derivado de `/improve-codebase-architecture` rodado sobre `f64ea28`. O ADR 0005 (brand outline) não é contrariado por nenhum achado — 18.3 é aplicação incompleta dele, não conflito.
 
 - 2026-11-04 — Revisado no pivô: 20.1 e 20.3 entram no Ticket 23; a Fase B do 18 deixa de existir (os seams nascem no port). Restam 20.2 (carrinho), 20.4 (matriz RBAC do Painel) e 20.5 (feedback por querystring), a reavaliar contra o código novo no fim da fila de produto.
-- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): o module de carrinho do 20.2 deve suportar as ações de [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) K2 (editar linha substituindo-a, remover com Desfazer) e K4 (linha inválida destacada).
+
+- 2026-11-05 — Referência Anota (lojista): os achados 20.4 e 20.5 encontram as diretrizes NAV-01/NAV-02 (campo `group` opcional em `RouteRule`) e T-04/T-05 (estados e feedback) de [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md). Achado de contraste T-02 (branco sobre `#F35050` = 3,5:1, abaixo do AA) aguarda P-DS-1 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).

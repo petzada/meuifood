@@ -23,3 +23,5 @@
 ## Comments
 
 - 2026-11-04 — Aberto na revisão final ([62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md)). Lotes de repasse ficam no Ticket 14.
+
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) OPS-01 a OPS-05 e T-06 (máscaras de CNPJ/WhatsApp com dígito verificador); mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §2 e §6. Em aberto: P-CFG-4 (CEP autopreenche o endereço) de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).
