@@ -57,8 +57,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
     const line = {
       additionalIds: ["77777777-7777-4777-8777-777777777777"],
       complementSelections: {
-        "22222222-2222-4222-8222-222222222222":
-          "33333333-3333-4333-8333-333333333333",
+        "22222222-2222-4222-8222-222222222222": "33333333-3333-4333-8333-333333333333",
       },
       quantity: 2,
     };
@@ -72,8 +71,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
       validateCartLineChoices(burger, {
         additionalIds: ["88888888-8888-4888-8888-888888888888"],
         complementSelections: {
-          "22222222-2222-4222-8222-222222222222":
-            "33333333-3333-4333-8333-333333333333",
+          "22222222-2222-4222-8222-222222222222": "33333333-3333-4333-8333-333333333333",
         },
         quantity: 1,
       }),
@@ -83,8 +81,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
       validateCartLineChoices(burger, {
         additionalIds: [],
         complementSelections: {
-          "22222222-2222-4222-8222-222222222222":
-            "99999999-9999-4999-8999-999999999999",
+          "22222222-2222-4222-8222-222222222222": "99999999-9999-4999-8999-999999999999",
         },
         quantity: 1,
       }),
@@ -99,8 +96,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
           "77777777-7777-4777-8777-777777777777",
         ],
         complementSelections: {
-          "22222222-2222-4222-8222-222222222222":
-            "33333333-3333-4333-8333-333333333333",
+          "22222222-2222-4222-8222-222222222222": "33333333-3333-4333-8333-333333333333",
         },
         quantity: 1,
       }),
@@ -112,8 +108,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
     cart.lines.push({
       additionalIds: [],
       complementSelections: {
-        "22222222-2222-4222-8222-222222222222":
-          "33333333-3333-4333-8333-333333333333",
+        "22222222-2222-4222-8222-222222222222": "33333333-3333-4333-8333-333333333333",
       },
       itemId: burger.id,
       quantity: 1,
@@ -134,8 +129,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
           quantity: 1,
           additionalIds: ["77777777-7777-4777-8777-777777777777"],
           complementSelections: {
-            "22222222-2222-4222-8222-222222222222":
-              "44444444-4444-4444-8444-444444444444",
+            "22222222-2222-4222-8222-222222222222": "44444444-4444-4444-8444-444444444444",
           },
         },
       ],
@@ -144,8 +138,7 @@ describe("prévia do carrinho (contrato + centavos)", () => {
     expect(total).toBe(2800);
     expect(cart.lines[0]?.itemId).toBe(burger.id);
     expect(cart.lines[0]?.complementSelections).toEqual({
-      "22222222-2222-4222-8222-222222222222":
-        "44444444-4444-4444-8444-444444444444",
+      "22222222-2222-4222-8222-222222222222": "44444444-4444-4444-8444-444444444444",
     });
   });
 });

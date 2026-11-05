@@ -34,10 +34,7 @@ export type ResolvedDeliveryFee =
       ok: true;
     }
   | {
-      error:
-        | "delivery_not_configured"
-        | "invalid_address"
-        | "neighborhood_not_served";
+      error: "delivery_not_configured" | "invalid_address" | "neighborhood_not_served";
       ok: false;
     };
 
@@ -110,9 +107,7 @@ export function resolveDeliveryFeeCents(
 
   if (config.mode === "neighborhood") {
     const key = normalizeNeighborhoodKey(sanitized.neighborhood);
-    const match = config.neighborhoods.find(
-      (entry) => entry.normalizedName === key,
-    );
+    const match = config.neighborhoods.find((entry) => entry.normalizedName === key);
     if (!match) {
       return { ok: false, error: "neighborhood_not_served" };
     }
@@ -136,9 +131,7 @@ export function previewDeliveryFeeCents(
   }
   if (config.mode === "neighborhood") {
     const key = normalizeNeighborhoodKey(neighborhoodRaw);
-    const match = config.neighborhoods.find(
-      (entry) => entry.normalizedName === key,
-    );
+    const match = config.neighborhoods.find((entry) => entry.normalizedName === key);
     return match ? match.feeCents : null;
   }
   return null;

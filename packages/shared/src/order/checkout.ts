@@ -4,6 +4,12 @@
 // Loja `active`, Pausa, horário, Retirada e bairro são conferidos na mesma escrita do Pedido.
 import { z } from "zod";
 
+import {
+  appliedCouponSchema,
+  COUPON_REJECTIONS,
+  couponCodeSchema,
+  couponRejectionMessagePt,
+} from "../coupon/rules.js";
 import { centsSchema, formatBRL } from "../money.js";
 import { cartLineSchema, MAX_CART_LINES } from "../menu/cart.js";
 import { normalizeBrazilianMobilePhone } from "../phone-br.js";
@@ -79,6 +85,11 @@ const cartShape = {
   lines: z.array(cartLineSchema).min(1).max(MAX_CART_LINES),
   fulfillment: fulfillmentSchema,
   address: deliveryAddressInputSchema.nullish(),
+  /**
+   * Cupom promocional digitado (Ticket 13), um por Pedido; maiúsculas automáticas. Sem código, o
+   * Cupom de boas-vindas entra sozinho quando o Consumidor está com a conta e é elegível.
+   */
+  couponCode: couponCodeSchema.nullish(),
 };
 
 /** Delivery exige endereço; Retirada não tem endereço. */
@@ -157,6 +168,7 @@ export const CHECKOUT_ERROR_CODES = [
   "payment_method_unavailable",
   "change_below_total",
   "idempotency_conflict",
+  "coupon_invalid",
 ] as const;
 export type CheckoutErrorCode = (typeof CHECKOUT_ERROR_CODES)[number];
 
@@ -178,6 +190,12 @@ export const checkoutErrorSchema = z.discriminatedUnion("code", [
   z.object({ code: z.literal("payment_method_unavailable") }),
   z.object({ code: z.literal("change_below_total") }),
   z.object({ code: z.literal("idempotency_conflict") }),
+  /** Cupom recusado no servidor (Ticket 13): um motivo por código, mensagem específica (U1–U4). */
+  z.object({
+    code: z.literal("coupon_invalid"),
+    reason: z.enum(COUPON_REJECTIONS),
+    minimumCents: centsSchema.optional(),
+  }),
 ]);
 export type CheckoutError = z.infer<typeof checkoutErrorSchema>;
 
@@ -202,6 +220,8 @@ export function checkoutErrorMessagePt(error: CheckoutError): string {
       return "O troco precisa ser para um valor igual ou maior que o total.";
     case "idempotency_conflict":
       return "Seu pedido mudou depois do envio. Confira e toque em Fazer pedido de novo.";
+    case "coupon_invalid":
+      return couponRejectionMessagePt(error);
   }
 }
 
@@ -227,6 +247,8 @@ export const checkoutQuoteResponseSchema = z.discriminatedUnion("ok", [
     minimumOrder: z.object({ minimumCents: centsSchema, missingCents: centsSchema }).nullable(),
     eta: etaRangeSchema.nullable(),
     paymentMethods: z.array(paymentMethodSchema),
+    /** Cupom aplicado (promocional digitado ou boas-vindas automático); null = sem desconto. */
+    coupon: appliedCouponSchema.nullable().optional(),
   }),
   z.object({ ok: z.literal(false), error: checkoutErrorSchema }),
 ]);

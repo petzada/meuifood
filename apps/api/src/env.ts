@@ -27,4 +27,13 @@ export type Env = {
   ORDER_TOKEN_SECRET?: string;
   /** Sal do hash do IP truncado na auditoria/rate limit da busca por telefone (P-2.1). */
   PHONE_LOOKUP_IP_SALT?: string;
+  // Ticket 13 (conta do Consumidor, decisão 65). Secrets OPCIONAIS: sem eles o login pelo WhatsApp
+  // responde "indisponível no momento" e o checkout Guest segue normal. O hash do código de login
+  // usa uma chave derivada de BETTER_AUTH_SECRET (já obrigatório no deploy).
+  /** Chave da API da whatsmiau.dev (header `apikey`). */
+  WHATSMIAU_API_KEY?: string;
+  /** Id da instância da whatsmiau conectada ao número oficial da Foode. */
+  WHATSMIAU_INSTANCE_ID?: string;
+  /** Base da API (var; padrão `https://api.whatsmiau.dev/v2`). */
+  WHATSMIAU_API_URL?: string;
 };

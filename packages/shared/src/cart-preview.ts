@@ -47,9 +47,7 @@ export type LineValidationError =
   | "missing_required_complement"
   | "quantity_invalid";
 
-export type LineValidationResult =
-  | { ok: true }
-  | { error: LineValidationError; ok: false };
+export type LineValidationResult = { ok: true } | { error: LineValidationError; ok: false };
 
 /**
  * Valida escolhas do Consumidor contra o Cardápio.
@@ -57,10 +55,7 @@ export type LineValidationResult =
  */
 export function validateCartLineChoices(
   item: CatalogItemForCart | undefined,
-  line: Pick<
-    CartLineContract,
-    "additionalIds" | "complementSelections" | "quantity"
-  >,
+  line: Pick<CartLineContract, "additionalIds" | "complementSelections" | "quantity">,
 ): LineValidationResult {
   if (!item) return { error: "item_not_found", ok: false };
   if (!Number.isInteger(line.quantity) || line.quantity < 1) {
@@ -76,10 +71,7 @@ export function validateCartLineChoices(
       if (!group.options.some((option) => option.id === selected)) {
         return { error: "invalid_complement_option", ok: false };
       }
-    } else if (
-      selected &&
-      !group.options.some((option) => option.id === selected)
-    ) {
+    } else if (selected && !group.options.some((option) => option.id === selected)) {
       return { error: "invalid_complement_option", ok: false };
     }
   }
@@ -95,9 +87,7 @@ export function validateCartLineChoices(
   }
 
   for (const additionalId of line.additionalIds) {
-    const additional = item.additionals.find(
-      (candidate) => candidate.id === additionalId,
-    );
+    const additional = item.additionals.find((candidate) => candidate.id === additionalId);
     if (!additional) return { error: "invalid_additional", ok: false };
     if (!additional.available) {
       return { error: "additional_unavailable", ok: false };
@@ -113,19 +103,14 @@ export function validateCartLineChoices(
  */
 export function previewLineTotalCents(
   item: CatalogItemForCart,
-  line: Pick<
-    CartLineContract,
-    "additionalIds" | "complementSelections" | "quantity"
-  >,
+  line: Pick<CartLineContract, "additionalIds" | "complementSelections" | "quantity">,
 ): number | null {
   const validation = validateCartLineChoices(item, line);
   if (!validation.ok) return null;
 
   let unitCents = item.priceCents;
   for (const additionalId of line.additionalIds) {
-    const additional = item.additionals.find(
-      (candidate) => candidate.id === additionalId,
-    );
+    const additional = item.additionals.find((candidate) => candidate.id === additionalId);
     if (!additional) return null;
     unitCents += additional.priceCents;
   }

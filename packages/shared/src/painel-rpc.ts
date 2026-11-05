@@ -8,6 +8,19 @@ import type {
 } from "./auth/schemas.js";
 import type { ActiveStore, RpcResult, SessionCtx } from "./auth/types.js";
 import type {
+  CouponCreateInput,
+  CouponRefInput,
+  CouponSetActiveInput,
+  CouponsOverview,
+  CouponUpdateInput,
+  WelcomeCouponInput,
+} from "./coupon/admin.js";
+import type {
+  OpsCustomerChangePhoneInput,
+  OpsCustomerFindInput,
+  OpsCustomerView,
+} from "./customer/account.js";
+import type {
   AdminMenu,
   MenuCopyComplementGroupsInput,
   MenuCreateAdditionalInput,
@@ -436,4 +449,46 @@ export interface PainelRpc {
 
   /** Funil agregado por dia (visita → item → carrinho → checkout → Pedido); fonte do Ticket 14. */
   funnelReport(caller: PainelCaller, input: FunnelReportInput): Promise<RpcResult<FunnelReport>>;
+
+  // ---- Cupons (Ticket 13, `/cupons` sob `store.settings`): só o Dono da Loja ATIVA; Operador e
+  // Ops = `forbidden`, sem efeito. Entradas com `@foode/shared/coupon` (`invalid_input`). Toda
+  // escrita audita (COUPON_AUDIT_ACTIONS). Cupom de outra Loja ou inexistente = `not_found`.
+
+  /** Boas-vindas (topo), lista com status (Ativo/Inativo/Expirado/Esgotado/Agendado) e modelos. */
+  couponsGet(caller: PainelCaller): Promise<RpcResult<CouponsOverview>>;
+
+  /** Cria Cupom promocional; código já usado NESTA Loja = `conflict`. */
+  couponCreate(
+    caller: PainelCaller,
+    input: CouponCreateInput,
+  ): Promise<RpcResult<{ couponId: string }>>;
+
+  /** Substitui os campos; limite abaixo dos usos ou código repetido = `conflict`. */
+  couponUpdate(caller: PainelCaller, input: CouponUpdateInput): Promise<RpcResult<null>>;
+
+  couponSetActive(caller: PainelCaller, input: CouponSetActiveInput): Promise<RpcResult<null>>;
+
+  /** Só sem usos; com uso = `conflict` (desative em vez de apagar). */
+  couponDelete(caller: PainelCaller, input: CouponRefInput): Promise<RpcResult<null>>;
+
+  /** Interruptor e desconto do Cupom de boas-vindas (primeira compra por Loja, decisão 66). */
+  welcomeCouponSet(caller: PainelCaller, input: WelcomeCouponInput): Promise<RpcResult<null>>;
+
+  // ---- Conta do Consumidor no Ops (Ticket 13, decisão 65): só `foode_ops`.
+
+  /** Busca por telefone ou CPF (CPF volta mascarado); sem conta = `not_found`. */
+  opsCustomerFind(
+    caller: PainelCaller,
+    input: OpsCustomerFindInput,
+  ): Promise<RpcResult<OpsCustomerView>>;
+
+  /**
+   * Troca o telefone da conta (o Consumidor não troca o próprio): auditoria com quem, quando e
+   * antes/depois; Pedidos Guest do número antigo continuam na conta; sessões da conta caem.
+   * Número de outra conta ou igual ao atual = `conflict`.
+   */
+  opsCustomerChangePhone(
+    caller: PainelCaller,
+    input: OpsCustomerChangePhoneInput,
+  ): Promise<RpcResult<null>>;
 }

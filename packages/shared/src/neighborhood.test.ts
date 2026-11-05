@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  normalizeNeighborhoodKey,
-  sanitizeNeighborhoodDisplayName,
-} from "./neighborhood.js";
+import { normalizeNeighborhoodKey, sanitizeNeighborhoodDisplayName } from "./neighborhood.js";
 
 describe("normalização de bairro", () => {
   it("trata acento, caixa e espaços como a mesma chave", () => {

@@ -5,6 +5,26 @@ export { AUTH_SCHEMA_OPTIONS, type AuthDatabase, createAuthDatabase } from "./au
 export { ForgedContextError, type OpsContext, type StoreContext } from "./context";
 export { cents, type Cents, utcNow } from "./conventions";
 export {
+  COUPON_AUDIT_ACTIONS,
+  type CouponData,
+  type CouponDiscountData,
+  type CouponOps,
+  type CouponRowView,
+  type WelcomeCheckoutFacts,
+  type WelcomeCouponData,
+  type WelcomeCouponRowView,
+} from "./coupon-db";
+export {
+  CUSTOMER_AUDIT_ACTIONS,
+  type CustomerAccount,
+  type CustomerOps,
+  type CustomerOrderRow,
+  type CustomerSession,
+  type LoginCodeAttempt,
+  type LoginCodeState,
+  type OpsCustomerRow,
+} from "./customer-db";
+export {
   type AuditEvent,
   type AuthAuditAction,
   type AuditInput,
@@ -83,6 +103,7 @@ export {
 } from "./store-operation-db";
 export {
   type CheckoutSnapshot,
+  type CreateOrderCoupon,
   type CreateOrderData,
   type CreateOrderDelivery,
   type CreateOrderResult,
@@ -96,6 +117,12 @@ export {
 export {
   BILLING_CYCLES,
   CARD_MODES,
+  COUPON_CODE_MAX,
+  COUPON_CODE_MIN,
+  COUPON_KINDS,
+  COUPON_WEEKDAYS_ALL,
+  CUSTOMER_NAME_MAX,
+  LOGIN_CODE_MAX_ATTEMPTS,
   type CardMode,
   DELIVERY_MODES,
   type DeliveryMode,

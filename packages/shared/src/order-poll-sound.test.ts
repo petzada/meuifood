@@ -1,16 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createEmptyPollSoundState,
-  stepOrderPollSound,
-} from "./order-poll-sound.js";
+import { createEmptyPollSoundState, stepOrderPollSound } from "./order-poll-sound.js";
 
 describe("som da fila por polling", () => {
   it("carga inicial só cria baseline sem tocar som", () => {
-    const first = stepOrderPollSound(createEmptyPollSoundState(), [
-      "o1",
-      "o2",
-    ]);
+    const first = stepOrderPollSound(createEmptyPollSoundState(), ["o1", "o2"]);
     expect(first.playForOrderIds).toEqual([]);
     expect(first.baselineEstablished).toBe(true);
     expect([...first.nextSeenOrderIds].sort()).toEqual(["o1", "o2"]);

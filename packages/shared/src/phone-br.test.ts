@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildWhatsAppMeUrl,
-  normalizeBrazilianMobilePhone,
-} from "./phone-br.js";
+import { buildWhatsAppMeUrl, normalizeBrazilianMobilePhone } from "./phone-br.js";
 
 describe("normalizeBrazilianMobilePhone", () => {
   it("normaliza formatos comuns para E.164 BR celular", () => {
@@ -31,9 +28,7 @@ describe("normalizeBrazilianMobilePhone", () => {
 
 describe("buildWhatsAppMeUrl", () => {
   it("monta wa.me com texto opcional", () => {
-    expect(buildWhatsAppMeUrl("5511988887777")).toBe(
-      "https://wa.me/5511988887777",
-    );
+    expect(buildWhatsAppMeUrl("5511988887777")).toBe("https://wa.me/5511988887777");
     expect(buildWhatsAppMeUrl("5511988887777", "Pedido ABC123")).toBe(
       "https://wa.me/5511988887777?text=Pedido%20ABC123",
     );

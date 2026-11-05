@@ -38,9 +38,7 @@ export function stepOrderPollSound(
     };
   }
 
-  const playForOrderIds = currentOrderIds.filter(
-    (orderId) => !state.seenOrderIds.has(orderId),
-  );
+  const playForOrderIds = currentOrderIds.filter((orderId) => !state.seenOrderIds.has(orderId));
 
   return {
     baselineEstablished: true,

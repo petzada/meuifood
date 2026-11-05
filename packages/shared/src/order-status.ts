@@ -36,29 +36,19 @@ const deliveryTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
   cancelled: [],
 };
 
-export function allowedPickupTransitions(
-  from: OrderStatus,
-): readonly OrderStatus[] {
+export function allowedPickupTransitions(from: OrderStatus): readonly OrderStatus[] {
   return pickupTransitions[from];
 }
 
-export function allowedDeliveryTransitions(
-  from: OrderStatus,
-): readonly OrderStatus[] {
+export function allowedDeliveryTransitions(from: OrderStatus): readonly OrderStatus[] {
   return deliveryTransitions[from];
 }
 
-export function canTransitionPickup(
-  from: OrderStatus,
-  to: OrderStatus,
-): boolean {
+export function canTransitionPickup(from: OrderStatus, to: OrderStatus): boolean {
   return pickupTransitions[from].includes(to);
 }
 
-export function canTransitionDelivery(
-  from: OrderStatus,
-  to: OrderStatus,
-): boolean {
+export function canTransitionDelivery(from: OrderStatus, to: OrderStatus): boolean {
   return deliveryTransitions[from].includes(to);
 }
 

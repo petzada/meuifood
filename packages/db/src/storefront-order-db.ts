@@ -10,6 +10,13 @@
 // Idempotência: UNIQUE (store_id, idempotency_key) + ON CONFLICT DO NOTHING; o batch devolve o
 // Pedido gravado com a chave (o nosso, ou o de uma tentativa anterior).
 //
+// Cupom e conta (Ticket 13): o Pedido nasce ligado à conta do Consumidor autenticado
+// (`customer_account_id`). Cupom promocional: a MESMA escrita confere que o Cupom segue ativo, na
+// versão cotada (`updated_at`) e com uso livre (`used_count < usage_limit`), conta +1 e grava o uso
+// (`coupon_redemptions`); o CHECK `used_count <= usage_limit` é a última barreira. Boas-vindas: a
+// escrita confere o programa ativo na versão cotada e que a conta (ou o telefone verificado dela)
+// não tem Pedido nem uso de boas-vindas NESTA Loja (UNIQUE parcial por conta e Loja).
+//
 // Dados pessoais: nada aqui registra log. A busca por telefone grava em `phone_lookups` só o hash
 // do IP truncado e o resultado; o telefone não é gravado (só comparado com o do Pedido).
 import { newId } from "./conventions";
@@ -59,6 +66,18 @@ export type CreateOrderDelivery =
   | { mode: "fixed"; feeCents: number }
   | { mode: "neighborhood"; neighborhoodId: string; feeCents: number };
 
+/** Cupom cotado para a escrita do Pedido (conferido e contado na mesma escrita). */
+export type CreateOrderCoupon =
+  | { source: "promo"; couponId: string; version: string; discountCents: number }
+  | {
+      source: "welcome";
+      version: string;
+      accountId: string;
+      /** Telefone verificado da conta (Pedidos Guest com ele contam como compra na Loja). */
+      accountPhoneE164: string;
+      discountCents: number;
+    };
+
 export type CreateOrderData = {
   slug: string;
   orderId: string;
@@ -83,6 +102,10 @@ export type CreateOrderData = {
   lines: Array<OrderLineData & { menuItemId: string }>;
   /** Itens cotados com o preço base: o INSERT só passa se continuam disponíveis e com esse preço. */
   itemPrices: Array<{ id: string; priceCents: number }>;
+  /** Conta do Consumidor autenticado (Ticket 13); null = Guest. */
+  customerAccountId?: string | null;
+  /** Cupom aplicado (Ticket 13); null = sem desconto (`discountCents` = 0). */
+  coupon?: CreateOrderCoupon | null;
 };
 
 export type CreateOrderResult =
@@ -236,10 +259,66 @@ export function createStorefrontOrderOps(d1: D1Database) {
           );
         }
       }
+      const coupon = input.coupon ?? null;
+      if (coupon?.source === "promo") {
+        guards.push(
+          `EXISTS (SELECT 1 FROM coupons c WHERE c.store_id = s.id AND c.id = ? AND c.active = 1
+             AND c.updated_at = ? AND (c.usage_limit IS NULL OR c.used_count < c.usage_limit))`,
+        );
+        guardBinds.push(coupon.couponId, coupon.version);
+      } else if (coupon?.source === "welcome") {
+        guards.push(
+          `EXISTS (SELECT 1 FROM store_welcome_coupons w WHERE w.store_id = s.id AND w.active = 1
+             AND w.updated_at = ?)`,
+          `NOT EXISTS (SELECT 1 FROM orders o2 WHERE o2.store_id = s.id
+             AND (o2.customer_account_id = ? OR o2.customer_phone_e164 = ?))`,
+          `NOT EXISTS (SELECT 1 FROM coupon_redemptions r WHERE r.store_id = s.id
+             AND r.source = 'welcome' AND r.customer_account_id = ?)`,
+        );
+        guardBinds.push(
+          coupon.version,
+          coupon.accountId,
+          coupon.accountPhoneE164,
+          coupon.accountId,
+        );
+      }
+      if (coupon && coupon.discountCents !== input.discountCents) {
+        throw new RangeError("checkout: desconto do Cupom diferente do desconto do Pedido");
+      }
       const address = delivery?.address ?? null;
       const lines = input.lines.map((line) => ({ ...line, id: newId() }));
 
-      const [, , , saved] = await d1.batch([
+      const couponStatements: D1PreparedStatement[] = [];
+      if (coupon) {
+        if (coupon.source === "promo") {
+          couponStatements.push(
+            d1
+              .prepare(
+                `UPDATE coupons SET used_count = used_count + 1
+                 WHERE id = ? AND store_id = (SELECT store_id FROM orders WHERE id = ?)`,
+              )
+              .bind(coupon.couponId, input.orderId),
+          );
+        }
+        couponStatements.push(
+          d1
+            .prepare(
+              `INSERT INTO coupon_redemptions (id, store_id, order_id, source, coupon_id,
+                 customer_account_id, discount_cents, created_at)
+               SELECT ?, store_id, id, ?, ?, ?, ?, created_at FROM orders WHERE id = ?`,
+            )
+            .bind(
+              newId(),
+              coupon.source,
+              coupon.source === "promo" ? coupon.couponId : null,
+              coupon.source === "welcome" ? coupon.accountId : (input.customerAccountId ?? null),
+              coupon.discountCents,
+              input.orderId,
+            ),
+        );
+      }
+
+      const results = await d1.batch([
         d1
           .prepare(
             `INSERT INTO orders (id, store_id, code, access_token_hash, idempotency_key,
@@ -247,9 +326,10 @@ export function createStorefrontOrderOps(d1: D1Database) {
                customer_phone_e164, delivery_postal_code, delivery_street, delivery_number,
                delivery_complement, delivery_reference, delivery_neighborhood, delivery_fee_mode,
                items_subtotal_cents, delivery_fee_cents, discount_cents, total_cents,
-               change_for_cents, note, eta_min_minutes, eta_max_minutes, created_at, updated_at)
+               change_for_cents, note, eta_min_minutes, eta_max_minutes, created_at, updated_at,
+               customer_account_id)
              SELECT ?, s.id, (SELECT COALESCE(MAX(o.code), 0) + 1 FROM orders o WHERE o.store_id = s.id),
-               ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+               ?, ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
              FROM stores s JOIN store_operation_settings st ON st.store_id = s.id
              WHERE ${guards.join(" AND ")}
              ON CONFLICT(store_id, idempotency_key) DO NOTHING`,
@@ -280,6 +360,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
             input.eta?.maxMinutes ?? null,
             input.now,
             input.now,
+            input.customerAccountId ?? null,
             ...guardBinds,
           ),
         d1
@@ -300,6 +381,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
              SELECT ?, store_id, id, NULL, 'received', NULL, NULL, created_at FROM orders WHERE id = ?`,
           )
           .bind(newId(), input.orderId),
+        ...couponStatements,
         d1
           .prepare(
             `SELECT id AS orderId, code, idempotency_payload_hash AS payloadHash FROM orders
@@ -307,6 +389,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
           )
           .bind(input.slug, input.idempotencyKey),
       ]);
+      const saved = results[results.length - 1];
       const row = (saved?.results as IdempotentOrder[] | undefined)?.[0];
       if (!row) return { kind: "rejected" };
       if (row.orderId === input.orderId) {
