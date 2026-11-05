@@ -1,6 +1,6 @@
-# 14 — Expor Plano, relatórios e Ledger ao Dono
+# 14 — Expor Plano, relatórios e Repasses ao Dono
 
-**What to build:** O Dono consulta o Plano ativado por ops, indicadores básicos do Canal próprio e o Ledger auditável do piloto, enquanto o Operador permanece sem acesso a configuração e informações financeiras.
+**What to build:** O Dono consulta o Plano ativado por ops, indicadores básicos do Canal próprio e a tela de Repasses (Ledger do piloto, só leitura), enquanto o Operador permanece sem acesso a configuração e informações financeiras.
 
 **Blocked by:** 12 — Cancelar Pedido e executar Estorno automático.
 
@@ -11,7 +11,11 @@
 - [ ] A tela não oferece pagamento, recorrência, meter de GMV, teto, overage ou conexão com gateway.
 - [ ] Relatórios mostram Pedidos por status, Fulfillment e meio de pagamento para um período e uma Loja.
 - [ ] GMV soma apenas Pedidos Concluídos pagos online, incluindo itens, Adicionais e taxa de Delivery, e exclui cancelados e `on_delivery`.
-- [ ] Ledger mostra Pedido, cobrança, provider, total, taxa, líquido, previsão, pagamento efetivo e Estorno sem se apresentar como extrato bancário.
-- [ ] Operador não recebe rotas, agregados, totais ou detalhes do Ledger por UI ou chamada direta.
+- [ ] Tela **Repasses** (só leitura): Pedido, meio, provedor, total, taxa, líquido, parcelas previstas, status (previsto/pago) e Estorno, sem se apresentar como extrato bancário. O Provedor do cartão vigente da Loja aparece só como informação.
+- [ ] Marcar repasse como pago continua exclusivo de Ops.
+- [ ] Operador não recebe rotas, agregados, totais ou detalhes de Repasses por UI ou chamada direta.
 - [ ] O teto de R$ 15 mil permanece somente âncora comercial fora do produto.
 
+## Comments
+
+- 2026-11-04 — Revisado no pivô ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md)): Ledger ganha a tela Repasses com provedor e parcelas previstas.

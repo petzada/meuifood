@@ -1,5 +1,7 @@
 # Decisão: hospedagem, CI, secrets e ops MVP
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling stack #8  
 **Depende de:** [17](17-monorepo-e-infra-preferencias.md), [18](18-stack-frontend.md), [19](19-stack-backend-api.md), [21](21-banco-orm-multitenant.md), [22](22-auth-lojista-e-consumidor.md), [23](23-realtime-pedidos-polling.md), [24](24-arquitetura-pagamentos.md)
 

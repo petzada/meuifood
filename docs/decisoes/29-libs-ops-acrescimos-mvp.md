@@ -1,5 +1,7 @@
 # Decisão: libs e ops acrescentados ao MVP
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** gate pós-tese stack  
 **Pesquisa:** [14](../pesquisa/14-viabilidade-stack-e-libs-mvp.md) · **Tese:** [28](28-tese-stack-mvp.md)
 

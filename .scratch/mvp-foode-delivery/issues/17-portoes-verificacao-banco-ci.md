@@ -1,10 +1,12 @@
 # 17 — Endurecer os portões de verificação do banco e do CI
 
+> **Superseded em 2026-11-04 pelo [Ticket 21](21-fundacao-cloudflare-d1-ci.md).** Histórico.
+
 **What to build:** Os portões que hoje reportam verde sem verificar passam a afirmar o que prometem: RLS derivada do catálogo em vez de lista literal, scripts de produção cobertos por typecheck e lint, allowlist de SQL que distingue destrutivo de não classificado, e o job que aplica migration em produção deixa de rodar em todo PR.
 
 **Blocked by:** 08 — Concluir o primeiro Pedido Guest na Retirada (merge do PR #17).
 
-**Status:** todo
+**Status:** superseded
 
 > **Executar antes do Ticket 09.** Este ticket não muda comportamento de produto — muda o que o CI consegue provar. Cada ticket de 09 a 16 que criar tabela com `store_id` passa hoje pelo portão sem que RLS seja afirmada. Adiar significa acumular tickets não verificados.
 
@@ -123,3 +125,5 @@ Sem as cinco variáveis `R2_*`, o teste cai em `expect(menuImageStorageFromEnvir
   **Risco residual.** Classes de erro que só aparecem com schema persistido e conexão nova ficam para o `integration` em `master`, que permanece como rede final — não desaparece, muda de momento.
 
   Nem a Decisão 25 nem a 55 afirmavam que o PR deveria *aplicar* a migration; a 55 diz "só depois de `quality` e preflight verdes". Atualizar a 55 com o fluxo acima faz parte deste ticket.
+
+- 2026-11-04 — Superseded pelo Ticket 21. Com D1 efêmero por run no CI não existe mais drift nem prova de RLS no catálogo do Postgres; os achados de CI aplicáveis (timeouts, lint/typecheck em scripts, README com Node 24, prova R2 que não passa verde sem executar) viraram critérios do 21. "PR prova, master aplica" foi substituída por [59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md).

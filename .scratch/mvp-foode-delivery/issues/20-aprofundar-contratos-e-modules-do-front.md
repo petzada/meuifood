@@ -2,7 +2,7 @@
 
 **What to build:** O contrato entre API e apps deixa de ser redigitado em cada lado, o carrinho do Storefront separa regra de apresentação, a matriz RBAC do Painel ganha um module, e o legado das duplicações do Ticket 18 é migrado por completo.
 
-**Blocked by:** 18 — Instalar os seams compartilhados antes que as cópias se multipliquem.
+**Blocked by:** 14 — Expor Plano, relatórios e Repasses ao Dono; 15 — Reconciliar pagamentos e repasses por Cron Triggers.
 
 **Status:** todo
 
@@ -103,3 +103,5 @@ Concluir o que o Ticket 18 deixou pela metade por decisão deliberada:
 ## Comments
 
 - 2026-07-29 — Ticket derivado de `/improve-codebase-architecture` rodado sobre `f64ea28`. O ADR 0005 (brand outline) não é contrariado por nenhum achado — 18.3 é aplicação incompleta dele, não conflito.
+
+- 2026-11-04 — Revisado no pivô: 20.1 e 20.3 entram no Ticket 23; a Fase B do 18 deixa de existir (os seams nascem no port). Restam 20.2 (carrinho), 20.4 (matriz RBAC do Painel) e 20.5 (feedback por querystring), a reavaliar contra o código novo no fim da fila de produto.

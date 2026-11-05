@@ -1,10 +1,12 @@
 # 11 — Pagar por Crédito Asaas em `pilot_platform`
 
+> **Superseded em 2026-11-04 pelo [Ticket 27](27-credito-efi-abacatepay.md).** Histórico.
+
 **What to build:** O Consumidor paga por Crédito online à vista e o Asaas produz estados seguros de aprovação, pendência ou falha, confirmação idempotente por webhook e obrigação auditável no mesmo Ledger do piloto.
 
 **Blocked by:** 10 — Pagar por PIX Woovi em `pilot_platform`.
 
-**Status:** ready-for-agent
+**Status:** superseded
 
 - [ ] O provider Asaas reutiliza o contrato financeiro existente por `fetch` e validação Zod, sem SDK comunitário.
 - [ ] Uma intenção idempotente cria no máximo uma cobrança lógica e externa.
@@ -16,3 +18,6 @@
 - [ ] O contrato aceita somente Crédito à vista; parcelamento, Débito e Voucher ficam fora.
 - [ ] O happy path continua limitado ao Comerciante-modelo em `pilot_platform`.
 
+## Comments
+
+- 2026-11-04 — Superseded pelo Ticket 27 (Crédito Efí/AbacatePay), decisão [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md).

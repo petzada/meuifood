@@ -1,10 +1,12 @@
 # 18 — Instalar os seams compartilhados antes que as cópias se multipliquem
 
+> **Superseded em 2026-11-04 pelos Tickets [21](21-fundacao-cloudflare-d1-ci.md) e [23](23-portar-cardapio-complementos.md).** Histórico.
+
 **What to build:** Os quatro pontos onde cada ticket novo paga pedágio copiando código — conversão reais↔centavos, chamada à API, controles de formulário e fixture de teste de rota — ganham um module com dono, para que os Tickets 09 a 16 nasçam consumindo em vez de copiando.
 
 **Blocked by:** 08 — Concluir o primeiro Pedido Guest na Retirada (merge do PR #17).
 
-**Status:** todo
+**Status:** superseded
 
 > **Ticket de custo crescente.** Estes achados são os únicos do lote que **pioram sozinhos**: cada ticket implementado adiciona uma cópia nova. O Ticket 08 já pagou os quatro pedágios. Adiar até o fim do MVP não mantém o custo — multiplica-o por oito.
 >
@@ -90,3 +92,5 @@ A leitura de env também está duplicada em `packages/db/scripts/production-data
 ## Comments
 
 - 2026-07-29 — Ticket derivado de `/improve-codebase-architecture` rodado sobre `f64ea28`. Estes quatro achados foram separados dos demais por um critério só: são os que se agravam a cada ticket implementado. Os outros achados (Tickets 19 e 20) mantêm custo constante e podem esperar sem penalidade.
+
+- 2026-11-04 — Superseded: como o código é portado, os seams nascem nos tickets de port em vez de serem extraídos depois. 18.1–18.3 → Ticket 23; 18.4 e 18.5 → Ticket 21.

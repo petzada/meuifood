@@ -1,5 +1,7 @@
 # Decisão: cancelamento com estorno automático (PIX/crédito)
 
+> **Superseded parcialmente em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md)** (PIX Efí; Crédito Efí ou AbacatePay, fixo por Loja). Menções a Woovi/Asaas abaixo são históricas.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #E  
 **Depende de:** [09](09-ciclo-pedido-status.md), [24](24-arquitetura-pagamentos.md), [34](34-meios-pagamento-checkout-mvp.md)  
 **Supersede:** “estorno manual no painel do gateway no piloto” em [24](24-arquitetura-pagamentos.md) e nota de estorno pós-MVP em [pesquisa 12](../pesquisa/12-stack-pagamentos-infra-integracoes.md)

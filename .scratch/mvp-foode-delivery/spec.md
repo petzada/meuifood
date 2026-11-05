@@ -2,13 +2,15 @@
 
 Status: ready-for-agent
 
+> **Revisada em 2026-11-04 (pivô):** infraestrutura 100% Cloudflare ([59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md), [ADR 0006](../../docs/adr/0006-cloudflare-workers-d1-sem-rls.md)) e pagamentos Efí/AbacatePay ([60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md), [ADR 0007](../../docs/adr/0007-efi-abacatepay-provedor-fixo-por-loja.md)). Trilha BaaS Asaas arquivada. Taxas comerciais a redefinir pelo Dono.
+
 ## Problem Statement
 
 O Comerciante de uma PME que já opera delivery precisa reduzir dependência e custo de marketplaces sem depender de uma nova praça de descoberta. Ele já traz o Consumidor por WhatsApp, Instagram, QR Code, atendimento local e recorrência, mas precisa de um Canal próprio que reúna Cardápio, checkout, Pedido, pagamento online e gestão diária com custo previsível, sem comissão de marketplace.
 
 O Dono precisa configurar a Loja e acompanhar sua operação e suas informações financeiras. O Operador precisa trabalhar exclusivamente com Pedidos e mudanças de status, sem acesso a Cardápio, horários, Delivery, relatórios, Plano, equipe ou incentivos. O Consumidor precisa pedir pelo navegador do celular sem instalar aplicativo nem ser obrigado a criar conta.
 
-O piloto precisa validar a operação ponta a ponta com um único Comerciante-modelo. Pagamentos online ficam temporariamente sob `pilot_platform`, com Ledger de repasse auditável, sem generalizar custódia no MEI e sem misturar o futuro onboarding `baas` ao caminho feliz do piloto.
+O piloto precisa validar a operação ponta a ponta com um único Comerciante-modelo. Pagamentos online ficam temporariamente sob `pilot_platform`, nas contas Efí e AbacatePay da Foode, com Ledger de repasse auditável e repasse manual; o modo de escala pós-piloto é decisão aberta.
 
 ## Solution
 
@@ -18,7 +20,7 @@ O Storefront reúne Cardápio, carrinho, Fulfillment e checkout. O Consumidor po
 
 O Painel permite ao Dono gerenciar Cardápio, funcionamento, Pausa, Delivery, Retirada, equipe, Cupom de boas-vindas e Plano, além de operar Pedidos. O Operador acessa somente Pedidos e mudanças de status. A fila atualiza por polling HTTP a cada 10 segundos e emite som uma única vez ao detectar Pedido novo.
 
-A API é a fonte de verdade de Pedido, autorização, pagamento, webhook, Estorno, Ledger de repasse e reconciliação. PIX usa Woovi; Crédito online usa Asaas. O piloto opera somente com o Comerciante-modelo em `pilot_platform`. `baas` permanece uma aresta pós-piloto validado, LTDA e homologação; `merchant_own_account` permanece apenas como valor do enum.
+A API é a fonte de verdade de Pedido, autorização, pagamento, webhook, Estorno, Ledger de repasse e reconciliação. PIX usa Efí; Crédito online à vista usa o Provedor do cartão da Loja — Efí (Recebimento Normal) ou AbacatePay (Recebimento Rápido) — definido pela operação Foode. O piloto opera somente com o Comerciante-modelo em `pilot_platform`.
 
 O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 por ano, com 20% OFF. O teto de R$ 15 mil de GMV online é somente âncora comercial fora do produto. O Painel mostra o Plano de forma read-only e sua ativação ocorre por flag de ops após pagamento externo.
 
@@ -89,8 +91,8 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 63. Como Consumidor, quero ver a taxa por bairro ou Taxa fixa antes de confirmar, para conhecer o total completo.
 64. Como Consumidor, quero ser impedido de escolher Delivery fora dos bairros atendidos, para não concluir um Pedido inviável.
 65. Como Consumidor, quero escolher Retirada quando não houver Delivery para meu endereço e a opção estiver ativa, para ainda concluir o Pedido.
-66. Como Consumidor, quero pagar por PIX, para concluir o pagamento online pela Woovi.
-67. Como Consumidor, quero pagar por Crédito online à vista, para concluir o pagamento pelo Asaas.
+66. Como Consumidor, quero pagar por PIX, para concluir o pagamento online pela Efí.
+67. Como Consumidor, quero pagar por Crédito online à vista num formulário da própria Loja, informando CPF e e-mail só nesse caso, para concluir o pagamento sem sair do Canal próprio.
 68. Como Consumidor, quero escolher Pagamento na entrega, para pagar diretamente ao Comerciante por dinheiro ou maquininha.
 69. Como Consumidor, quero que retries técnicos não criem duas cobranças, para não pagar duas vezes pelo mesmo Pedido.
 70. Como Consumidor, quero receber confirmação com número e resumo do Pedido, para saber que a Loja o recebeu.
@@ -102,7 +104,7 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 76. Como Guest, quero concluir meu primeiro Pedido sem criar conta, para evitar atrito no checkout.
 77. Como Guest, quero informar nome e telefone, além do endereço somente para Delivery, para fornecer os dados mínimos necessários.
 78. Como Guest, quero concluir Retirada sem informar endereço, para não fornecer dado desnecessário.
-79. Como Guest, quero concluir o Pedido sem informar e-mail, para manter a criação de conta opcional.
+79. Como Guest, quero concluir o Pedido por PIX ou Pagamento na entrega sem informar e-mail, para manter a criação de conta opcional (o Cartão exige CPF e e-mail do pagador).
 80. Como Guest, quero usar PIX, Crédito online ou Pagamento na entrega, para ter os mesmos meios disponíveis a uma conta.
 81. Como Guest, quero criar conta após o Pedido, para decidir sem bloquear a compra já concluída.
 82. Como Guest, quero informar e-mail e confirmar o telefone do Pedido, para receber o magic link e comprovar o vínculo.
@@ -111,30 +113,27 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 85. Como Comerciante-modelo, quero que cada pagamento online pago gere obrigação rastreável no Ledger de repasse, para conferir o dinheiro devido.
 86. Como Comerciante-modelo, quero ver o líquido e a data prevista de repasse, para planejar meu caixa.
 87. Como Comerciante-modelo, quero que a data prevista seja distinta da data efetivamente paga, para não tratar previsão como repasse concluído.
-88. Como Comerciante-modelo, quero preservar o histórico do Ledger após a migração futura para `baas`, para manter a prestação de contas do piloto.
+88. Como Comerciante-modelo, quero preservar o histórico do Ledger após qualquer mudança futura de Modo de cobrança, para manter a prestação de contas do piloto.
 89. Como responsável pela operação Foode, quero registrar o pagamento efetivo do repasse, para manter trilha auditável da custódia temporária.
 90. Como responsável pela operação Foode, quero reconciliar cobranças, liquidações, Estornos e repasses, para detectar eventos perdidos e divergências.
 91. Como responsável pela operação Foode, quero que webhooks repetidos ou fora de ordem não dupliquem efeitos nem façam estados regredirem, para suportar entrega `at-least-once`.
 92. Como responsável pela operação Foode, quero ser alertado quando cobrança, Estorno ou reconciliação falhar, para tratar exceções sem tornar a operação manual o caminho feliz.
-93. Como responsável pela operação Foode, quero manter somente o Comerciante-modelo em `pilot_platform`, para não escalar a custódia no MEI.
-94. Como responsável pela operação Foode, quero declarar manualmente o piloto validado, sem gate automático de GMV, Pedidos ou calendário, para decidir quando abrir a LTDA.
-95. Como responsável pela operação Foode, quero iniciar a homologação BaaS somente depois da LTDA, para respeitar o caminho comercial e de compliance decidido.
-96. Como responsável pela operação Foode, quero migrar o Comerciante-modelo para `baas` após homologação, para encerrar a custódia e o repasse pelo MEI.
-97. Como responsável pela operação Foode, quero que novos Comerciantes só sejam ativados em `baas`, para operar um único modelo pós-homologação.
-98. Como responsável pela operação Foode, quero que `merchant_own_account` permaneça sem UI ou fallback, para não transformá-lo em contingência comercial.
+93. Como responsável pela operação Foode, quero manter somente o Comerciante-modelo em `pilot_platform`, para não escalar a custódia.
+94. Como responsável pela operação Foode, quero definir o Provedor do cartão de cada Loja (Efí ou AbacatePay), para controlar prazo e custo de recebimento sem expor a escolha no Painel.
+95. Como Dono, quero consultar a tela de Repasses (só leitura), para ver taxa, líquido, previsão e status de cada pagamento online.
 
 ## Implementation Decisions
 
 - O MVP é um monorepo TypeScript com pnpm workspaces, três apps — Storefront, Painel e API — e packages compartilhados para banco, contratos/tokens e primitives de UI.
-- Storefront e Painel usam Next.js App Router, React, Tailwind e shadcn seletivo. A API usa Fastify, REST/JSON e Zod e concentra mutações e regras de domínio.
+- Storefront e Painel usam Next.js App Router, React, Tailwind e shadcn seletivo, publicados como Workers via OpenNext. A API usa Hono em Worker próprio, REST/JSON e Zod, concentra mutações e regras de domínio e atende o Painel por service binding; o fetch público expõe só Storefront, webhooks e `/health`.
 - Marketing institucional compartilha o Storefront; não existe quarto app de landing.
-- Railway hospeda os três apps. GitHub Actions executa lint, typecheck, testes e validação de migrations antes de produção. Não existe staging ou preview no MVP.
-- Railway Cron executa reconciliação short-lived reutilizando a responsabilidade da API; não existe worker sempre-on nem quarto app.
-- Supabase fornece Postgres, Auth, RLS e backup do plano contratado. Imagens do Cardápio usam Cloudflare R2 (não Supabase Storage). Prisma é o ORM e owner do schema e das migrations.
+- A Cloudflare hospeda os três apps. GitHub Actions executa lint, typecheck e testes no PR (testes com banco contra um D1 efêmero da run) e faz o deploy no merge da `master`. Migration de produção roda por workflow manual no pedido de produção. Não existe staging nem banco local.
+- Cron Triggers do Worker `api` executam a reconciliação short-lived; não existe worker sempre-on nem quarto app.
+- D1 é o banco (backup por Time Travel) e Drizzle é o owner do schema e das migrations. Imagens do Cardápio usam R2 por binding. Dados do Supabase antigo foram descartados.
 - Loja é o tenant. `store_id` é a FK canônica em todas as tabelas de negócio. Não existem Workspace, `workspace_id` ou `merchant_id` como tenant.
-- RLS impede acesso entre Lojas. A API estabelece contexto confiável por request com uma role sujeita às policies. Role privilegiada é restrita a migrations, tarefas administrativas e bypass consciente.
+- O isolamento entre Lojas é invariante de código: `packages/db` só expõe operações com contexto de Loja derivado do servidor, rotas não acessam o D1 diretamente e testes de vazamento com duas Lojas provam a regra. Escritas condicionais usam `batch` atômico e constraints.
 - RBAC na API separa Dono e Operador. Ocultar controles no Painel não substitui autorização no servidor.
-- Dono e Operador usam Supabase Auth com e-mail e senha e entram por convite. Consumidor usa magic link; Guest não usa Auth.
+- Dono e Operador usam Better Auth (D1) com e-mail e senha e entram por convite enviado pela MillionSend. Consumidor usa magic link do Better Auth; Guest não usa Auth.
 - O Storefront resolve a Loja pelo Slug, obtém o Cardápio público e nunca aceita `store_id` arbitrário do navegador como fonte de tenant.
 - O Cardápio contém categorias, itens, imagens, disponibilidade, Complementos e Adicionais. Imagens usam Cloudflare R2 com autorização compatível com `store_id` e RBAC (PUT pré-assinado na API; leitura pública via base URL/CDN).
 - Loja fora do horário e Pausa são estados distintos. Ambos mantêm o Cardápio visível e bloqueiam a criação de Pedido; não existe agendamento.
@@ -149,41 +148,40 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 - O ciclo de Pedido usa estados enxutos e transições compatíveis com Delivery ou Retirada. Conclusão é manual.
 - Cancelar Pedido já pago por PIX ou Crédito online registra o cancelamento e dispara Estorno automático total no provider correto. Cancelar Pagamento na entrega altera somente o Pedido.
 - Pedido cancelado e estado de Estorno são observáveis separadamente. Falha do provider não desfaz o cancelamento nem elimina a obrigação de devolução.
-- Pagamentos são implementados na API por providers: Woovi para PIX e Asaas para Crédito online. Woovi usa o SDK oficial; Asaas usa `fetch` com validação Zod.
-- Cada Loja possui Modo de cobrança `pilot_platform`, `baas` ou `merchant_own_account`. O checkout escolhe provider e credenciais pela configuração protegida da Loja sem expor custódia ao Storefront.
-- O dia 1 executa somente `pilot_platform` para o Comerciante-modelo, com secrets do MEI em variáveis Railway e nenhuma UI de conexão de gateway.
-- PIX aplica a condição comercial de 1,19% com D+1. Crédito à vista aplica 3,29% mais R$ 0,79 com D+33. Datas previstas devem preferir a informação retornada pelo provider em vez de reinterpretar dias úteis no produto.
+- Pagamentos são implementados na API por providers: Efí para PIX (API Pix com mTLS por binding) e Efí ou AbacatePay para Crédito à vista, em checkout transparente com tokenização no navegador.
+- Cada Loja possui Modo de cobrança (no MVP só `pilot_platform`) e Provedor do cartão (`efi` ou `abacatepay`), ambos protegidos e alterados só por Ops. O checkout escolhe provider pela configuração da Loja sem expor custódia ao Storefront; cada cobrança grava provider, taxa e prazo efetivos.
+- O dia 1 executa somente `pilot_platform` para o Comerciante-modelo, com secrets da conta Efí exclusiva do Foode e da conta AbacatePay em `wrangler secret`, e nenhuma UI de conexão de gateway. Sem kill switch de provedor.
+- Taxas comerciais, prazos e retenções vêm de uma tabela versionada por provedor/meio (valores a redefinir pelo Dono). Retenções do provedor viram parcelas previstas no Ledger. Datas previstas devem preferir a informação retornada pelo provider.
 - Valores monetários são persistidos em centavos e calculados deterministicamente, sem ponto flutuante ou locale implícito. O arredondamento ocorre uma vez no resultado monetário da cobrança, conforme contrato fechado nos testes do helper.
 - Criação de cobrança, cancelamento, Estorno e webhook usam chaves idempotentes estáveis. Retentar a mesma intenção não cria outro efeito lógico.
-- Webhooks Woovi e Asaas possuem endpoints separados, verificam autenticidade, persistem identidade única do evento e aceitam entrega `at-least-once` sem regressão de estado.
+- Webhooks Efí Pix, Efí cobrança e AbacatePay possuem endpoints separados, verificam autenticidade (segredo na URL e consulta autenticada ao provider quando o corpo não é assinado), persistem identidade única do evento e aceitam entrega `at-least-once` sem regressão de estado.
 - O Ledger de repasse é obrigatório em `pilot_platform` e relaciona Pedido, cobrança, provider, total pago, taxa comercial, líquido, data prevista e data efetivamente paga. Histórico não é apagado por Estorno.
 - A confirmação de que o repasse ao Comerciante-modelo foi efetivamente pago é uma ação assistida de ops no piloto; não se modela extrato bancário como Ledger.
 - Reconciliação consulta cobranças, Estornos e obrigações pendentes e reaplica as mesmas transições idempotentes dos webhooks. Pagamento tardio de Pedido cancelado converge para Estorno total.
-- Sentry entra nos três apps desde o bootstrap. Logs usam stdout Railway e não incluem secrets, dados de cartão ou dados pessoais desnecessários.
+- Sentry (`@sentry/cloudflare`/OpenNext) entra nos três apps. Logs usam Workers Logs e não incluem secrets, dados de cartão, URLs de webhook com segredo ou dados pessoais desnecessários.
 - A UI usa Primary Foode `#F35050`, accent escasso `#FFB800`, Nunito e containers outline com borda fina, sem fill e sem shadow. O asset do logo pode preservar sua sombra própria.
 - Tokens de marca vêm da identidade Foode. A referência de design fornece apenas densidade, spacing, canvas/ink, radii e hierarquia modesta; Rausch e componentes Airbnb não entram.
 - A Mensalidade é ativada por flag de ops após pagamento externo. O Painel é read-only para cobrança, e o teto de GMV não aparece como meter, bloqueio ou cobrança automática.
 - O GMV conta somente Pedidos Concluídos pagos online e inclui itens, Adicionais e taxa de Delivery. Exclui Pedidos cancelados e Pagamento na entrega.
-- `baas` entra somente após piloto validado manualmente, abertura da LTDA e homologação. O onboarding de subconta no Painel é uma fase futura bloqueada, não parte do aceite do piloto.
-- `merchant_own_account` permanece somente no enum, sem UI, credenciais de Comerciante ou comportamento de fallback.
+- O modo de escala pós-piloto (`baas` Asaas foi arquivado) é decisão aberta; nenhum ticket do MVP o implementa.
 
 ## Testing Decisions
 
 - Testes verificam comportamento externo, contratos HTTP, autorização, estado persistido e efeitos financeiros; não fixam organização interna, quantidade de queries, nomes de funções ou classes CSS.
 - Como não existe implementação anterior, estas seams inauguram o padrão do repositório. Não há prior art de testes a imitar.
-- **Seam 1 — API HTTP com Postgres/RLS reais:** exercitar Fastify pela interface HTTP com migrations aplicadas via Supabase CLI, constraints, transactions e policies no Supabase de produção. Fixtures de teste devem ter identificadores sintéticos únicos, cleanup exato e verificado e nunca usar banco local, simulador ou fallback. Cobrir resolução da Loja, Cardápio, checkout, recálculo server-side, Pausa, Delivery, Pedido Guest/autenticado, estados, cancelamento, RLS e RBAC.
-- A prova de RLS usa role de negócio não privilegiada e ao menos duas Lojas sintéticas. Mock de Prisma, banco em memória sem policies ou `service_role` padrão não provam isolamento.
+- **Seam 1 — API HTTP com D1 real:** exercitar o Worker Hono pela interface HTTP/RPC com migrations aplicadas num D1 efêmero criado pela run de CI. Fixtures com identificadores sintéticos; nunca banco local nem Docker. Cobrir resolução da Loja, Cardápio, checkout, recálculo server-side, Pausa, Delivery, Pedido Guest/autenticado, estados, cancelamento, isolamento entre Lojas e RBAC.
+- A prova de isolamento usa ao menos duas Lojas sintéticas e verifica que nenhuma operação de uma Loja lê ou altera dados da outra, inclusive por id adivinhado. Mock da camada de dados não prova isolamento.
 - A prova de RBAC verifica respostas e ausência de efeito persistido para ações negadas ao Operador. Esconder navegação no Painel não é prova de autorização.
-- JWTs podem usar chave/JWKS controlados em teste; Woovi e Asaas podem usar adapters fakes no limite HTTP/SDK; relógio e Sentry podem ser controlados.
-- **Seam 2 — webhooks e reconciliação:** exercitar endpoints reais Woovi/Asaas e a entrada short-lived da reconciliação contra persistência real. Cobrir assinatura inválida, duplicata, reentrega, eventos fora de ordem, associação à Loja, Estorno, Ledger e convergência depois de evento perdido.
+- Sessões podem ser criadas por helper de teste do Better Auth; Efí e AbacatePay usam adapters fakes no limite HTTP; relógio e Sentry podem ser controlados.
+- **Seam 2 — webhooks e reconciliação:** exercitar endpoints reais Efí Pix, Efí cobrança e AbacatePay e o handler do Cron Trigger contra D1 real. Cobrir autenticação inválida, duplicata, reentrega, eventos fora de ordem, associação à Loja, Estorno, Ledger e convergência depois de evento perdido.
 - Repetir webhook, cancelamento, Estorno ou reconciliação deve produzir um único efeito lógico e nunca regredir estado financeiro.
-- O agendador Railway e a rede externa não fazem parte da suíte determinística; testa-se a entrada e sua repetição segura.
-- **Seam 3 — Vitest determinístico:** manter suíte estreita para helpers de dinheiro, cálculo do Ledger e parsers/normalizadores Woovi e Asaas, usando fixtures sanitizadas compartilhadas com a Seam 2.
-- Os helpers provam totais em centavos, aplicação de 1,19% no PIX, 3,29% mais R$ 0,79 no Crédito, ausência de lançamento para `on_delivery` e distinção entre previsão e pagamento efetivo.
+- O agendador da Cloudflare e a rede externa não fazem parte da suíte determinística; testa-se o handler e sua repetição segura.
+- **Seam 3 — Vitest determinístico:** manter suíte estreita para helpers de dinheiro, cálculo do Ledger e parsers/normalizadores Efí e AbacatePay, usando fixtures sanitizadas compartilhadas com a Seam 2.
+- Os helpers provam totais em centavos, aplicação da tabela de taxas por provedor/meio, parcelas previstas por retenção, ausência de lançamento para `on_delivery` e distinção entre previsão e pagamento efetivo.
 - Parsers aceitam eventos válidos representativos, rejeitam payloads incompatíveis e preservam identidade/correlação para idempotência.
 - Checkout e QA do piloto cobrem somente PIX, Crédito online e Pagamento na entrega, com happy path exclusivamente em `pilot_platform`.
 - Browser E2E amplo, chamadas reais aos gateways, staging, WebSocket, SSE e BaaS não são requisitos do aceite do piloto.
-- CI exige lint, typecheck, Vitest e validação das migrations. Mudanças de RLS exigem teste de isolamento, não apenas geração bem-sucedida do Prisma Client.
+- CI exige lint, typecheck, Vitest e migrations aplicadas no D1 efêmero. Mudanças de acesso a dados exigem teste de isolamento.
 
 ## Out of Scope
 
@@ -192,9 +190,8 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 - Sincronização com iFood, Keeta ou outro marketplace.
 - Domínio ou subdomínio personalizado por Loja.
 - Workspace, multi-unidade, `workspace_id`, `merchant_id` como tenant ou schema por tenant.
-- WebSocket, SSE ou Supabase Realtime para Pedidos.
-- BaaS em produção no dia 1, split, onboarding de subconta no happy path do piloto ou mais de um Comerciante em `pilot_platform`.
-- UI ou ativação comercial de `merchant_own_account`.
+- WebSocket, SSE ou realtime gerenciado para Pedidos.
+- BaaS, split, envio de Pix automático de repasse, mais de um Comerciante em `pilot_platform`, escolha do provedor pelo Dono e kill switch de provedor.
 - Débito online, Voucher online, parcelamento, boleto ou PSP adicional no checkout.
 - Redis, fila externa, worker sempre-on, staging, preview environments, Loja `is_demo`, Kubernetes ou multi-região.
 - Catálogo Airbnb, Rausch, Airbnb Cereal, property cards, search orb ou containers com fill/sombra como padrão.
@@ -209,11 +206,8 @@ O produto oferece uma única assinatura Foode: R$ 179 por mês ou R$ 1.718,40 po
 ## Further Notes
 
 - As teses de produto e stack e os grillings de lacunas e BaaS estão fechados. A implementação não deve reabrir essas decisões.
-- Números comerciais vigentes: R$ 179/mês; R$ 1.718,40/ano; PIX 1,19% D+1; Crédito à vista 3,29% + R$ 0,79 D+33. Menções históricas diferentes estão superseded.
+- Números comerciais vigentes: R$ 179/mês; R$ 1.718,40/ano. Taxas de PIX e Crédito serão redefinidas pelo Dono para Efí/AbacatePay; 1,19% e 3,29% + R$ 0,79 eram da dupla Woovi/Asaas e estão superseded.
 - O teto de R$ 15 mil de GMV online é âncora comercial fora do produto.
-- O piloto possui exatamente um Comerciante-modelo em `pilot_platform`; a fixture de duas Lojas usada em teste serve apenas para provar isolamento RLS.
-- O contato com Asaas durante o piloto é informativo. Homologação formal só começa depois do piloto validado e da abertura da LTDA.
-- Depois da homologação, o Comerciante-modelo migra para `baas` e novos Comerciantes nascem nesse modo. Até lá, não existe contingência comercial por `merchant_own_account`.
-- O onboarding de subconta `baas` deve ser tratado como ticket futuro e bloqueado, fora do aceite do piloto.
-- O histórico do Ledger do piloto permanece auditável depois de futura migração para `baas`.
+- O piloto possui exatamente um Comerciante-modelo em `pilot_platform`; a fixture de duas Lojas usada em teste serve apenas para provar isolamento.
+- O histórico do Ledger do piloto permanece auditável depois de qualquer mudança futura de Modo de cobrança.
 - Decisões de implementação menores podem ser fechadas dentro dos tickets desde que preservem as invariantes desta spec e não introduzam itens fora do MVP.

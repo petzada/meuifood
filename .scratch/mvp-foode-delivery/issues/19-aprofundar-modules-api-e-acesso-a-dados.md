@@ -1,10 +1,12 @@
 # 19 — Aprofundar os modules da API e do acesso a dados
 
+> **Superseded em 2026-11-04 pelos Tickets 21–24.** Histórico.
+
 **What to build:** Os modules de `apps/api` e `packages/db` deixam de ser largos e rasos: a Pausa passa a valer dentro da transação que grava o Pedido, o protocolo de sessão RLS ganha um dono, `buildApp` volta a compor em vez de conter, e a delegação oca de `BusinessDatabase` desaparece.
 
 **Blocked by:** 17 — Endurecer os portões de verificação do banco e do CI.
 
-**Status:** todo
+**Status:** superseded
 
 > **Ticket de custo constante.** Diferente do 18, estes achados não pioram sozinhos — pioram apenas na proporção em que o domínio cresce. Podem esperar o fim da fila de produto sem penalidade, **com uma exceção: 19.1 é um bug de corrida real e é follow-up direto do Ticket 08.**
 
@@ -168,3 +170,5 @@ O que está duplicado é outra coisa: `pendingCanonicalMigrations` (remoto é pr
 
 - 2026-07-29 — Ticket derivado de `/improve-codebase-architecture` rodado sobre `f64ea28`. Nenhum achado contraria `docs/adr/0001` ou `0002`; 19.2, 19.8 e o 17.1 do Ticket 17 reforçam a Decisão 55 e o ADR 0002.
 - **Lacuna de ADR sugerida:** não existe ADR sobre estratégia de teste. A dependência de Supabase de produção para *todo* teste de rota é consequência prática do ADR 0002, mas o ADR não a exige. Um "testes de rota provam RLS real; wiring prova-se sem banco" fecharia a lacuna que 18.4 e 19.9 tocam por ângulos diferentes.
+
+- 2026-11-04 — Superseded pelo pivô. Obsoletos com a saída de Prisma/Postgres/Fastify: 19.2, 19.3, 19.8, 19.10. Absorvidos: 19.1 → Ticket 24 (Pausa na mesma escrita do Pedido); 19.4 e 19.7 → Ticket 23; 19.5 e 19.6 → Ticket 22; 19.9 e 19.11 → Ticket 21.

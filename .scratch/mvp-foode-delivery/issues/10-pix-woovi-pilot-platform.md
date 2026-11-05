@@ -1,10 +1,12 @@
 # 10 — Pagar por PIX Woovi em `pilot_platform`
 
+> **Superseded em 2026-11-04 pelo [Ticket 26](26-pix-efi-pilot-platform.md).** Histórico.
+
 **What to build:** O Consumidor paga um Pedido do Comerciante-modelo por PIX, recebe QR Code/copia-e-cola seguros e a confirmação Woovi converge por webhook para o Pedido e para uma única obrigação no Ledger de repasse.
 
 **Blocked by:** 08 — Concluir o primeiro Pedido Guest na Retirada.
 
-**Status:** ready-for-agent
+**Status:** superseded
 
 - [ ] A API resolve o Modo de cobrança protegido e permite somente o Comerciante-modelo em `pilot_platform`.
 - [ ] O SDK oficial Woovi cria uma cobrança por intenção idempotente sem expor secrets.
@@ -16,3 +18,6 @@
 - [ ] `on_delivery` continua sem cobrança/Ledger e `baas`/`merchant_own_account` não ganham execução ou UI.
 - [ ] Testes usam API/webhook reais, Postgres/RLS e adapter Woovi controlado.
 
+## Comments
+
+- 2026-11-04 — Superseded pelo Ticket 26 (PIX Efí), decisão [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md). O PR #19 (Woovi) será fechado sem merge no Ticket 25; as partes reaproveitáveis estão listadas no 26.

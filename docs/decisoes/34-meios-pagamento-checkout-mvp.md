@@ -1,5 +1,7 @@
 # Decisão: meios de pagamento no checkout MVP
 
+> **Superseded parcialmente em 2026-11-04 por [60](60-pagamentos-efi-abacatepay.md)** (PIX Efí; Crédito Efí ou AbacatePay, fixo por Loja). Menções a Woovi/Asaas abaixo são históricas.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #O  
 **Depende de:** [32](32-taxas-e-assinatura-fixa-unica.md) · **Arquitetura:** [24](24-arquitetura-pagamentos.md)
 

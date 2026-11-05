@@ -1,3 +1,35 @@
+# Estado atual — 2026-11-04 (pivô Cloudflare + Efí/AbacatePay)
+
+**Decisões:** [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Workers + D1 + Drizzle + Better Auth + MillionSend; D1 efêmero no CI) e [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX Efí; Crédito à vista Efí/AbacatePay fixo por Loja por Ops; custódia com repasse manual). ADRs [0006](../../docs/adr/0006-cloudflare-workers-d1-sem-rls.md) e [0007](../../docs/adr/0007-efi-abacatepay-provedor-fixo-por-loja.md).
+
+**Entregue (stack antiga, será portado):** Tickets 01–09 na `master`.
+
+**Fila (blockers-first):**
+
+| Ordem | Ticket | Bloqueado por |
+| --- | --- | --- |
+| 1 | [21](issues/21-fundacao-cloudflare-d1-ci.md) Fundação Cloudflare, D1 e CI/CD | — |
+| 2 | [22](issues/22-auth-better-auth-rbac.md) Auth e RBAC com Better Auth | 21 |
+| 3 | [23](issues/23-portar-cardapio-complementos.md) Port de Cardápio e Complementos | 22 |
+| 4 | [24](issues/24-portar-operacao-pedido-delivery.md) Port de horários, Pausa, Pedido e Delivery | 23 |
+| 5 | [25](issues/25-cutover-producao-cloudflare.md) Produção na Cloudflare; desligar Supabase/Railway; fechar PR #19 | 24 |
+| 6 | [26](issues/26-pix-efi-pilot-platform.md) PIX Efí | 25 |
+| 6 | [13](issues/13-guest-conta-cupom-boas-vindas.md) Guest → conta e Cupom (paralelo a 26/27) | 24 |
+| 7 | [27](issues/27-credito-efi-abacatepay.md) Crédito Efí/AbacatePay | 26 |
+| 8 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 |
+| 9 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano, relatórios e Repasses · [15](issues/15-reconciliacao-railway-cron.md) Reconciliação por Cron Triggers | 12 |
+| 10 | [20](issues/20-aprofundar-contratos-e-modules-do-front.md) Resto do deepening do front | 14, 15 |
+
+**Fora da fila:** 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
+
+**Pendências do Dono:** taxas comerciais de PIX e Crédito para Efí/AbacatePay; conta AbacatePay do Foode; certificado/aplicação/chave Pix na conta Efí do Foode; desligar Supabase e Railway no Ticket 25.
+
+**Fluxo de git:** o global do Dono (`~/.claude/CLAUDE.md`) vale acima deste arquivo — commit+push na branch da feature, PR e pronto só no "finaliza", produção e migration só sob pedido.
+
+---
+
+> O conteúdo abaixo é o handoff histórico do orquestrador após o Ticket 01 (stack antiga). As regras de relatórios, seams e escopo continuam úteis; menções a Supabase, Railway, Woovi, Asaas e BaaS estão superseded.
+
 # Continuação do orquestrador — após o Ticket 01
 
 Copie o prompt abaixo para um contexto novo. Ele foi deliberadamente escrito para manter o contexto do orquestrador pequeno: detalhes, exploração, criação, código, testes e revisão pertencem aos agentes isolados.

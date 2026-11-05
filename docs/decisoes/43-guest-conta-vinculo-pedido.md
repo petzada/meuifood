@@ -1,5 +1,7 @@
 # Decisão: guest → conta e vínculo de pedido
 
+> **Atualizada em 2026-11-04:** magic link passa a ser do Better Auth ([59](59-pivo-cloudflare-d1-workers.md)); ao escolher Cartão o Guest informa CPF e e-mail (e nascimento se o provedor exigir) — exceção registrada em [60](60-pagamentos-efi-abacatepay.md).
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #I  
 **Depende de:** [10](10-checkout-guest-e-conta.md), [22](22-auth-lojista-e-consumidor.md)
 

@@ -1,5 +1,7 @@
 # Tese de stack MVP — Foode Delivery
 
+> **Superseded parcialmente em 2026-11-04 por [59](59-pivo-cloudflare-d1-workers.md)** (Cloudflare Workers + D1 + Better Auth; sem Supabase nem Railway). Trechos sobre hospedagem, banco, RLS, Auth, CI ou Cron abaixo são históricos.
+
 **Data:** jul/2026 · **Status:** entendimento compartilhado confirmado · **Marca:** provisional  
 **Produto (não reabrir):** [16](16-tese-produto-fechada.md) · **Pesquisas:** [10](../pesquisa/10-stack-frontend-concorrentes.md)–[13](../pesquisa/13-sintese-stack-mvp.md)
 
