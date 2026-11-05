@@ -1,11 +1,12 @@
 // Atualização periódica da página do Pedido (Ticket 24a): o navegador consulta este handler a
 // cada ORDER_TRACKING_POLL_INTERVAL_MS; ele lê a api pelo binding e devolve o contrato.
+import { movedResponse } from "../../../../../../lib/slug-moved";
 import { loadOrderTracking } from "../../../../../../lib/storefront";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string; token: string }> },
 ) {
   const { slug, token } = await params;
@@ -13,6 +14,7 @@ export async function GET(
   if (result.kind === "not_found") {
     return Response.json({ error: "order_not_found" }, { status: 404 });
   }
+  if (result.kind === "moved") return movedResponse(request.url, result.currentSlug);
   if (result.kind === "error") {
     return Response.json({ error: "tracking_unavailable" }, { status: 502 });
   }

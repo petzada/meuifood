@@ -13,9 +13,18 @@ vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },
+  permanentRedirect: (url: string) => {
+    throw new Error(`NEXT_REDIRECT_308:${url}`);
+  },
   usePathname: () => "/loja/lanchonete-do-ze",
   useRouter: () => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
+}));
+
+// `next/script` não emite nada no render estático: aqui vira um `<script>` comum.
+vi.mock("next/script", () => ({
+  default: ({ children, src }: { children?: string; src?: string }) =>
+    src ? <script src={src} /> : <script>{children}</script>,
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -108,6 +117,61 @@ describe("storefront /loja/[slug]", () => {
     );
     expect(html).toContain("Em pausa · pedidos voltam em breve");
     expect(html).toContain("Sobre a Loja");
+  });
+
+  it("vitrine (28): logo, capa e descrição no cabeçalho; descrição vira meta description", async () => {
+    const showcase = {
+      coverUrl: "https://media.test/capa.jpg",
+      description: "Hambúrguer artesanal desde 1998.",
+      instagram: "lanchonetedoze",
+      logoUrl: "https://media.test/logo.png",
+      pixels: { googleTagId: "G-ABC123", metaPixelId: "123456789012345" },
+    };
+    apiFetch.mockImplementation(async (path) =>
+      path.endsWith("/estado")
+        ? jsonResponse({ ...storeState, showcase })
+        : jsonResponse(publicMenu),
+    );
+    const html = await render();
+    expect(html).toContain('src="https://media.test/capa.jpg"');
+    expect(html).toContain('src="https://media.test/logo.png"');
+    expect(html).toContain("Hambúrguer artesanal desde 1998.");
+
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "lanchonete-do-ze" }),
+    });
+    expect(metadata.description).toBe("Hambúrguer artesanal desde 1998.");
+  });
+
+  it("Pixel só com ID configurado (sem ID, nenhum script de terceiro)", async () => {
+    const { PixelScripts } = await import("./storefront/pixel-scripts");
+    expect(
+      renderToStaticMarkup(<PixelScripts pixels={{ googleTagId: null, metaPixelId: null }} />),
+    ).toBe("");
+    expect(renderToStaticMarkup(<PixelScripts pixels={null} />)).toBe("");
+    const configured = renderToStaticMarkup(
+      <PixelScripts pixels={{ googleTagId: "G-ABC123", metaPixelId: "123456789012345" }} />,
+    );
+    expect(configured).toContain('"123456789012345"');
+    expect(configured).toContain("gtag/js?id=G-ABC123");
+    expect(configured).not.toContain("phone");
+  });
+
+  it("link antigo (decisão 69): 308 para o link atual preservando a query", async () => {
+    apiFetch.mockResolvedValue(
+      new Response(JSON.stringify({ error: "slug_moved", currentSlug: "lanchonete-ze" }), {
+        headers: { "content-type": "application/json" },
+        status: 308,
+      }),
+    );
+    const { default: StorefrontPage } = await import("./page");
+    await expect(
+      StorefrontPage({
+        params: Promise.resolve({ slug: "lanchonete-do-ze" }),
+        searchParams: Promise.resolve({ item: ids.burger, utm_source: "qr" }),
+      }),
+    ).rejects.toThrow(`NEXT_REDIRECT_308:/loja/lanchonete-ze?item=${ids.burger}&utm_source=qr`);
   });
 
   it("gera o título com o nome da Loja", async () => {

@@ -13,15 +13,21 @@ import { cache } from "react";
 
 import { apiFetch } from "./api";
 import type { ContractSchema } from "./contract";
+import { slugMovedTo } from "./slug-moved";
 
 export type StorefrontLoad<T> =
   | { kind: "ok"; data: T }
   /** Slug inexistente ou Loja fora de `active`: "Cardápio indisponível" (spec). */
   | { kind: "not_found" }
+  /** Link personalizado antigo (decisão 69): a página responde 308 para o atual. */
+  | { kind: "moved"; currentSlug: string }
   | { kind: "error"; reason: string };
 
 export type PublicMenuLoad =
-  { kind: "ok"; menu: PublicMenu } | { kind: "not_found" } | { kind: "error"; reason: string };
+  | { kind: "ok"; menu: PublicMenu }
+  | { kind: "not_found" }
+  | { kind: "moved"; currentSlug: string }
+  | { kind: "error"; reason: string };
 
 export type ApiFetch = typeof apiFetch;
 
@@ -32,11 +38,13 @@ async function loadPublic<T>(
 ): Promise<StorefrontLoad<T>> {
   let response: Response;
   try {
-    response = await fetchApi(path, { cache: "no-store" });
+    response = await fetchApi(path, { cache: "no-store", redirect: "manual" });
   } catch {
     return { kind: "error", reason: "api_unreachable" };
   }
   if (response.status === 404) return { kind: "not_found" };
+  const currentSlug = await slugMovedTo(response);
+  if (currentSlug) return { kind: "moved", currentSlug };
   if (!response.ok) return { kind: "error", reason: `api_status_${response.status}` };
 
   let payload: unknown;
