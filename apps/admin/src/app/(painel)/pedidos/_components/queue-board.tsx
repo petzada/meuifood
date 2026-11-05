@@ -235,7 +235,7 @@ export function QueueBoard(props: QueueBoardProps) {
         <button
           type="button"
           onClick={() => void queue.sound.unlock()}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3 text-left text-sm font-bold text-[var(--color-primary-strong)]"
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3 text-left text-sm font-bold text-[var(--color-primary-ink)]"
         >
           <span>
             <span aria-hidden="true">♪ </span>Clique para ativar o som de novos Pedidos

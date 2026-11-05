@@ -24,6 +24,8 @@ Tipografia do wordmark: sans geométrica **pesada**, terminais arredondados, Tit
   --color-primary: #F35050;
   --color-primary-active: #E04545;
   --color-primary-soft: #FFE8E8;
+  --color-primary-strong: #D63A3A; /* fill com texto branco e links sobre branco (4,64:1) */
+  --color-primary-ink: #AD2828;    /* texto vermelho sobre primary-soft/#FFD1D1 (≥ 4,92:1) */
   --color-accent: #FFB800;          /* gema — uso escasso */
   --color-on-primary: #FFFFFF;
 
@@ -41,6 +43,7 @@ Tipografia do wordmark: sans geométrica **pesada**, terminais arredondados, Tit
 ```
 
 - **CTA / links brand / estados ativos:** `--color-primary` (não Rausch Airbnb).  
+- **Texto vermelho sobre fundo tingido** (`--color-primary-soft`, `#FFD1D1`): sempre `--color-primary-ink` (`--color-primary-strong` fica abaixo de 4,5:1 ali; segue só em fill sólido com texto branco e em texto sobre branco).  
 - **Accent `#FFB800`:** só momentos pontuais (badge, destaque raro) — não competir com primary.  
 - **Canvas branco + ink:** base clean; atmosfera vem de tipografia, borda e primary, não de shadow/glow.
 

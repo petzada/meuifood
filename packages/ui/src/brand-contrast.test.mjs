@@ -50,3 +50,17 @@ describe("--color-primary-strong (P-DS-1)", () => {
     expect(rule).toContain("background: var(--color-primary-strong)");
   });
 });
+
+describe("--color-primary-ink (texto vermelho sobre fundo tingido)", () => {
+  // #ffd1d1 é o fundo do CTA final da landing (cta-final.tsx), fora do brand.css.
+  it.each([
+    ["color-primary-soft", token("color-primary-soft")],
+    ["#ffd1d1 (CTA final)", "#ffd1d1"],
+  ])("tem contraste ≥ 4,5:1 sobre %s", (_label, bg) => {
+    expect(contrast(token("color-primary-ink"), bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("o primary-strong não passa sobre o fundo tingido (por isso o token existe)", () => {
+    expect(contrast(token("color-primary-strong"), token("color-primary-soft"))).toBeLessThan(4.5);
+  });
+});

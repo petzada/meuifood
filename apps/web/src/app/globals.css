@@ -85,6 +85,7 @@ a {
 
 .foode-button--pending:hover {
   background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
 }
 
 .foode-carousel {
