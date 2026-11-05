@@ -44,18 +44,23 @@ if (!existsSync("packages/shared/dist") || !existsSync("packages/ui/dist")) {
 }
 
 console.log(`test-related: ${files.length} arquivo(s) alterado(s) desde ${from.slice(0, 8)}.`);
+// No Windows (shell do cmd) a linha de comando passa de ~8 mil caracteres com diffs grandes
+// (ex.: depois de um merge de outro branch) e o `related` nem começa ("Linha de comando muito
+// longa"). Nesse caso roda a suíte sem banco inteira: mais lenta, mas cobre o diff.
+const tooLong = process.platform === "win32" && files.join(" ").length > 6000;
+if (tooLong)
+  console.log("test-related: diff grande demais para a linha de comando; suíte inteira.");
 const r = spawnSync(
   "pnpm",
   [
     "exec",
     "vitest",
-    "related",
-    "--run",
+    ...(tooLong ? ["run"] : ["related", "--run"]),
     "--passWithNoTests",
     "--exclude",
     "**/*.d1.test.ts",
     ...process.argv.slice(2),
-    ...files,
+    ...(tooLong ? [] : files),
   ],
   { stdio: "inherit", shell: process.platform === "win32" },
 );
