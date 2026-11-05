@@ -6,10 +6,13 @@ export { ForgedContextError, type OpsContext, type StoreContext } from "./contex
 export { cents, type Cents, utcNow } from "./conventions";
 export {
   type AuditEvent,
+  type AuthAuditAction,
   type AuditInput,
   createFoodeDb,
   type FoodeDb,
   FoodeDbError,
+  type MembershipInvite,
+  type MembershipInviteInput,
   type PublicStore,
   type StoreMember,
   type StoreSummary,

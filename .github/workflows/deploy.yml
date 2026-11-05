@@ -87,7 +87,12 @@ jobs:
           restore-keys: |
             next-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: pnpm build:packages
+      # Site key pública do Turnstile (GitHub variable) para o widget do Painel (login, reset,
+      # definir senha, convite); o nome que o admin lê é definido na fatia UI do Ticket 22.
       - name: Build OpenNext (web e admin)
+        env:
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: pnpm --filter @foode/web --filter @foode/admin build:cf
       - name: Tamanho dos Workers (teto 10 MiB gzip)
         run: node scripts/worker-size.mjs apps/api apps/web apps/admin
@@ -100,11 +105,17 @@ jobs:
           SENTRY_DSN_WEB: ${{ secrets.SENTRY_DSN_WEB }}
           SENTRY_DSN_ADMIN: ${{ secrets.SENTRY_DSN_ADMIN }}
           MILLIONSEND_API_KEY: ${{ secrets.MILLIONSEND_API_KEY }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
         run: |
           umask 077
           dir="$RUNNER_TEMP/secrets"
           mkdir -p "$dir"
-          jq -n '{SENTRY_DSN: env.SENTRY_DSN_API, MILLIONSEND_API_KEY: env.MILLIONSEND_API_KEY}
+          # Auth (Ticket 22) não sobe sem o segredo do Better Auth: sem ele a api recusa login.
+          : "${BETTER_AUTH_SECRET:?secret BETTER_AUTH_SECRET ausente}"
+          : "${TURNSTILE_SECRET_KEY:?secret TURNSTILE_SECRET_KEY ausente}"
+          jq -n '{SENTRY_DSN: env.SENTRY_DSN_API, MILLIONSEND_API_KEY: env.MILLIONSEND_API_KEY,
+                  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY}
             | with_entries(select(.value != null and .value != ""))' > "$dir/api.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_WEB} | with_entries(select(.value != null and .value != ""))' > "$dir/web.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_ADMIN} | with_entries(select(.value != null and .value != ""))' > "$dir/admin.json"
@@ -112,9 +123,17 @@ jobs:
             echo "$worker: $(jq -r 'keys | join(", ") | if . == "" then "(nenhum)" else . end' "$dir/$worker.json")"
           done
           echo "SECRETS_DIR=$dir" >> "$GITHUB_ENV"
+      # Vars de Auth: GitHub variables sobrescrevem o padrão do wrangler.jsonc quando definidas.
       - name: Deploy api
         working-directory: apps/api
-        run: pnpm exec wrangler deploy --secrets-file "$SECRETS_DIR/api.json"
+        env:
+          BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+        run: |
+          args=(--secrets-file "$SECRETS_DIR/api.json")
+          if [ -n "$BETTER_AUTH_URL" ]; then args+=(--var "BETTER_AUTH_URL:$BETTER_AUTH_URL"); fi
+          if [ -n "$EMAIL_FROM" ]; then args+=(--var "EMAIL_FROM:$EMAIL_FROM"); fi
+          pnpm exec wrangler deploy "${args[@]}"
       - name: Deploy web
         working-directory: apps/web
         run: pnpm exec opennextjs-cloudflare deploy --secrets-file "$SECRETS_DIR/web.json"

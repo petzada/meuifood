@@ -14,7 +14,16 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: "./wrangler.jsonc" },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations },
+          // Valores só de teste (nenhum é segredo real). TURNSTILE_SECRET_KEY é a chave pública
+          // de teste da Cloudflare que sempre aprova; os testes ainda interceptam o siteverify.
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            BETTER_AUTH_SECRET: "segredo-de-teste-do-better-auth-com-32-caracteres-ou-mais",
+            BETTER_AUTH_URL: "https://painel.foode.test",
+            TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+            MILLIONSEND_API_KEY: "ms_teste_sem_envio",
+            EMAIL_FROM: "Foode <no-reply@foode.test>",
+          },
         },
       }),
     ],

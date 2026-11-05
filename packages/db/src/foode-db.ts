@@ -15,6 +15,7 @@ import {
 import { newId, utcNow } from "./conventions";
 import {
   auditEvents,
+  MEMBERSHIP_ROLES,
   type MembershipRole,
   storeMemberships,
   stores,
@@ -60,6 +61,33 @@ export type AuditInput = {
   metadata?: Record<string, unknown>;
 };
 
+/** Entrada do provisionamento por convite (Ticket 22, achado 19.6: um único fluxo). */
+export type MembershipInviteInput = {
+  email: string;
+  name?: string | undefined;
+};
+
+/**
+ * Resultado do provisionamento: a membership (nova ou já existente) e o estado do usuário.
+ * `membershipCreated = false` quer dizer que o usuário já era membro desta Loja; nesse caso
+ * nada foi gravado, a não ser a auditoria de reenvio quando o usuário ainda não tem senha.
+ */
+export type MembershipInvite = {
+  membershipId: string;
+  userId: string;
+  email: string;
+  role: MembershipRole;
+  storeId: string;
+  storeName: string;
+  membershipCreated: boolean;
+  userCreated: boolean;
+  /** Já tem conta `credential` com senha (o convite vira só um aviso). */
+  hasPassword: boolean;
+};
+
+/** Eventos de autenticação sem Loja (trilha do usuário). */
+export type AuthAuditAction = "auth.password_set" | "auth.sessions_revoked";
+
 export class FoodeDbError extends Error {
   constructor(
     readonly code: "forbidden" | "slug_unavailable" | "invalid_input",
@@ -71,6 +99,7 @@ export class FoodeDbError extends Error {
 }
 
 const SLUG_PATTERN = /^(?=.{3,63}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 function parseMetadata(value: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(value);
@@ -127,6 +156,94 @@ export function createFoodeDb(d1: D1Database) {
         input.targetId ?? null,
         JSON.stringify(input.metadata ?? {}),
       );
+  }
+
+  /**
+   * Provisionamento único (convite do Dono e convite do Ops): cria o usuário se o e-mail for
+   * novo, cria a membership e audita, num batch atômico. Nada é gravado se a Loja não existe.
+   * Membership já existente não muda de papel; se o usuário ainda não tem senha, registra o
+   * reenvio do convite.
+   */
+  async function provisionMembership(
+    actorUserId: string,
+    storeId: string,
+    role: MembershipRole,
+    input: MembershipInviteInput,
+    action: string,
+  ): Promise<MembershipInvite | null> {
+    const email = input.email.trim().toLowerCase();
+    const name = (input.name ?? "").trim();
+    if (!EMAIL_PATTERN.test(email) || email.length > 254) {
+      throw new FoodeDbError("invalid_input", "e-mail inválido");
+    }
+    const userId = newId();
+    const membershipId = newId();
+    const now = utcNow();
+    const hasPasswordSql = `EXISTS (SELECT 1 FROM accounts a WHERE a.user_id = m.user_id AND a.provider_id = 'credential' AND a.password IS NOT NULL)`;
+
+    const [userInsert] = await d1.batch([
+      d1
+        .prepare(
+          `INSERT INTO users (id, email, name, email_verified, created_at, updated_at)
+           SELECT ?, ?, ?, 0, ?, ? WHERE EXISTS (SELECT 1 FROM stores WHERE id = ?)
+           ON CONFLICT(email) DO NOTHING`,
+        )
+        .bind(userId, email, name, now, now, storeId),
+      // Reenvio: a membership já existia e o usuário ainda não definiu senha.
+      d1
+        .prepare(
+          `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action, target_type, target_id, metadata)
+           SELECT ?, ?, ?, m.store_id, 'membership.invite_resent', 'store_membership', m.id, json_object('role', m.role)
+           FROM store_memberships m JOIN users u ON u.id = m.user_id
+           WHERE m.store_id = ? AND u.email = ? AND NOT ${hasPasswordSql}`,
+        )
+        .bind(newId(), now, actorUserId, storeId, email),
+      d1
+        .prepare(
+          `INSERT INTO store_memberships (id, store_id, user_id, role, created_at)
+           SELECT ?, s.id, u.id, ?, ? FROM stores s JOIN users u ON u.email = ? WHERE s.id = ?
+           ON CONFLICT(store_id, user_id) DO NOTHING`,
+        )
+        .bind(membershipId, role, now, email, storeId),
+      d1
+        .prepare(
+          `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action, target_type, target_id, metadata)
+           SELECT ?, ?, ?, store_id, ?, 'store_membership', id, json_object('role', role, 'userId', user_id)
+           FROM store_memberships WHERE id = ?`,
+        )
+        .bind(newId(), now, actorUserId, action, membershipId),
+    ]);
+
+    const row = await d1
+      .prepare(
+        `SELECT m.id AS membershipId, m.user_id AS userId, u.email AS email, m.role AS role,
+                s.name AS storeName, ${hasPasswordSql} AS hasPassword
+         FROM store_memberships m
+         JOIN users u ON u.id = m.user_id
+         JOIN stores s ON s.id = m.store_id
+         WHERE m.store_id = ? AND u.email = ?`,
+      )
+      .bind(storeId, email)
+      .first<{
+        membershipId: string;
+        userId: string;
+        email: string;
+        role: MembershipRole;
+        storeName: string;
+        hasPassword: number;
+      }>();
+    if (!row) return null;
+    return {
+      membershipId: row.membershipId,
+      userId: row.userId,
+      email: row.email,
+      role: row.role,
+      storeId,
+      storeName: row.storeName,
+      membershipCreated: row.membershipId === membershipId,
+      userCreated: (userInsert?.meta.changes ?? 0) > 0,
+      hasPassword: row.hasPassword === 1,
+    };
   }
 
   return {
@@ -190,6 +307,50 @@ export function createFoodeDb(d1: D1Database) {
           .limit(1);
         return row ? issueOpsContext({ userId: row.id }) : null;
       },
+
+      /** Trilha de eventos de autenticação de um usuário (sem Loja); ator padrão = o próprio. */
+      async recordAuthEvent(
+        userId: string,
+        action: AuthAuditAction,
+        options: { actorUserId?: string; metadata?: Record<string, unknown> } = {},
+      ): Promise<void> {
+        await d1
+          .prepare(
+            `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action, target_type, target_id, metadata)
+             SELECT ?, ?, ?, NULL, ?, 'user', id, ? FROM users WHERE id = ?`,
+          )
+          .bind(
+            newId(),
+            utcNow(),
+            options.actorUserId ?? userId,
+            action,
+            JSON.stringify(options.metadata ?? {}),
+            userId,
+          )
+          .run();
+      },
+    },
+
+    /**
+     * Rate limit de janela fixa no D1 (mesma tabela do Better Auth, chaves com prefixo próprio).
+     * Um único UPSERT atômico: conta a tentativa e devolve se ainda cabe na janela.
+     */
+    rateLimit: {
+      async consume(key: string, rule: { windowSeconds: number; max: number }): Promise<boolean> {
+        const now = Date.now();
+        const windowMs = rule.windowSeconds * 1000;
+        const row = await d1
+          .prepare(
+            `INSERT INTO rate_limits (id, key, count, last_request) VALUES (?, ?, 1, ?)
+             ON CONFLICT(key) DO UPDATE SET
+               "count" = CASE WHEN ? - last_request >= ? THEN 1 ELSE "count" + 1 END,
+               last_request = CASE WHEN ? - last_request >= ? THEN ? ELSE last_request END
+             RETURNING "count" AS count`,
+          )
+          .bind(newId(), key, now, now, windowMs, now, windowMs, now)
+          .first<{ count: number }>();
+        return (row?.count ?? Number.POSITIVE_INFINITY) <= rule.max;
+      },
     },
 
     /** Operações de uma Loja. Todas filtram por `ctx.storeId`. */
@@ -233,6 +394,23 @@ export function createFoodeDb(d1: D1Database) {
               .bind(membershipId, storeId),
           ]);
           return (removal?.meta.changes ?? 0) > 0;
+        },
+
+        /** Só o Dono: convida para ESTA Loja (a Loja vem do contexto, nunca do request). */
+        async inviteMember(
+          input: MembershipInviteInput & { role: MembershipRole },
+        ): Promise<MembershipInvite> {
+          if (context.role !== "owner") throw new FoodeDbError("forbidden");
+          if (!MEMBERSHIP_ROLES.includes(input.role)) throw new FoodeDbError("invalid_input");
+          const invite = await provisionMembership(
+            context.userId,
+            storeId,
+            input.role,
+            input,
+            "membership.invited",
+          );
+          if (!invite) throw new FoodeDbError("forbidden");
+          return invite;
         },
 
         async rename(name: string): Promise<void> {
@@ -314,6 +492,20 @@ export function createFoodeDb(d1: D1Database) {
             throw error;
           }
           return { id, slug, name, status: "onboarding" };
+        },
+
+        /** Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado). */
+        async inviteOwner(
+          storeId: string,
+          input: MembershipInviteInput,
+        ): Promise<MembershipInvite | null> {
+          return provisionMembership(
+            context.userId,
+            storeId,
+            "owner",
+            input,
+            "membership.owner_invited_by_ops",
+          );
         },
 
         async setStoreStatus(storeId: string, status: StoreStatus): Promise<boolean> {
