@@ -2,7 +2,8 @@
 
 import { Button } from "@foode/ui";
 import type { ReactNode } from "react";
-import { useFormStatus } from "react-dom";
+
+import { useFormPending } from "../../../../components/action-form";
 
 /** Botão de envio com estado pendente; `disabled` extra para edição sem mudança (T-06). */
 export function SubmitButton({
@@ -20,7 +21,7 @@ export function SubmitButton({
   pendingLabel?: string;
   variant?: "primary" | "secondary";
 }) {
-  const { pending } = useFormStatus();
+  const pending = useFormPending();
   return (
     <Button
       {...(className ? { className } : {})}

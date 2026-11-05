@@ -40,6 +40,7 @@ import type {
   FunnelReport,
   FunnelReportInput,
   OwnerOnboardingState,
+  OwnerPlanView,
   OwnerProfileInput,
   OwnerStoreSettings,
   SlugAvailability,
@@ -554,6 +555,10 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
 
   async onboardingGet(caller: PainelCaller): Promise<RpcResult<OwnerOnboardingState>> {
     return this.run("onboardingGet", () => this.onboarding().onboardingGet(caller));
+  }
+
+  async storePlanGet(caller: PainelCaller): Promise<RpcResult<OwnerPlanView>> {
+    return this.run("storePlanGet", () => this.onboarding().storePlanGet(caller));
   }
 
   async onboardingAnswerProfile(

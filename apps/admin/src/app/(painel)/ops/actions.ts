@@ -58,7 +58,7 @@ function revalidateStore(storeId: string) {
 
 export const createStore: Action = async (_prev, formData) => {
   const parsed = parseCreateStore(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await opsRpc((api, caller) => api.opsCreateStore(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {
@@ -72,7 +72,7 @@ export const createStore: Action = async (_prev, formData) => {
 export const updateStore: Action = async (_prev, formData) => {
   const storeId = text(formData, "storeId");
   const parsed = parseUpdateStore(formData, storeId);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await opsRpc((api, caller) => api.opsUpdateStore(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {
@@ -182,7 +182,7 @@ export async function checkSlug(
 
 export const publishPlanTiers: Action = async (_prev, formData) => {
   const parsed = parsePublishPlanTiers(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira as faixas.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await opsRpc((api, caller) => api.opsPublishPlanTiers(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {

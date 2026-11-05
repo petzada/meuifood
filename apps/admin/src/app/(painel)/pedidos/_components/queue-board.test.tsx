@@ -2,7 +2,9 @@
 // faixa para liberar o áudio, chips, "Sem conexão" mantendo a lista, título da aba, transição
 // com destino explícito e "Imprimir ao aceitar". Sem rede: carregadores e actions são vi.fn().
 import type { OrderDetail, OrderQueueItem, OrdersList } from "@foode/shared/order";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -218,8 +220,9 @@ describe("QueueBoard (fila de Pedidos)", () => {
     await user.click(
       screen.getByRole("button", { name: /Clique para ativar o som de novos Pedidos/u }),
     );
-    expect(sound.unlock).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Som ligado" })).toBeInTheDocument();
+    await flush();
+    expect(sound.unlock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("button", { name: "Som ligado" })).toBeInTheDocument();
 
     loadList.mockResolvedValueOnce(
       list([item({ id: "a", code: 12 }), item({ id: "b", code: 13 })]),
@@ -227,7 +230,7 @@ describe("QueueBoard (fila de Pedidos)", () => {
     await poll();
     expect(loadList).toHaveBeenCalledTimes(2);
     expect(sound.play).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("1 Pedido novo na fila.")).toBeInTheDocument();
+    expect(await screen.findByText("1 Pedido novo na fila.")).toBeInTheDocument();
     expect(document.title).toBe("(2) Pedidos · Foode");
 
     // Mesma lista: nada toca de novo.
@@ -271,7 +274,7 @@ describe("QueueBoard (fila de Pedidos)", () => {
     expect(
       within(preparing).getByRole("button", { name: "Marcar como Saiu para entrega" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Pedido #12 em preparo.");
+    expect(await screen.findByText("Pedido #12 em preparo.")).toBeInTheDocument();
     await flush();
     expect(document.title).toBe("Pedidos · Foode");
   });
@@ -315,8 +318,26 @@ describe("QueueBoard (fila de Pedidos)", () => {
     render(<QueueBoard {...props} />);
     await flush();
     await user.click(screen.getByRole("button", { name: "Começar preparo" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Este Pedido mudou em outra tela.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Este Pedido mudou em outra tela.");
     expect(loadList).toHaveBeenCalledTimes(2);
+  });
+
+  it("1ª carga falhou: erro com 'Tentar de novo', nunca a fila vazia", async () => {
+    const { loadList, props, user } = setup();
+    loadList.mockRejectedValueOnce(new Error("fila: 503"));
+    render(<QueueBoard {...props} />);
+    await flush();
+    expect(screen.getByText("Não foi possível carregar os Pedidos.")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhum Pedido agora.")).not.toBeInTheDocument();
+
+    loadList.mockResolvedValueOnce(list([item({ id: "a", code: 12 })]));
+    const retry = screen
+      .getAllByRole("button", { name: "Tentar de novo" })
+      .find((button) => button.closest("[role=alert]")?.textContent?.includes("carregar"));
+    await user.click(retry!);
+    await flush();
+    expect(screen.getByText("#12")).toBeInTheDocument();
+    expect(screen.queryByText("Não foi possível carregar os Pedidos.")).not.toBeInTheDocument();
   });
 
   it("fila vazia por papel e tour na primeira visita", async () => {
@@ -326,16 +347,60 @@ describe("QueueBoard (fila de Pedidos)", () => {
     render(<QueueBoard {...props} />);
     await flush();
 
-    const tour = screen.getByRole("dialog", { name: "Os Pedidos novos chegam aqui" });
-    expect(within(tour).getByText("Pedido de exemplo")).toBeInTheDocument();
-    await user.click(within(tour).getByRole("button", { name: "Próximo" }));
-    expect(screen.getByRole("dialog", { name: "Um botão, um destino" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Pular tour" }));
+    // Passo 1: card em Recebidos com o selo Novo e "Começar preparo"; Pular e Próximo.
+    const step1 = screen.getByRole("dialog", { name: "Os Pedidos novos chegam aqui" });
+    const art1 = within(step1).getByTestId("tour-ilustracao-1");
+    expect(within(art1).getByText("Pedido de exemplo")).toBeInTheDocument();
+    expect(within(art1).getByText("Novo")).toBeInTheDocument();
+    expect(within(art1).getByText("Começar preparo")).toBeInTheDocument();
+    expect(within(step1).getByRole("button", { name: "Pular tour" })).toBeInTheDocument();
+    await user.click(within(step1).getByRole("button", { name: "Próximo" }));
+
+    // Passo 2: o mesmo card em "Em preparo" com o botão do próximo passo; Voltar e Próximo.
+    const step2 = screen.getByRole("dialog", { name: "Um botão, um destino" });
+    const art2 = within(step2).getByTestId("tour-ilustracao-2");
+    expect(within(art2).getAllByText("Em preparo").length).toBeGreaterThan(0);
+    expect(within(art2).getByText("Marcar como Saiu para entrega")).toBeInTheDocument();
+    expect(within(art2).queryByText("Novo")).not.toBeInTheDocument();
+    expect(within(step2).getByRole("button", { name: "Voltar" })).toBeInTheDocument();
+    await user.click(within(step2).getByRole("button", { name: "Próximo" }));
+
+    // Passo 3: card aberto com Imprimir, Avisar no WhatsApp e Cancelar; Voltar e Começar.
+    const step3 = screen.getByRole("dialog", { name: "Detalhe, impressão e WhatsApp" });
+    const art3 = within(step3).getByTestId("tour-ilustracao-3");
+    for (const label of ["Imprimir", "Avisar no WhatsApp", "Cancelar"]) {
+      expect(within(art3).getByText(label)).toBeInTheDocument();
+    }
+    // Ilustração inerte: nada nela recebe foco ou clique.
+    expect(
+      within(step3)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Voltar", "Começar a usar"]);
+
+    // Esc fecha e grava que o tour foi visto.
+    await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(storage.setItem).toHaveBeenCalledWith(
       "foode.painel.tour-fila.v1:u1",
       expect.any(String),
     );
     expect(screen.getByText("Novos Pedidos aparecem aqui com aviso sonoro.")).toBeInTheDocument();
+  });
+
+  it("tour: Pular fecha no 1º passo e o foco fica preso no diálogo", async () => {
+    const storage = { getItem: vi.fn(() => null), setItem: vi.fn() } as unknown as Storage;
+    const { loadList, props, user } = setup({ storage });
+    loadList.mockResolvedValue(list([]));
+    render(<QueueBoard {...props} />);
+    await flush();
+    const dialog = screen.getByRole("dialog", { name: "Os Pedidos novos chegam aqui" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    await user.click(within(dialog).getByRole("button", { name: "Pular tour" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

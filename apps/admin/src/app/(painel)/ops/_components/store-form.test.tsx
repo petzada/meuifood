@@ -1,7 +1,9 @@
 // Componente: cadastro de Loja na área Ops (OPS-03). Validação no envio com o parser real
 // do formulário, Slug verificado enquanto digita (taken/invalid) e conflito de Slug vindo
 // da RPC no campo certo. A RPC é mocada: a action falsa reproduz `createStore` sem a api.
-import { render, screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,7 +20,7 @@ const rpcCreate = vi.fn<(data: unknown) => Promise<{ ok: boolean }>>();
 /** Igual à server action: valida com o parser do contrato e traduz o conflito para o Slug. */
 async function createStoreAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseCreateStore(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await rpcCreate(parsed.data);
   if (!result.ok) return formError({ slug: "Este link já pertence a outra Loja." });
   return { errors: {}, message: "Loja criada.", status: "success" };
@@ -52,10 +54,8 @@ describe("CreateStoreForm (Ops: nova Loja)", () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Cadastrar Loja" }));
 
-    expect(await screen.findByText("Confira os campos destacados.")).toHaveAttribute(
-      "role",
-      "alert",
-    );
+    await waitFor(() => expect(screen.getByLabelText("Nome da Loja")).toHaveFocus());
+    expect(screen.queryByText(/Confira os campos/u)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Nome da Loja")).toHaveAccessibleDescription(
       "Informe o nome da Loja.",
     );

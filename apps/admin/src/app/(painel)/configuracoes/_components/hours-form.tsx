@@ -19,6 +19,7 @@ import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { periodErrors } from "../../../../lib/settings-forms";
 import { ActionNotice, SectionHeading } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Row = { key: number; weekday: Weekday; opensAt: string; closesAt: string };
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -90,8 +91,9 @@ export function HoursForm({ action, initial }: { action: Action; initial: Openin
     });
 
   return (
-    <form
+    <ActionForm
       action={formAction}
+      state={state}
       noValidate
       onSubmit={(event) => {
         setShowErrors(true);
@@ -209,6 +211,6 @@ export function HoursForm({ action, initial }: { action: Action; initial: Openin
           <p className="text-sm text-[var(--color-muted)]">Nenhuma alteração para salvar.</p>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }

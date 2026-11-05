@@ -14,9 +14,11 @@ import {
   type FunnelReport,
   funnelReportInputSchema,
   type OwnerOnboardingState,
+  type OwnerPlanView,
   ownerProfileInputSchema,
   type OwnerStoreSettings,
   type SlugAvailability,
+  tierForOrders,
   slugFormatIssue,
   storeContactInputSchema,
   storePixelsInputSchema,
@@ -137,6 +139,22 @@ export function createOnboardingService(deps: OnboardingServiceDeps) {
           goalOther: data.goal.other,
         });
         return ok(null);
+      }),
+
+    /**
+     * Plano vigente, faixa do mês e Pedidos não cancelados do mês civil de São Paulo (decisão 72:
+     * banner da sidebar e `/plano`). Só leitura, só Dono.
+     */
+    storePlanGet: (caller: PainelCaller) =>
+      asOwner(caller, noInput, undefined, async (context): Promise<RpcResult<OwnerPlanView>> => {
+        const row = await onboardingOf(context).planSummary();
+        const tier =
+          row.plan?.cycle === "annual"
+            ? (row.tiers[0] ?? null)
+            : row.plan
+              ? tierForOrders(row.tiers, row.orderCount)
+              : null;
+        return ok({ month: row.month, orderCount: row.orderCount, plan: row.plan, tier });
       }),
 
     /** "Sua Loja está pronta" visto: só com o checklist completo (senão `conflict`). */

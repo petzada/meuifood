@@ -3,7 +3,9 @@
 // validação no envio com o parser real do contrato. A RPC é mocada pela action falsa.
 import { COUPON_TEMPLATES } from "@foode/shared/coupon";
 import { formatBRL } from "@foode/shared/money";
-import { render, screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -21,7 +23,7 @@ const created: unknown[] = [];
 /** Igual à server action: valida com o parser do contrato. */
 async function createAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseCouponCreate(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   created.push(parsed.data);
   return { errors: {}, message: "Cupom criado.", status: "success" };
 }
@@ -43,11 +45,11 @@ describe("CouponForm (criar)", () => {
   it("envio vazio destaca o código e o valor sem chamar a RPC", async () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Criar Cupom" }));
-    expect(await screen.findByText("Confira os campos destacados.")).toHaveAttribute(
-      "role",
-      "alert",
+    await waitFor(() =>
+      expect(screen.getByLabelText("Código")).toHaveAttribute("aria-invalid", "true"),
     );
-    expect(screen.getByLabelText("Código")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Código")).toHaveFocus();
+    expect(screen.queryByRole("alert", { name: /Confira/u })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Desconto (%)")).toHaveAttribute("aria-invalid", "true");
     expect(created).toHaveLength(0);
   });
@@ -57,7 +59,7 @@ describe("CouponForm (criar)", () => {
     await user.click(screen.getByRole("button", { name: "15% de segunda a quinta (até R$ 20)" }));
     expect(screen.getByLabelText("Código")).toHaveValue("SEMANA15");
     expect(screen.getByLabelText("Desconto (%)")).toHaveValue("15");
-    expect(screen.getByLabelText("Teto do desconto em R$ (opcional)")).toHaveValue("20,00");
+    expect(screen.getByLabelText("Teto do desconto em R$ (opcional)")).toHaveValue("R$ 20,00");
     expect(screen.getByLabelText("Limite total de usos (opcional)")).toHaveValue("100");
     const days = within(screen.getByRole("group", { name: "Dias da semana" }));
     expect(days.getByRole("checkbox", { name: "segunda" })).toBeChecked();
@@ -72,7 +74,8 @@ describe("CouponForm (criar)", () => {
     // Ajusta: tira a quinta, põe o sábado, pedido mínimo e validade.
     await user.click(days.getByRole("checkbox", { name: "quinta" }));
     await user.click(days.getByRole("checkbox", { name: "sábado" }));
-    await user.type(screen.getByLabelText("Pedido mínimo em R$ (opcional)"), "30");
+    // Máscara em centavos: digitar 3000 vira R$ 30,00.
+    await user.type(screen.getByLabelText("Pedido mínimo em R$ (opcional)"), "3000");
     await user.type(screen.getByLabelText("Vale até (opcional)"), "2026-11-30");
     expect(screen.getByRole("status")).toHaveTextContent(
       "em Pedidos a partir de R$ 30,00 em itens, segunda, terça, quarta e sábado, até 100 usos, válido até 30/11/2026.",

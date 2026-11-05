@@ -5,7 +5,7 @@
 // (faixa para liberar o áudio), "Atualizado há N s" e "Sem conexão" sem limpar a lista;
 // contador na aba do navegador; detalhe lateral; impressão 80 mm (inclusive ao aceitar, P-IMP-1);
 // tour de 3 passos na primeira visita. Server actions e carregadores entram por prop.
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import {
   isAcceptTransition,
   type OrderDetail,
@@ -35,8 +35,6 @@ import { QueueTour, useQueueTour } from "./queue-tour";
 import type { QueueSound } from "./sound";
 import { type LoadList, useOrdersQueue } from "./use-orders-queue";
 
-type Toast = { id: number; tone: "success" | "error"; text: string };
-
 export type QueueBoardProps = {
   cancel: (input: { orderId: string; from: OrderStatus }) => Promise<OrderActionResult>;
   intervalMs?: number;
@@ -48,6 +46,8 @@ export type QueueBoardProps = {
   storefrontOrigin: string;
   storeName: string;
   storeSlug: string;
+  /** Tour da 1ª visita liberado (falso enquanto as perguntas de perfil estão abertas). */
+  tourEnabled?: boolean;
   transition: (input: {
     orderId: string;
     from: OrderStatus;
@@ -55,8 +55,6 @@ export type QueueBoardProps = {
   }) => Promise<OrderActionResult>;
   userId: string;
 };
-
-let toastSeq = 0;
 
 export function QueueBoard(props: QueueBoardProps) {
   const {
@@ -70,6 +68,7 @@ export function QueueBoard(props: QueueBoardProps) {
     storefrontOrigin,
     storeName,
     storeSlug,
+    tourEnabled = true,
     transition,
     userId,
   } = props;
@@ -87,9 +86,7 @@ export function QueueBoard(props: QueueBoardProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
   const [printing, setPrinting] = useState<OrderDetail | null>(null);
-  const [copied, setCopied] = useState(false);
   const filterLabelId = useId();
 
   const groups = groupByColumn(queue.orders, filter);
@@ -100,13 +97,15 @@ export function QueueBoard(props: QueueBoardProps) {
     document.title = tabTitle(newCount);
   }, [newCount]);
 
-  const pushToast = useCallback((tone: Toast["tone"], text: string) => {
-    const id = ++toastSeq;
-    setToasts((list) => [...list, { id, tone, text }]);
-    if (tone === "success") {
-      setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), 4000);
-    }
-  }, []);
+  // Feedback das ações da fila no Toast padrão (decisão 72): preto, topo-centro, 4 s.
+  const toast = useToast();
+  const pushToast = useCallback(
+    (tone: "success" | "error", text: string) => {
+      if (tone === "error") toast.error(text);
+      else toast.success(text);
+    },
+    [toast],
+  );
 
   const open = useCallback((order: { id: string }) => {
     setOpened((set) => (set.has(order.id) ? set : new Set([...set, order.id])));
@@ -168,8 +167,7 @@ export function QueueBoard(props: QueueBoardProps) {
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(`${storefrontOrigin}/loja/${storeSlug}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      pushToast("success", "Link copiado.");
     } catch {
       pushToast("error", "Não foi possível copiar o link.");
     }
@@ -229,8 +227,15 @@ export function QueueBoard(props: QueueBoardProps) {
             </button>
           ) : null}
           {queue.offline ? (
-            <p role="alert" className="font-bold text-[var(--color-error)]">
+            <p role="alert" className="flex items-center gap-2 font-bold text-[var(--color-error)]">
               Sem conexão — tentando de novo
+              <button
+                type="button"
+                onClick={() => void queue.refresh()}
+                className="rounded-full border border-current px-3 py-0.5 text-xs"
+              >
+                Tentar de novo
+              </button>
             </p>
           ) : queue.updatedAtMs !== null ? (
             <p className="text-[var(--color-muted)]">
@@ -276,6 +281,24 @@ export function QueueBoard(props: QueueBoardProps) {
             />
           ))}
         </div>
+      ) : queue.offline && queue.updatedAtMs === null ? (
+        <div
+          role="alert"
+          className="rounded-3xl border border-[var(--color-error)] px-6 py-10 text-center"
+        >
+          <p className="font-bold text-[var(--color-ink)]">Não foi possível carregar os Pedidos.</p>
+          <p className="mt-1 text-sm text-[var(--color-body)]">
+            Confira a conexão. A fila tenta de novo sozinha a cada 10 segundos.
+          </p>
+          <Button
+            variant="secondary"
+            type="button"
+            className="mt-4"
+            onClick={() => void queue.refresh()}
+          >
+            Tentar de novo
+          </Button>
+        </div>
       ) : total === 0 ? (
         <div className="rounded-3xl border border-dashed border-[var(--color-hairline)] px-6 py-10 text-center">
           <p className="font-bold text-[var(--color-ink)]">Nenhum Pedido agora.</p>
@@ -290,9 +313,6 @@ export function QueueBoard(props: QueueBoardProps) {
               >
                 Copiar link
               </Button>
-              <p aria-live="polite" className="mt-2 text-sm text-[var(--color-primary-strong)]">
-                {copied ? "Link copiado." : ""}
-              </p>
             </>
           ) : (
             <p className="mt-1 text-sm text-[var(--color-body)]">
@@ -338,34 +358,6 @@ export function QueueBoard(props: QueueBoardProps) {
         </div>
       )}
 
-      <div
-        aria-live="polite"
-        className="fixed bottom-4 left-4 right-4 z-30 flex flex-col items-center gap-2 md:left-auto md:right-6 md:items-end"
-      >
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role={toast.tone === "error" ? "alert" : "status"}
-            className={`flex items-center gap-3 rounded-2xl border bg-[var(--color-canvas)] px-4 py-3 text-sm font-bold ${
-              toast.tone === "error"
-                ? "border-[var(--color-error)] text-[var(--color-error)]"
-                : "border-[var(--color-primary)] text-[var(--color-primary-strong)]"
-            }`}
-          >
-            {toast.text}
-            {toast.tone === "error" ? (
-              <button
-                type="button"
-                onClick={() => setToasts((list) => list.filter((item) => item.id !== toast.id))}
-                className="rounded-full border border-current px-2 py-0.5 text-xs"
-              >
-                Fechar
-              </button>
-            ) : null}
-          </div>
-        ))}
-      </div>
-
       {selectedId ? (
         <OrderDetailPanel
           busy={busyId === selectedId}
@@ -385,7 +377,7 @@ export function QueueBoard(props: QueueBoardProps) {
         <PrintReceipt onDone={donePrinting} order={printing} storeName={storeName} />
       ) : null}
 
-      {tour.open ? <QueueTour onFinish={tour.finish} /> : null}
+      {tour.open && tourEnabled ? <QueueTour onFinish={tour.finish} /> : null}
     </section>
   );
 }

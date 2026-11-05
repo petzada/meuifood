@@ -2,6 +2,8 @@
 // instantes UTC; a tela fala em R$, % e horário de America/Sao_Paulo. Puro, roda no
 // navegador e no servidor (sem dependência do banco nem do Next).
 
+import { formatMoneyInput } from "./money-mask";
+
 export const SAO_PAULO_TZ = "America/Sao_Paulo";
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -36,9 +38,9 @@ export function parsePercentToBps(raw: string): number | null {
   return Math.round(Number(text) * 100);
 }
 
-/** 8499 → "84,99" (valor inicial de um campo de dinheiro). */
+/** 8499 → "R$ 84,99" (valor inicial de um campo de dinheiro, já na máscara do item 10d). */
 export function centsToInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",");
+  return formatMoneyInput(cents);
 }
 
 /** 349 → "3,49" (valor inicial de um campo de percentual). */

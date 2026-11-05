@@ -5,6 +5,7 @@
 // rótulo de ESTADO (CAR-02), reordenar por botões acessíveis (CAR-04) e preço inline só com
 // confirmação explícita (CAR-03: Enter ou ✓; Esc desfaz; nunca salva no blur).
 import { formatBRL, reaisToCents } from "@foode/shared/money";
+import { useToast } from "@foode/ui";
 import {
   useActionState,
   useEffect,
@@ -36,22 +37,24 @@ export function useQuickAction(action: MenuAction): [FormState, (formData: FormD
   return [visible, formAction];
 }
 
-/** Mensagem curta junto do controle. */
-export function QuickFeedback({ state, className = "" }: { state: FormState; className?: string }) {
-  const message =
-    state.status === "error"
-      ? (state.message ?? Object.values(state.errors)[0] ?? "Não foi possível salvar.")
-      : state.status === "success"
-        ? state.message
-        : null;
-  return (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={`text-xs font-bold ${state.status === "error" ? "text-[var(--color-error)]" : "text-[#1f6b41]"} ${message ? "" : "sr-only"} ${className}`}
-    >
-      {message ?? ""}
-    </p>
-  );
+const quickAnnounced = new WeakSet<FormState>();
+
+/**
+ * Resultado da ação rápida como Toast (decisão 72): nada inline, para o aviso não deslocar setas e
+ * interruptores (bug do reordenar Adicionais). Cada estado é anunciado uma vez.
+ */
+export function QuickFeedback({ state }: { state: FormState; className?: string }) {
+  const toast = useToast();
+  useEffect(() => {
+    if (state.status === "idle" || quickAnnounced.has(state)) return;
+    quickAnnounced.add(state);
+    if (state.status === "error") {
+      toast.error(state.message ?? Object.values(state.errors)[0] ?? "Não foi possível salvar.");
+    } else if (state.message) {
+      toast.success(state.message);
+    }
+  }, [state, toast]);
+  return null;
 }
 
 function Hidden({ fields }: { fields: Record<string, string> }) {
@@ -271,7 +274,8 @@ export function InlinePrice({
           value={value}
           onChange={(event) => setValue(event.currentTarget.value)}
           onKeyDown={onKeyDown}
-          inputMode="decimal"
+          inputMode="numeric"
+          data-money=""
           autoComplete="off"
           aria-invalid={invalid || undefined}
           aria-describedby={`${inputId}-dica`}
@@ -354,6 +358,7 @@ export function ConfirmDialogForm({
           </h3>
           <div className="text-sm leading-relaxed text-[var(--color-body)]">{description}</div>
           {children}
+          {/* Dentro do <dialog> modal (camada do topo) o Toast ficaria atrás: erro fica aqui. */}
           {state.status === "error" ? (
             <p role="alert" className="text-sm font-bold text-[var(--color-error)]">
               {state.message ?? Object.values(state.errors)[0]}

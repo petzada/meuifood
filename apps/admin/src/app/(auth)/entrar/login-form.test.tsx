@@ -1,6 +1,8 @@
 // Componente: login do Painel (/entrar). Validação no envio, Turnstile obrigatório,
 // erro do Better Auth em PT-BR e redirecionamento. Turnstile e fetch de auth mocados.
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { render } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { forwardRef, useImperativeHandle } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -150,6 +150,7 @@ describe("RPCs do Dono (contrato)", () => {
     for (const result of [
       service.onboardingGet(caller),
       service.storeSettingsGet(caller),
+      service.storePlanGet(caller),
       service.storeSetSlug(caller, { slug: "nova-loja" }),
       service.storeSetPixels(caller, { metaPixelId: null, googleTagId: null }),
       service.onboardingAnswerProfile(caller, {
@@ -167,7 +168,6 @@ describe("RPCs do Dono (contrato)", () => {
     const { service } = fakeService("owner", {
       checklistFacts: async () => ({
         hasWhatsapp: true,
-        slugConfirmed: false,
         openingPeriods: 1,
         pickupEnabled: true,
         deliveryConfigured: false,
@@ -184,8 +184,45 @@ describe("RPCs do Dono (contrato)", () => {
         profileAnswered: false,
         slug: "loja-a",
         storeUrl: "https://foodedelivery.com.br/loja/loja-a",
-        checklist: { pendingCount: 3, complete: false },
+        checklist: { pendingCount: 2, complete: false },
       },
+    });
+  });
+
+  it("Dono: Plano vigente com a faixa da contagem do mês (mensal) ou a única (anual)", async () => {
+    const tiers = [
+      { minOrders: 0, maxOrders: 150, priceCents: 8499 },
+      { minOrders: 151, maxOrders: null, priceCents: 16999 },
+    ];
+    const plan = { cycle: "monthly", validFrom: "2026-11-01T03:00:00.000Z", validTo: null };
+    const monthly = fakeService("owner", {
+      planSummary: async () => ({ month: "2026-11", orderCount: 160, plan, tiers }),
+    });
+    await expect(monthly.service.storePlanGet(caller)).resolves.toEqual({
+      ok: true,
+      data: { month: "2026-11", orderCount: 160, plan, tier: tiers[1] },
+    });
+
+    const annualTier = { minOrders: 0, maxOrders: null, priceCents: 101988 };
+    const annual = fakeService("owner", {
+      planSummary: async () => ({
+        month: "2026-11",
+        orderCount: 7,
+        plan: { ...plan, cycle: "annual" },
+        tiers: [annualTier],
+      }),
+    });
+    await expect(annual.service.storePlanGet(caller)).resolves.toMatchObject({
+      ok: true,
+      data: { tier: annualTier },
+    });
+
+    const none = fakeService("owner", {
+      planSummary: async () => ({ month: "2026-11", orderCount: 0, plan: null, tiers: [] }),
+    });
+    await expect(none.service.storePlanGet(caller)).resolves.toMatchObject({
+      ok: true,
+      data: { plan: null, tier: null },
     });
   });
 
@@ -248,7 +285,6 @@ describe("RPCs do Dono (contrato)", () => {
     const { service } = fakeService("owner", {
       checklistFacts: async () => ({
         hasWhatsapp: false,
-        slugConfirmed: false,
         openingPeriods: 0,
         pickupEnabled: false,
         deliveryConfigured: false,

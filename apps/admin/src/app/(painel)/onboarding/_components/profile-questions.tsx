@@ -2,7 +2,8 @@
 
 // Duas perguntas de perfil no primeiro acesso do Dono (P-ONB-4, decisão 63): culinária e
 // objetivo com opções fechadas e "Outro" (texto). A tela diz que as respostas são dado
-// interno da Foode. Respondidas uma vez, não reaparecem (`profileAnswered`).
+// interno da Foode. Respondidas uma vez, não reaparecem (`profileAnswered`). Abrem num diálogo
+// sobre o Painel desfocado (feedback do Dono, item 6), no mesmo estilo do tour da fila.
 import {
   PROFILE_OTHER_MAX,
   STORE_CUISINE_LABELS,
@@ -10,13 +11,14 @@ import {
   STORE_GOAL_LABELS,
   STORE_GOALS,
 } from "@foode/shared/onboarding";
-import { OutlineContainer } from "@foode/ui";
 import { useActionState, useState } from "react";
 
 import { Field } from "../../../../components/form";
+import { OverlayDialog } from "../../../../components/overlay-dialog";
 import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -105,11 +107,7 @@ export function ProfileQuestions({ action, storeName }: { action: Action; storeN
   const [goalOther, setGoalOther] = useState("");
 
   return (
-    <OutlineContainer
-      as="section"
-      aria-labelledby="perfil-title"
-      className="mx-auto max-w-3xl p-5 md:p-7"
-    >
+    <OverlayDialog labelledBy="perfil-title" className="max-w-3xl">
       <p className="text-sm font-bold text-[var(--color-primary-strong)]">{storeName}</p>
       <h1
         id="perfil-title"
@@ -121,7 +119,7 @@ export function ProfileQuestions({ action, storeName }: { action: Action; storeN
         Suas respostas são <strong>para uso interno da Foode</strong>: ajudam a equipe a conhecer
         sua Loja. Não aparecem para o cliente nem no Cardápio.
       </p>
-      <form action={formAction} noValidate className="mt-6 space-y-8">
+      <ActionForm action={formAction} state={state} noValidate className="mt-6 space-y-8">
         <Question
           error={state.errors["cuisine.value"] ?? state.errors.cuisine}
           labels={STORE_CUISINE_LABELS}
@@ -152,7 +150,7 @@ export function ProfileQuestions({ action, storeName }: { action: Action; storeN
           <ActionNotice state={state} />
           <SubmitButton pendingLabel="Enviando...">Continuar</SubmitButton>
         </div>
-      </form>
-    </OutlineContainer>
+      </ActionForm>
+    </OverlayDialog>
   );
 }

@@ -1,16 +1,11 @@
 // Checklist do Dono no Painel (Ticket 28; ONB-01, ONB-02, ONB-04). Calculado NO SERVIDOR a
 // partir do estado gravado (a api lê os fatos e chama `buildOwnerChecklist`); o admin só exibe.
 // Sem ordem forçada: qualquer item pendente é acionável, menos "Plano ativo", que a Foode faz.
+// Sem item de Link personalizado (decisão 72): o link que o Ops define já vale; trocar é opcional
+// em Configurações.
 // Diferente do checklist de ativação do Ops (`ONBOARDING_CHECKS` de @foode/shared/ops).
 
-export const OWNER_CHECKLIST_ITEMS = [
-  "contact",
-  "slug",
-  "hours",
-  "fulfillment",
-  "menu",
-  "plan",
-] as const;
+export const OWNER_CHECKLIST_ITEMS = ["contact", "hours", "fulfillment", "menu", "plan"] as const;
 export type OwnerChecklistItem = (typeof OWNER_CHECKLIST_ITEMS)[number];
 
 /** Itens que o Dono não aciona (ONB-02): o Plano é ativado pela equipe Foode. */
@@ -20,8 +15,6 @@ export const OWNER_CHECKLIST_NOT_ACTIONABLE: readonly OwnerChecklistItem[] = ["p
 export type OwnerChecklistFacts = {
   /** WhatsApp da Loja gravado. */
   hasWhatsapp: boolean;
-  /** O Dono confirmou ou trocou o Slug pelo Painel (o do Ops vale como sugestão). */
-  slugConfirmed: boolean;
   /** Pelo menos um período de funcionamento. */
   openingPeriods: number;
   /** Retirada ligada ou Delivery configurado (Taxa fixa ou bairro ativo). */
@@ -52,7 +45,6 @@ export type OwnerChecklist = {
 export function buildOwnerChecklist(facts: OwnerChecklistFacts): OwnerChecklist {
   const done: Record<OwnerChecklistItem, boolean> = {
     contact: facts.hasWhatsapp,
-    slug: facts.slugConfirmed,
     hours: facts.openingPeriods > 0,
     fulfillment: facts.pickupEnabled || facts.deliveryConfigured,
     menu: facts.availableMenuItems > 0,

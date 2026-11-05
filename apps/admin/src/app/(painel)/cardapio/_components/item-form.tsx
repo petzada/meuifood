@@ -17,6 +17,7 @@ import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
 import type { MenuAction } from "../actions";
 import { ImageField } from "./image-field";
+import { ActionForm } from "../../../../components/action-form";
 
 const DESCRIPTION_MAX = 600;
 
@@ -88,7 +89,13 @@ export function ItemForm({
   const full = featuredFull(featuredCount, item?.featured ?? false);
 
   return (
-    <form ref={ref} action={formAction} onChange={onChange} className="space-y-6">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      onChange={onChange}
+      className="space-y-6"
+    >
       {editing ? <input type="hidden" name="itemId" value={item.id} /> : null}
       {!editing ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
 
@@ -109,8 +116,9 @@ export function ItemForm({
           name="priceCents"
           label="Preço (R$)"
           defaultValue={item ? centsToInput(item.priceCents) : ""}
-          placeholder="12,90"
-          inputMode="decimal"
+          placeholder="R$ 12,90"
+          inputMode="numeric"
+          data-money=""
           autoComplete="off"
           error={state.errors.priceCents}
         />
@@ -199,6 +207,6 @@ export function ItemForm({
           </p>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }

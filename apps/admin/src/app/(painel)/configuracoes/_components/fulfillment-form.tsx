@@ -4,6 +4,9 @@
 // "Por bairro" ou "Taxa fixa" — com aviso do que deixa de valer ao trocar; tabela Bairro · Taxa ·
 // interruptor ativo/inativo com "+ Bairro" em linha; pedido mínimo só do Delivery; tempo
 // estimado mín–máx por Fulfillment. Validação (mín ≤ máx, ≥ 1 bairro ativo) no servidor.
+// Sugestão por km (decisão 73): "Quanto você cobra por km" (só neste navegador, por Loja) vira
+// PLACEHOLDER das taxas — bairro: centro do bairro e da Loja pelo Nominatim, linha reta × 1,3;
+// Taxa fixa: média dos bairros (ou 3 km); Pedido mínimo: 3× a Taxa fixa. Nunca cobra por km.
 import { Button } from "@foode/ui";
 import {
   type DeliveryMode,
@@ -12,16 +15,29 @@ import {
   MAX_ETA_MINUTES,
   type StoreOperationSettings,
 } from "@foode/shared/order";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useMemo, useState } from "react";
 
 import { Field } from "../../../../components/form";
-import { centsToInput } from "../../../../lib/ops-format";
+import {
+  type LatLng,
+  neighborhoodQuery,
+  routeKm,
+  suggestedFeeCents,
+  suggestedFixedFeeCents,
+  suggestedMinimumOrderCents,
+} from "../../../../lib/delivery-suggestion";
+import { geocoder } from "../../../../lib/geocode";
+import { formatMoneyInput } from "../../../../lib/money-mask";
+import { centsToInput, parseMoneyToCents } from "../../../../lib/ops-format";
 import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, SectionHeading } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
+type Locate = (query: string) => Promise<LatLng | null>;
+export type StoreArea = { district: string; city: string; state: string };
 type Mode = DeliveryMode | "none";
 type Row = { key: number; id: string | null; name: string; fee: string; active: boolean };
 
@@ -94,12 +110,95 @@ function Switch({
   );
 }
 
+const PER_KM_KEY = (storeId: string) => `foode.painel.reais-por-km.v1:${storeId}`;
+
+function readPerKm(storage: Storage | null, storeId: string): string {
+  try {
+    return storage?.getItem(PER_KM_KEY(storeId)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Sugestões de taxa (decisão 73): distâncias por bairro (nome) e placeholders em "R$ 0,00". */
+function useFeeSuggestions({
+  area,
+  locate,
+  names,
+  perKmCents,
+}: {
+  area: StoreArea | null;
+  locate: Locate;
+  names: string[];
+  perKmCents: number | null;
+}) {
+  const [storePoint, setStorePoint] = useState<LatLng | null>(null);
+  const [distances, setDistances] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!area) return;
+    const query = neighborhoodQuery(area.district, area);
+    if (!query) return;
+    let live = true;
+    void locate(query).then((point) => {
+      if (live) setStorePoint(point);
+    });
+    return () => {
+      live = false;
+    };
+  }, [area, locate]);
+
+  const namesKey = names.map((name) => name.trim()).join("|");
+  useEffect(() => {
+    if (!area || !storePoint) return;
+    let live = true;
+    // Espera o lojista parar de digitar antes de consultar (e a fila respeita 1 req/s).
+    const timer = setTimeout(() => {
+      for (const raw of namesKey.split("|")) {
+        const query = neighborhoodQuery(raw, area);
+        if (!query) continue;
+        void locate(query).then((point) => {
+          if (!live || !point) return;
+          const key = raw.toLowerCase();
+          setDistances((map) => (key in map ? map : { ...map, [key]: routeKm(storePoint, point) }));
+        });
+      }
+    }, 700);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [area, locate, namesKey, storePoint]);
+
+  const known = namesKey
+    .split("|")
+    .map((name) => distances[name.toLowerCase()])
+    .filter((km): km is number => typeof km === "number");
+  const fixed = suggestedFixedFeeCents(known, perKmCents);
+  return {
+    neighborhood: (name: string) =>
+      formatMoneyInput(suggestedFeeCents(distances[name.trim().toLowerCase()] ?? 0, perKmCents)),
+    fixed: formatMoneyInput(fixed),
+    minimum: formatMoneyInput(suggestedMinimumOrderCents(fixed)),
+  };
+}
+
 export function FulfillmentForm({
   action,
+  area = null,
   initial,
+  locate,
+  storage = typeof window === "undefined" ? null : window.localStorage,
+  storeId,
 }: {
   action: Action;
+  /** Bairro/cidade da Loja (centro de onde saem as distâncias); null = sem sugestão por bairro. */
+  area?: StoreArea | null;
   initial: StoreOperationSettings;
+  /** Geocodificador (padrão: Nominatim do navegador); injetável nos testes. */
+  locate?: Locate;
+  storage?: Storage | null;
+  storeId: string;
 }) {
   const [state, formAction] = useActionState(action, IDLE_FORM);
   const { dirty, onChange, ref } = useDirtyForm(state);
@@ -110,6 +209,25 @@ export function FulfillmentForm({
   const headingId = useId();
   const modeId = useId();
   const errors = state.errors;
+  const [perKm, setPerKm] = useState("");
+  useEffect(() => setPerKm(readPerKm(storage, storeId)), [storage, storeId]);
+  const locateFn = useMemo<Locate>(() => locate ?? ((query) => geocoder().locate(query)), [locate]);
+  const suggestion = useFeeSuggestions({
+    area,
+    locate: locateFn,
+    names: rows.map((r) => r.name),
+    perKmCents: parseMoneyToCents(perKm),
+  });
+
+  function savePerKm(value: string) {
+    setPerKm(value);
+    try {
+      if (value) storage?.setItem(PER_KM_KEY(storeId), value);
+      else storage?.removeItem(PER_KM_KEY(storeId));
+    } catch {
+      // Sem localStorage: a sugestão vale só nesta tela.
+    }
+  }
 
   const touch = () => queueMicrotask(onChange);
   const update = (key: number, patch: Partial<Row>) => {
@@ -118,7 +236,14 @@ export function FulfillmentForm({
   };
 
   return (
-    <form ref={ref} action={formAction} onChange={onChange} noValidate className="space-y-8">
+    <ActionForm
+      formRef={ref}
+      action={formAction}
+      state={state}
+      onChange={onChange}
+      noValidate
+      className="space-y-8"
+    >
       <SectionHeading
         id={headingId}
         description="Como o Consumidor recebe o Pedido. Pelo menos uma forma precisa ficar ativa para a Loja vender."
@@ -185,18 +310,36 @@ export function FulfillmentForm({
           </p>
         ) : null}
 
+        {mode !== "none" ? (
+          <div className="max-w-sm">
+            <Field
+              id="reais-por-km"
+              label="Quanto você cobra por km (R$)"
+              inputMode="numeric"
+              data-money=""
+              autoComplete="off"
+              value={perKm}
+              onChange={(event) => savePerKm(event.currentTarget.value)}
+              placeholder="R$ 0,00"
+              hint="Só para sugerir as taxas abaixo (aparecem apagadas no campo). O Consumidor paga a taxa do bairro ou a Taxa fixa, nunca por km. Fica salvo neste navegador."
+            />
+          </div>
+        ) : null}
+
         {mode === "fixed" ? (
           <div className="max-w-xs">
             <Field
               id="fixedFeeCents"
               name="fixedFeeCents"
               label="Taxa fixa (R$)"
-              inputMode="decimal"
+              inputMode="numeric"
+              data-money=""
               defaultValue={
                 initial.fixedFeeCents === null ? "" : centsToInput(initial.fixedFeeCents)
               }
               error={errors.fixedFeeCents}
-              hint="Vale para qualquer bairro. 0,00 = entrega grátis."
+              placeholder={suggestion.fixed}
+              hint="Vale para qualquer bairro. R$ 0,00 = entrega grátis."
             />
           </div>
         ) : null}
@@ -260,8 +403,10 @@ export function FulfillmentForm({
                         <input
                           id={`bairro-${r.key}-taxa`}
                           name={`neighborhoods.${index}.feeCents`}
-                          inputMode="decimal"
+                          inputMode="numeric"
+                          data-money=""
                           value={r.fee}
+                          placeholder={suggestion.neighborhood(r.name)}
                           aria-invalid={feeError ? true : undefined}
                           aria-describedby={feeError ? `bairro-${r.key}-taxa-erro` : undefined}
                           onChange={(event) => update(r.key, { fee: event.target.value })}
@@ -337,13 +482,15 @@ export function FulfillmentForm({
               id="deliveryMinimumOrderCents"
               name="deliveryMinimumOrderCents"
               label="Pedido mínimo do Delivery (R$)"
-              inputMode="decimal"
+              inputMode="numeric"
+              data-money=""
               defaultValue={
                 initial.deliveryMinimumOrderCents === null
                   ? ""
                   : centsToInput(initial.deliveryMinimumOrderCents)
               }
               error={errors.deliveryMinimumOrderCents}
+              placeholder={suggestion.minimum}
               hint="Opcional. Sobre os itens, sem a taxa. Vazio = sem mínimo."
             />
             <EtaFields
@@ -365,7 +512,7 @@ export function FulfillmentForm({
           <p className="text-sm text-[var(--color-muted)]">Nenhuma alteração para salvar.</p>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }
 

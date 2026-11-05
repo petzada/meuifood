@@ -2,7 +2,9 @@
 // Destaque no teto, erros da action nos campos e grupos de Complemento (obrigatório ×
 // opcional pelo Mínimo, limite de opções). Server actions e upload são mocados.
 import type { AdminComplementGroup, AdminMenuItem } from "@foode/shared/menu";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -79,10 +81,7 @@ describe("ItemForm: Destaque e validação", () => {
 
   it("criação envia o formulário e mostra os erros da action nos campos", async () => {
     const action = vi.fn<Action>(async () =>
-      formError(
-        { featured: "A Loja já tem 4 Destaques.", name: "Informe o nome do item." },
-        "Confira os campos destacados.",
-      ),
+      formError({ featured: "A Loja já tem 4 Destaques.", name: "Informe o nome do item." }),
     );
     const { user } = renderItemForm({ action });
     await user.type(screen.getByLabelText("Preço (R$)"), "12,90");
@@ -91,10 +90,13 @@ describe("ItemForm: Destaque e validação", () => {
     expect(await screen.findByText("Informe o nome do item.")).toBeInTheDocument();
     expect(screen.getByLabelText("Nome do item")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("A Loja já tem 4 Destaques.")).toHaveAttribute("role", "alert");
-    expect(screen.getByText("Confira os campos destacados.")).toHaveAttribute("role", "alert");
+    expect(screen.queryByText(/Confira os campos/u)).not.toBeInTheDocument();
+    // Em erro nada é resetado e o foco vai ao primeiro campo com erro.
+    expect(screen.getByLabelText("Preço (R$)")).toHaveValue("R$ 12,90");
+    expect(screen.getByLabelText("Nome do item")).toHaveFocus();
     const sent = action.mock.calls[0]?.[1];
     expect(sent?.get("categoryId")).toBe("cat-lanches");
-    expect(sent?.get("priceCents")).toBe("12,90");
+    expect(sent?.get("priceCents")).toBe("R$ 12,90");
   });
 
   it("edição só habilita Salvar com mudança e permite mover de categoria", async () => {

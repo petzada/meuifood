@@ -109,7 +109,7 @@ export function auditActionLabel(action: string): string {
 export const RPC_ERROR_MESSAGE: Record<AuthErrorCode, string> = {
   unauthenticated: "Sua sessão expirou. Entre de novo.",
   forbidden: "Você não tem permissão para esta ação.",
-  invalid_input: "Confira os campos destacados.",
+  invalid_input: "O servidor recusou algum dado. Revise e tente de novo.",
   captcha_failed: "A verificação de segurança falhou. Tente de novo.",
   rate_limited: "Muitas tentativas em pouco tempo. Aguarde um instante.",
   not_found: "Este registro não existe mais. Recarregue a página.",

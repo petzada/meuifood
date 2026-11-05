@@ -1,19 +1,23 @@
 // Moldura do Painel autenticado: marca, navegação guiada pelo papel (lib/access.ts), Loja
 // ativa com seletor para quem tem mais de uma, status da Loja com Pausa (NAV-04) e sair.
 // Operador (um só item no menu) ganha barra superior e a fila em largura total (NAV-03).
-// Presentacional e testável.
+// Item ativo do menu pelo `usePathname` (PainelNav), Sair como ícone e, só para o Dono, o banner
+// do Plano acima do rodapé (decisão 72). Presentacional e testável.
 //
 // PONTO DE EXTENSÃO: entradas novas no menu entram em `ROUTES` (lib/access.ts); conteúdo
 // de cabeçalho por área pode vir no slot `aside` se um ticket precisar.
 import { BrandMark } from "@foode/ui";
 import type { Role, SessionCtx } from "@foode/shared/auth";
 import { can } from "@foode/shared/auth";
+import type { OwnerPlanView } from "@foode/shared/onboarding";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import logo from "../../../../public/images/logo.png";
-import { isCurrentNav, navFor } from "../lib/access";
+import { navFor } from "../lib/access";
+import { PainelNav } from "./painel-nav";
+import { PlanBanner } from "./plan-banner";
 import { SignOutButton } from "./sign-out-button";
 import { type SetPause, StoreStatusControl, type StoreStatusView, PauseBand } from "./store-status";
 import { StoreSwitcher } from "./store-switcher";
@@ -27,6 +31,7 @@ const ROLE_LABEL: Record<Role, string> = {
 export function PainelShell({
   children,
   currentPath,
+  plan = null,
   role,
   session,
   setPause,
@@ -35,6 +40,8 @@ export function PainelShell({
 }: {
   children: ReactNode;
   currentPath: string;
+  /** Plano do Dono para o banner da sidebar (null: Operador/Ops ou a api não respondeu). */
+  plan?: OwnerPlanView | null;
   role: Role;
   session: SessionCtx;
   /** Server action da Pausa (ausente nos testes de render). */
@@ -100,20 +107,7 @@ export function PainelShell({
               {storeBlock}
               {status}
             </div>
-            <nav aria-label="Navegação do Painel" className="sr-only">
-              <ul>
-                {nav.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={isCurrentNav(item.href, currentPath) ? "page" : undefined}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <PainelNav compact initialPath={currentPath} items={nav} />
             {user}
           </div>
         </header>
@@ -136,30 +130,17 @@ export function PainelShell({
           {status}
         </div>
 
-        <nav aria-label="Navegação do Painel" className="mt-4 md:mt-6">
-          <ul className="flex gap-1 overflow-x-auto md:grid">
-            {nav.map((item) => {
-              const current = isCurrentNav(item.href, currentPath);
-              return (
-                <li key={item.href} className="shrink-0">
-                  <Link
-                    href={item.href}
-                    aria-current={current ? "page" : undefined}
-                    className={
-                      current
-                        ? "flex min-h-11 items-center rounded-full bg-[var(--color-primary-strong)] px-5 text-sm font-bold text-white"
-                        : "flex min-h-11 items-center rounded-full px-5 text-sm font-bold text-[var(--color-body)] hover:bg-[var(--color-primary-soft)]"
-                    }
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <PainelNav initialPath={currentPath} items={nav} />
 
-        <div className="mt-4 border-t border-[var(--color-hairline-soft)] pt-4 md:mt-auto">
+        {role === "owner" && plan ? (
+          <div className="mt-6 md:mt-auto md:pt-6">
+            <PlanBanner plan={plan} />
+          </div>
+        ) : null}
+
+        <div
+          className={`mt-4 border-t border-[var(--color-hairline-soft)] pt-4 ${role === "owner" && plan ? "md:mt-4" : "md:mt-auto"}`}
+        >
           {user}
         </div>
       </aside>

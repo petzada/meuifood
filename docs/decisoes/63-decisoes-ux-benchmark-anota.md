@@ -76,7 +76,7 @@ O concorrente é inspiração, não verdade: as diretrizes valem onde não confl
 | P-VIS-1 | Logo quadrado da Loja no Storefront. (rec.) | 28 |
 | P-VIS-2 | **Imagem de capa da Loja (sem cor personalizada).** (Dono) | 28 |
 | P-VIS-3 | Descrição curta da Loja (até 160 caracteres, também meta description). (rec.) | 28 |
-| P-PLN-1 | Progresso da faixa só na tela Plano. (rec.) | 14 |
+| P-PLN-1 | ~~Progresso da faixa só na tela Plano.~~ **Substituída pela [72](72-banner-plano-sidebar.md)**: progresso também no banner da sidebar do Dono. | 14 |
 
 ## Consequências
 

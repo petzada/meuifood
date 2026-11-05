@@ -1,10 +1,10 @@
 // Primitivos de formulário da área Ops, no mesmo desenho de `components/form.tsx`
 // (borda fina, primary só no foco e no CTA). Select, textarea, aviso de estado da action e
-// cabeçalho de seção. Sem estado: servem a Server e Client Components.
+// cabeçalho de seção. `ActionNotice` lê o contexto do `ActionForm` (Client Component).
 import type { ReactNode, Ref, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
-import { Notice } from "../../../../components/form";
-import type { FormState } from "../../../../lib/ops-forms";
+// Aviso de resultado da action: virou Toast (decisão 72); re-exportado para os imports antigos.
+export { ActionNotice } from "../../../../components/action-form";
 
 const CONTROL_CLASSES =
   "mt-2 block min-h-12 w-full rounded-xl border bg-transparent px-4 text-base font-normal text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]";
@@ -101,15 +101,6 @@ export function TextareaField({
       <Messages error={error} hint={hint} id={id} />
     </div>
   );
-}
-
-/** Aviso inline acima do botão (T-05): sucesso `status`, erro `alert`. */
-export function ActionNotice({ state }: { state: FormState }) {
-  if (state.status === "idle") return null;
-  const message =
-    state.message ??
-    (state.status === "error" ? (state.errors.form ?? "Confira os campos destacados.") : "Feito.");
-  return <Notice tone={state.status === "error" ? "error" : "success"}>{message}</Notice>;
 }
 
 /** Cabeçalho de seção (T-07: seções independentes, sem numeração). */
