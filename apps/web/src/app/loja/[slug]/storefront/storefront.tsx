@@ -103,6 +103,8 @@ export function Storefront({
   const openItem = openItemId ? (itemsById.get(openItemId) ?? null) : null;
   const itemOpen = openItem !== null;
   const pixels = state?.showcase?.pixels ?? null;
+  /** Loja em `onboarding` (decisão 74): Cardápio em prévia, sem checkout. */
+  const preview = menu.state === "preview";
 
   // Funil próprio (uma vez por sessão e etapa, sem dado pessoal) e Pixel da Loja (Ticket 28).
   useEffect(() => {
@@ -225,6 +227,18 @@ export function Storefront({
         }
       />
 
+      {preview ? (
+        <div className="mx-auto max-w-3xl px-4 pt-4 md:px-8">
+          <p
+            className="rounded-2xl border border-[var(--color-accent)] px-4 py-3 text-sm font-bold text-[var(--color-ink)]"
+            role="status"
+          >
+            Esta Loja ainda não está recebendo pedidos. Você pode ver o Cardápio; o pedido abre
+            quando a Loja começar a funcionar.
+          </p>
+        </div>
+      ) : null}
+
       {menu.categories.length === 0 ? (
         <section className="mx-auto max-w-3xl px-4 py-10 md:px-8">
           <div className="foode-outline p-6">
@@ -321,6 +335,7 @@ export function Storefront({
 
       <CartSheet
         availability={availability}
+        preview={preview}
         cart={cart}
         deliveryMinimumCents={state?.delivery?.minimumOrderCents ?? null}
         itemsById={itemsById}

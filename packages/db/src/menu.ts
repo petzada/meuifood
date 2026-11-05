@@ -65,6 +65,8 @@ export type PublicStoreMenu = {
   slug: string;
   name: string;
   categories: Array<{ id: string; name: string; items: StoreMenuItem[] }>;
+  /** Loja em `onboarding` (decisão 74): Cardápio em prévia, sem Pedido. Ausente = `active`. */
+  preview?: true;
 };
 
 export type MenuCategoryInput = { name: string; available: boolean };
@@ -263,18 +265,28 @@ function buildMenu(
 
 const SLUG_PATTERN = /^(?=.{3,63}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Cardápio público pelo Slug: só Loja `active`; null para Slug inexistente ou Loja não ativa. */
+/**
+ * Cardápio público pelo Slug: só Loja `active`; null para Slug inexistente ou Loja não ativa.
+ * `includePreview` (só a leitura do Cardápio do Storefront, decisão 74) também devolve a Loja em
+ * `onboarding`, marcada `preview: true`; `suspended` continua null. Carrinho, cotação e Pedido
+ * NUNCA passam `includePreview`: só Loja `active` vende.
+ */
 export async function publicMenuBySlug(
   d1: D1Database,
   slug: string,
+  options: { includePreview?: boolean } = {},
 ): Promise<PublicStoreMenu | null> {
   if (!SLUG_PATTERN.test(slug)) return null;
+  const statuses = options.includePreview ? "('active', 'onboarding')" : "('active')";
   const store = await d1
-    .prepare("SELECT id, slug, name FROM stores WHERE slug = ? AND status = 'active' LIMIT 1")
+    .prepare(
+      `SELECT id, slug, name, status FROM stores WHERE slug = ? AND status IN ${statuses} LIMIT 1`,
+    )
     .bind(slug)
-    .first<{ id: string; slug: string; name: string }>();
+    .first<{ id: string; slug: string; name: string; status: string }>();
   if (!store) return null;
-  return publicMenuForStore(d1, store);
+  const menu = await publicMenuForStore(d1, store);
+  return store.status === "onboarding" ? { ...menu, preview: true } : menu;
 }
 
 /** Cardápio público de uma Loja já conferida como `active` (checkout do Ticket 24a). */

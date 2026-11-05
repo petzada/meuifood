@@ -13,6 +13,7 @@ export function toPublicMenu(menu: PublicStoreMenu, baseUrl: string | null): Pub
   return publicMenuSchema.parse({
     slug: menu.slug,
     name: menu.name,
+    ...(menu.preview ? { state: "preview" } : {}),
     categories: menu.categories.map((category) => ({
       id: category.id,
       name: category.name,

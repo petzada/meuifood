@@ -1,6 +1,6 @@
 import { movedStorePath } from "@foode/shared/onboarding";
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { getCustomerSession } from "../../../../lib/customer-session";
 import { searchString } from "../../../../lib/slug-moved";
@@ -36,6 +36,8 @@ export default async function CheckoutPage({
 }) {
   const { slug } = await params;
   const [menu, state] = await Promise.all([getPublicMenu(slug), getStoreState(slug)]);
+  // Loja em configuração (prévia, decisão 74): sem checkout; volta ao Cardápio com a faixa.
+  if (menu.kind === "ok" && menu.menu.state === "preview") redirect(`/loja/${slug}`);
   if (menu.kind === "not_found" || state.kind === "not_found") notFound();
   const moved = menu.kind === "moved" ? menu : state.kind === "moved" ? state : null;
   if (moved) {

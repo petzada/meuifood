@@ -35,6 +35,8 @@ export type CartSheetProps = {
   onQuantity: (lineIndex: number, quantity: number) => void;
   onRemove: (lineIndex: number) => void;
   open: boolean;
+  /** Loja em configuração (decisão 74): mostra o carrinho, mas não leva ao checkout. */
+  preview?: boolean;
   /** Injetável nos testes; por padrão usa `quoteCart` com `fetch`. */
   quote?: typeof quoteCart;
 };
@@ -171,6 +173,7 @@ export function CartSheet({
   onQuantity,
   onRemove,
   open,
+  preview = false,
   quote = quoteCart,
 }: CartSheetProps) {
   const summary = useMemo(() => summarizeCart(itemsById, cart), [itemsById, cart]);
@@ -178,7 +181,8 @@ export function CartSheet({
   const { lines, storeSlug } = cart;
 
   useEffect(() => {
-    if (!open || lines.length === 0 || summary.hasInvalidLines) {
+    // Na prévia a api não cota (só Loja `active` vende): fica o subtotal local.
+    if (!open || preview || lines.length === 0 || summary.hasInvalidLines) {
       setServerQuote(null);
       return;
     }
@@ -189,14 +193,18 @@ export function CartSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, lines, storeSlug, summary.hasInvalidLines, quote]);
+  }, [open, preview, lines, storeSlug, summary.hasInvalidLines, quote]);
 
   const serverErrorIndex = serverQuote && !serverQuote.ok ? serverQuote.lineIndex : null;
   const serverErrorMessage =
     serverQuote && !serverQuote.ok ? cartLineErrorMessagePt[serverQuote.error.code] : null;
   const subtotalCents = serverQuote?.ok ? serverQuote.subtotalCents : summary.subtotalCents;
   const blocked = summary.hasInvalidLines || serverErrorIndex !== null;
-  const closedMessage = availability ? blockedCheckoutMessage(availability) : null;
+  const closedMessage = preview
+    ? "Esta Loja ainda não está recebendo pedidos."
+    : availability
+      ? blockedCheckoutMessage(availability)
+      : null;
   const gap = minimumOrderGap(subtotalCents, deliveryMinimumCents);
   const belowMinimum = gap !== null && gap.missingCents > 0;
 

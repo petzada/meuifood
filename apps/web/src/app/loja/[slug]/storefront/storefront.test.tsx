@@ -256,4 +256,23 @@ describe("Storefront: estado da Loja e checkout (24a)", () => {
     });
     expect(screen.getByText("Fechada · abre amanhã às 11:00")).toBeInTheDocument();
   });
+  it("Loja em configuração (prévia): faixa no topo; carrinho funciona, mas não leva ao checkout", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockClear();
+    render(<Storefront menu={{ ...publicMenu, state: "preview" }} />);
+    expect(
+      screen.getByText(/Esta Loja ainda não está recebendo pedidos\. Você pode ver o Cardápio/u),
+    ).toBeInTheDocument();
+    await addSoda(user);
+    await user.click(screen.getByRole("button", { name: CART_BAR }));
+    const cart = cartDialog();
+    expect(within(cart).getByText("Esta Loja ainda não está recebendo pedidos.")).toBeVisible();
+    expect(within(cart).queryByRole("link", { name: /Finalizar pedido/u })).not.toBeInTheDocument();
+    expect(
+      within(cart).getByRole("button", { name: "Pedidos indisponíveis agora" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    // Na prévia o carrinho não pede cotação à api (só Loja ativa vende).
+    const urls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(urls.some((url) => url.includes("/carrinho"))).toBe(false);
+  });
 });

@@ -118,6 +118,13 @@ export const storeSlugSchema = z
   .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u, "slug inválido");
 
 /**
+ * Estado do Cardápio público (decisão 74): `live` (Loja `active`, vende) ou `preview` (Loja em
+ * `onboarding`: o Consumidor vê o Cardápio, mas não há checkout nem Pedido). Ausente = `live`.
+ */
+export const PUBLIC_MENU_STATES = ["live", "preview"] as const;
+export type PublicMenuState = (typeof PUBLIC_MENU_STATES)[number];
+
+/**
  * Cardápio público de uma Loja, resolvido pelo Slug (nunca por `store_id` do navegador).
  * Operação (aberto/fechado) e Delivery têm contratos próprios nos Tickets 24/26.
  */
@@ -126,6 +133,7 @@ export const publicMenuSchema = z
     categories: z.array(menuCategorySchema),
     name: menuNameSchema,
     slug: storeSlugSchema,
+    state: z.enum(PUBLIC_MENU_STATES).optional(),
   })
   .superRefine((menu, ctx) => {
     const featured = menu.categories.flatMap((category) =>

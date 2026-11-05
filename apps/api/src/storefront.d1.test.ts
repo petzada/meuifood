@@ -357,6 +357,21 @@ describe("criação idempotente do Pedido", () => {
   });
 });
 
+describe("Loja em onboarding (prévia, decisão 74)", () => {
+  it("Cardápio aparece em prévia, mas cotação e Pedido continuam recusados", async () => {
+    const ops = await db.access.opsContext(fx.ops.id);
+    await db
+      .ops(ops!)
+      .changeStoreStatus(fx.storeA.id, "onboarding", { allowedFrom: ["active"], reason: "teste" });
+    await expect(storefront().create(fx.storeA.slug, createBody())).resolves.toMatchObject({
+      status: 404,
+    });
+    const { address, fulfillment, lines } = createBody();
+    const quote = await storefront().quote(fx.storeA.slug, { address, fulfillment, lines }, null);
+    expect(quote.status).toBe(404);
+  });
+});
+
 describe("página do Pedido por token", () => {
   it("token desta Loja = 200 sem telefone; outra Loja, token adulterado ou inválido = 404", async () => {
     const created = checkoutCreateResponseSchema.parse(

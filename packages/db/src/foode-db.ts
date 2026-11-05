@@ -267,9 +267,15 @@ export function createFoodeDb(d1: D1Database) {
         return row ?? null;
       },
 
-      /** Cardápio público da Loja `active` do Slug; null para inexistente ou não ativa. */
-      publicMenuBySlug(slug: string): Promise<PublicStoreMenu | null> {
-        return publicMenuBySlug(d1, slug);
+      /**
+       * Cardápio público da Loja `active` do Slug; null para inexistente ou não ativa. Com
+       * `includePreview`, a Loja em `onboarding` volta como prévia (`preview: true`, decisão 74).
+       */
+      publicMenuBySlug(
+        slug: string,
+        options?: { includePreview?: boolean },
+      ): Promise<PublicStoreMenu | null> {
+        return publicMenuBySlug(d1, slug, options);
       },
 
       /**
