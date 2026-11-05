@@ -32,6 +32,7 @@ import {
   effectivePaymentFeesOf,
   type EffectivePaymentFee,
 } from "./ops-db";
+import { createCardPaymentOps } from "./card-payment-db";
 import { createPaymentOps } from "./payment-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
@@ -328,6 +329,12 @@ export function createFoodeDb(d1: D1Database) {
      * do Pedido (token conferido) ou o webhook autenticado do provedor.
      */
     payments: createPaymentOps(d1),
+
+    /**
+     * Cartão de crédito (Ticket 27): tentativas idempotentes, cobrança, recusa e confirmação
+     * canônica com Ledger e retenções. Mesmo modelo sem StoreContext do PIX.
+     */
+    cardPayments: createCardPaymentOps(d1),
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {

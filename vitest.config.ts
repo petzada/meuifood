@@ -45,6 +45,7 @@ export default defineConfig({
         "packages/db/src/customer-db.ts",
         "packages/db/src/coupon-db.ts",
         "packages/db/src/payment-db.ts",
+        "packages/db/src/card-payment-db.ts",
         "packages/db/src/lead-db.ts",
       ],
       thresholds: {

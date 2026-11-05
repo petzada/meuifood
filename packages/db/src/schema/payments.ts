@@ -112,6 +112,11 @@ export const paymentIntents = sqliteTable(
     uniqueIndex("payment_intents_pix_order_unique")
       .on(table.storeId, table.orderId)
       .where(sql.raw(`"method" = 'pix'`)),
+    // Ticket 27 (0009): no máximo uma tentativa de Cartão viva por Pedido; `failed` (recusado)
+    // libera "Tentar outro cartão".
+    uniqueIndex("payment_intents_credit_active_unique")
+      .on(table.storeId, table.orderId)
+      .where(sql.raw(`"method" = 'credit' AND "state" IN ('creating', 'pending', 'paid')`)),
     uniqueIndex("payment_intents_provider_charge_unique").on(
       table.provider,
       table.providerChargeId,
