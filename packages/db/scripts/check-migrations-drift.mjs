@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Falha se src/schema.ts tiver mudança sem migration gerada: roda `drizzle-kit generate`
+// Falha se src/schema/*.ts tiver mudança sem migration gerada: roda `drizzle-kit generate`
 // e confere se apareceu arquivo novo/alterado em migrations/. Usado no CI.
 import { execFileSync, spawnSync } from "node:child_process";
 
@@ -20,4 +20,4 @@ if (status) {
   );
   process.exit(1);
 }
-console.log("migrations em dia com src/schema.ts.");
+console.log("migrations em dia com src/schema/*.ts.");

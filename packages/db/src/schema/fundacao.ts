@@ -3,6 +3,7 @@
 // - enums como TEXT + CHECK (o SQLite não tem tipo enum);
 // - dinheiro em centavos inteiros (INTEGER, sufixo `_cents`, CHECK >= 0);
 // - ids TEXT (UUID gerado no Worker com crypto.randomUUID()).
+// Schema partido por domínio em src/schema/*.ts (índice em src/schema/index.ts).
 // Toda mudança aqui vira migration por `pnpm db:generate` (drizzle-kit) e é aplicada por
 // `wrangler d1 migrations` (CI efêmero e workflow db-migrate).
 import { sql } from "drizzle-orm";
@@ -18,18 +19,18 @@ export const PLATFORM_ROLES = ["foode_ops"] as const;
 export type PlatformRole = (typeof PLATFORM_ROLES)[number];
 
 /** Default de coluna de data: agora, em ISO-8601 UTC com milissegundos. */
-const utcNowDefault = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
+export const utcNowDefault = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
 /**
  * CHECK que exige o formato ISO-8601 UTC com milissegundos: o valor tem de sobreviver intacto à
  * normalização do `strftime` (data inválida vira NULL e `IS` falha). Sem GLOB: o D1 limita padrões
  * LIKE/GLOB a 50 bytes ("LIKE or GLOB pattern too complex").
  */
-function utcCheck(column: string) {
+export function utcCheck(column: string) {
   return sql.raw(`strftime('%Y-%m-%dT%H:%M:%fZ', "${column}") IS "${column}"`);
 }
 
-function inList(column: string, values: readonly string[]) {
+export function inList(column: string, values: readonly string[]) {
   return `"${column}" IN (${values.map((value) => `'${value}'`).join(", ")})`;
 }
 
