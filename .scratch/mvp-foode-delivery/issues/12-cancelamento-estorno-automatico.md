@@ -21,6 +21,7 @@
 - [ ] Ledger preserva os fatos do Estorno sem apagar histórico: lançamento ainda não repassado é anulado; já repassado vira débito compensado nos lotes seguintes da Loja.
 - [ ] Testes com adapters controlados dos dois provedores, com D1 via `@cloudflare/vitest-plugin` no CI.
 - [ ] UI segue as [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) aplicáveis (CAN-01, CAN-02, T-03, T-12, PED-07) e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, regra separada da apresentação, matriz de papéis em module, testes que afirmam comportamento e não substrings de HTML).
+- [ ] Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md): Estorno total devolve também a tarifa de serviço.
 
 ## Comments
 
@@ -30,3 +31,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-OPE-3 (motivo opcional de cancelamento). Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Critérios consolidados com 63–65: P-OPE-3, CAN-01/CAN-02 e o critério de UI/`/code-review` do antigo Ticket 20 entraram no checklist; seam de testes renomeado para `@cloudflare/vitest-plugin`. O detalhe e a fila do Painel nascem no [24b](24b-painel-operacao-pedido.md).
+
+- 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
