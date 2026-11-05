@@ -7,6 +7,7 @@ import { searchString } from "../../../../../lib/slug-moved";
 import { getStoreState, loadOrderTracking } from "../../../../../lib/storefront";
 import { turnstileSiteKey } from "../../../../../lib/turnstile";
 import { PixelScripts } from "../../storefront/pixel-scripts";
+import { pixelSafeOrderPath } from "../../storefront/pixels";
 import { OrderTrackingView } from "./order-tracking";
 
 // Página do Pedido por token (Ticket 24a): lida da api pelo binding `API` a cada request;
@@ -56,7 +57,8 @@ export default async function OrderTrackingPage({
 
   return (
     <>
-      <PixelScripts pixels={pixels} />
+      {/* URL com o token: os Pixels só veem `/loja/{slug}/pedido` (Ticket 30). */}
+      <PixelScripts pixels={pixels} safePagePath={pixelSafeOrderPath(slug)} />
       <OrderTrackingView
         accountCpfMasked={accountCpfMasked}
         accountOffer={accountOffer}

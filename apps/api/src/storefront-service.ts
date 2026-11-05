@@ -20,6 +20,7 @@ import {
   orderTrackingPath,
   orderTrackingSchema,
   PHONE_LOOKUP_CONFIRM_TTL_SECONDS,
+  PHONE_LOOKUP_GLOBAL_IP_MAX,
   PHONE_LOOKUP_RATE_LIMIT,
   phoneE164Schema,
   phoneLookupConfirmRequestSchema,
@@ -526,6 +527,7 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           now.getTime() - PHONE_LOOKUP_RATE_LIMIT.windowSeconds * 1000,
         ).toISOString(),
         max: PHONE_LOOKUP_RATE_LIMIT.max,
+        globalMax: PHONE_LOOKUP_GLOBAL_IP_MAX,
       });
       if (!begin) return STORE_NOT_FOUND;
       const rateLimited = { status: 429, body: { error: "rate_limited" } } as const;

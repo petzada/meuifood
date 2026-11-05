@@ -85,16 +85,76 @@ export function pixelPayloads(event: PixelEvent): {
   }
 }
 
-/** Dispara nas redes configuradas; sem Pixel configurado, não faz nada. */
-export function firePixelEvent(win: PixelWindow, pixels: PixelIds | null, event: PixelEvent): void {
+/**
+ * Página do Pedido para os Pixels, SEM o token (Ticket 30): `/loja/{slug}/pedido`. O token da URL
+ * dá acesso a nome, endereço e itens do Pedido; Meta e Google nunca o recebem.
+ */
+export function pixelSafeOrderPath(storeSlug: string): string {
+  return `/loja/${encodeURIComponent(storeSlug)}/pedido`;
+}
+
+/**
+ * Pixel da Meta como imagem (`/tr`, a forma "noscript" documentada pela Meta) com a URL da
+ * página informada em `dl`: na página do Pedido o `fbevents.js` não carrega (ele lê
+ * `location.href`, que tem o token).
+ */
+export function metaBeaconUrl(
+  pixelId: string,
+  [eventName, params]: [string, Record<string, unknown>],
+  pageUrl: string,
+): string {
+  const url = new URL("https://www.facebook.com/tr");
+  url.searchParams.set("id", pixelId);
+  url.searchParams.set("ev", eventName);
+  url.searchParams.set("dl", pageUrl);
+  url.searchParams.set("rl", "");
+  url.searchParams.set("noscript", "1");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(
+      `cd[${key}]`,
+      typeof value === "string" || typeof value === "number"
+        ? String(value)
+        : JSON.stringify(value),
+    );
+  }
+  return url.href;
+}
+
+/** Página com segredo na URL: a URL sem segredo e como mandar a imagem do Pixel da Meta. */
+export type PixelSecretPage = { safePageUrl: string; beacon: (url: string) => void };
+
+/**
+ * Dispara nas redes configuradas; sem Pixel configurado, não faz nada. Em página com segredo na
+ * URL (`secretPage`), a Meta vai por imagem com a URL sem segredo e o Google com `page_location`.
+ */
+export function firePixelEvent(
+  win: PixelWindow,
+  pixels: PixelIds | null,
+  event: PixelEvent,
+  secretPage?: PixelSecretPage,
+): void {
   if (!pixels) return;
   const { meta, google } = pixelPayloads(event);
   try {
+    if (secretPage) {
+      if (pixels.metaPixelId) {
+        secretPage.beacon(metaBeaconUrl(pixels.metaPixelId, meta, secretPage.safePageUrl));
+      }
+      if (pixels.googleTagId && typeof win.gtag === "function") {
+        win.gtag("event", google[0], { ...google[1], page_location: secretPage.safePageUrl });
+      }
+      return;
+    }
     if (pixels.metaPixelId && typeof win.fbq === "function") win.fbq("track", ...meta);
     if (pixels.googleTagId && typeof win.gtag === "function") win.gtag("event", ...google);
   } catch {
     // Pixel de terceiro nunca derruba o Storefront.
   }
+}
+
+/** Há script de Pixel carregado nesta página (Meta ou Google)? */
+export function hasPixelScripts(win: PixelWindow): boolean {
+  return typeof win.fbq === "function" || typeof win.gtag === "function";
 }
 
 /** Chave de "compra já enviada" (uma vez por Pedido no aparelho). */

@@ -8,7 +8,8 @@
 //   depois Turnstile. A resposta do pedido é igual com ou sem conta (sem enumeração); só depois do
 //   código certo o próprio dono do telefone sabe se precisa se cadastrar.
 // - Código: aleatório uniforme, guardado como HMAC (chave derivada de BETTER_AUTH_SECRET), vale
-//   5 min, 5 tentativas, uso único, reenvio após 30 s (regras no INSERT/UPDATE de @foode/db).
+//   5 min, 5 tentativas, uso único, reenvio após 30 s e no máximo 8 códigos por telefone em 24 h
+//   (regras no INSERT/UPDATE de @foode/db; o teto diário contém a força bruta, Ticket 30).
 // - Sessão do Consumidor separada da do Painel (tabela própria; cookie `__Host-`, httpOnly,
 //   Secure, SameSite=Lax). O token só existe no cookie; o banco guarda o SHA-256.
 // Dados pessoais: telefone, CPF e código nunca vão para log/Sentry (nenhum log aqui).
@@ -30,6 +31,8 @@ import {
   type CustomerOrders,
   type CustomerSessionState,
   customerSignupSchema,
+  LOGIN_CODE_DAILY_MAX_PER_PHONE,
+  LOGIN_CODE_DAILY_WINDOW_SECONDS,
   LOGIN_CODE_LENGTH,
   LOGIN_CODE_REQUEST_IP_LIMIT,
   LOGIN_CODE_REQUEST_PHONE_LIMIT,
@@ -212,8 +215,14 @@ export function createCustomerService(deps: CustomerServiceDeps) {
         now: now.toISOString(),
         expiresAt: new Date(now.getTime() + LOGIN_CODE_TTL_SECONDS * 1000).toISOString(),
         resendSeconds: LOGIN_CODE_RESEND_SECONDS,
+        daily: {
+          max: LOGIN_CODE_DAILY_MAX_PER_PHONE,
+          windowSeconds: LOGIN_CODE_DAILY_WINDOW_SECONDS,
+        },
       });
       if (!issued.issued) {
+        // Teto diário: mesma resposta de qualquer rate limit (não revela nada do telefone).
+        if (issued.reason === "daily_limit") return failure({ error: "rate_limited" });
         return failure({ error: "resend_too_soon", retryAfterSeconds: issued.retryAfterSeconds });
       }
       const sent = await deps.whatsapp.sendText(phone, loginCodeMessage(code));

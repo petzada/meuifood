@@ -44,6 +44,7 @@ import { createAccountApi, type AccountApi } from "../conta/account-api";
 import { LoginSheet } from "../conta/login-sheet";
 import { summarizeCart } from "../storefront/cart-store";
 import { trackFunnel } from "../storefront/funnel";
+import { hasPixelScripts, type PixelWindow } from "../storefront/pixels";
 import { blockedCheckoutMessage, describeAvailability } from "../storefront/store-status";
 import { useStoreCart } from "../storefront/use-store-cart";
 import { CardFields, type CardFieldsHandle } from "./card-fields";
@@ -603,7 +604,10 @@ export function Checkout({
       forgetRememberedCustomer(window.localStorage, menu.slug);
     }
     dispatch({ type: "clear" });
-    router.push(result.trackingPath);
+    // A página do Pedido tem o token na URL: com Pixel carregado (Meta/Google acompanham troca de
+    // rota no navegador), navegação completa para os scripts não verem o token (Ticket 30).
+    if (hasPixelScripts(window as PixelWindow)) window.location.assign(result.trackingPath);
+    else router.push(result.trackingPath);
   }
 
   // Tarifa de serviço do pagamento online (decisão 71): só com PIX/Cartão escolhido, depois do

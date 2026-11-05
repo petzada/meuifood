@@ -549,8 +549,9 @@ export function createStorefrontOrderOps(d1: D1Database) {
 
     /**
      * Busca por telefone, passo 1: registra a consulta em `phone_lookups` (Loja `active` do Slug,
-     * hash do IP) e decide o rate limit por IP na MESMA escrita (conta as consultas do IP nesta
-     * Loja desde `windowStart`). null = Loja inexistente/não ativa (nada gravado).
+     * hash do IP) e decide o rate limit por IP na MESMA escrita: consultas do IP nesta Loja desde
+     * `windowStart` (`max`) e em TODAS as Lojas (`globalMax`, Ticket 30: varredura trocando de
+     * Loja). null = Loja inexistente/não ativa (nada gravado).
      */
     async phoneLookupBegin(input: {
       slug: string;
@@ -558,15 +559,21 @@ export function createStorefrontOrderOps(d1: D1Database) {
       now: string;
       windowStart: string;
       max: number;
+      globalMax: number;
     }): Promise<{ lookupId: string; rateLimited: boolean } | null> {
       if (!SLUG_PATTERN.test(input.slug)) return null;
       const lookupId = newId();
       const row = await d1
         .prepare(
           `INSERT INTO phone_lookups (id, store_id, occurred_at, ip_hash, result)
-           SELECT ?, s.id, ?, ?, CASE WHEN (SELECT COUNT(*) FROM phone_lookups l
-               WHERE l.ip_hash = ? AND l.store_id = s.id AND l.occurred_at > ?) >= ?
-             THEN 'rate_limited' ELSE 'not_found' END
+           SELECT ?, s.id, ?, ?, CASE
+               WHEN (SELECT COUNT(*) FROM phone_lookups l
+                 WHERE l.ip_hash = ? AND l.store_id = s.id AND l.occurred_at > ?) >= ?
+               THEN 'rate_limited'
+               WHEN (SELECT COUNT(*) FROM phone_lookups g
+                 WHERE g.ip_hash = ? AND g.occurred_at > ?) >= ?
+               THEN 'rate_limited'
+               ELSE 'not_found' END
            FROM stores s WHERE s.slug = ? AND s.status = 'active'
            RETURNING result`,
         )
@@ -577,6 +584,9 @@ export function createStorefrontOrderOps(d1: D1Database) {
           input.ipHash,
           input.windowStart,
           input.max,
+          input.ipHash,
+          input.windowStart,
+          input.globalMax,
           input.slug,
         )
         .first<{ result: string }>();
