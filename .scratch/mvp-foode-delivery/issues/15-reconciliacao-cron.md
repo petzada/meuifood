@@ -4,7 +4,7 @@
 
 **Blocked by:** 12 — Cancelar Pedido e executar Estorno automático.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus (geral).
 
@@ -25,3 +25,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: nenhum código P-* novo para este ticket; arquivo renomeado de `15-reconciliacao-railway-cron.md` para `15-reconciliacao-cron.md` (links atualizados) e seam de testes renomeado para `@cloudflare/vitest-plugin`.
 
 - 2026-11-05 — Implementado (branch `feat/15-api-391f`): handler `scheduled` da `api` (`src/reconciliation.ts`) com dois Cron Triggers — `*/5 * * * *` (rotina `payments`: PIX sem webhook, aberto e pago tarde em até 48 h; PIX vencido; Cartão sem desfecho; Cartão recusado e abandonado há 2 h → Cancelado `card_abandoned`, libera o Cupom; Estornos pendentes/falhos/sem confirmação) e `0 9 * * *` (06:00 em São Paulo, rotina `settlement`: liberação do Cartão confirmada no provedor move só a data de repasse prevista; divergências da obrigação de repasse viram alerta, sem corrigir dinheiro). Trava leve por rotina no D1 (`maintenance_locks`), resumo por execução nos Workers Logs e no Sentry (Cron Monitor + mensagens de falha parcial/divergência). Migration 0011 (expand): `maintenance_locks`, `ledger_release_confirmations` e `order_cancellations.system_reason` por ADD COLUMN com CHECK. Testes: `reconciliacao.d1.test.ts` invoca o handler real com D1 e provedores fakes.
+
+- 2026-11-05 — Done no PR do Ticket 15 (squash na `master`); migration `0011_reconciliacao_cron` (`maintenance_locks`, `ledger_release_confirmations`, `order_cancellations.system_reason`). Crons no `foode-api`: `*/5 * * * *` (`payments`: PIX sem webhook/vencido, Cartão sem desfecho, Cartão abandonado 2 h → Cancelado `card_abandoned`, Estornos) e `0 9 * * *` (`settlement`: liberação confirmada atualiza só a data prevista; repasse divergente → alerta Sentry `payout_divergence`). Trava por rotina no D1, resumo por execução nos Workers Logs + Cron Monitor do Sentry, sem dado pessoal. Pendências: confirmar em sandbox que Efí `paid`/AbacatePay `PAID` = crédito liberado (`TODO(15)`); cobrança que deu timeout com webhook perdido não é localizável (adapters sem busca por `custom_id`); contagens de divergência varrem tabelas inteiras (limitar por janela com volume).
