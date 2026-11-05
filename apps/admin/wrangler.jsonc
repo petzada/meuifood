@@ -17,6 +17,8 @@
   "vars": {
     "SENTRY_ENVIRONMENT": "production",
   },
+  // Turnstile: a site key pública entra no build do Next como NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  // (deploy.yml, GitHub variable TURNSTILE_SITE_KEY); não é var do Worker.
   // API: entrypoint RPC `PainelApi` da api — o único caminho do Painel até os dados.
   // O navegador nunca fala com a api. A api precisa estar publicada antes (deploy.yml).
   // WORKER_SELF_REFERENCE: revalidação do OpenNext.

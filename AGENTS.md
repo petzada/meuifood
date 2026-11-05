@@ -40,7 +40,7 @@ Os mesmos nomes de script de todos os repositórios (rode na raiz):
 | `pnpm build` | bundle da api (`wrangler --dry-run`) e `next build` de web/admin |
 | `pnpm build:cf` | build OpenNext de web/admin (o que o deploy publica) |
 | `pnpm e2e` | smoke HTTP contra os Workers publicados (`scripts/smoke.mjs`) |
-| `pnpm db:generate -- --name <nome>` | gera a migration SQL a partir de `packages/db/src/schema.ts` |
+| `pnpm db:generate -- --name <nome>` | gera a migration SQL a partir de `packages/db/src/schema/*.ts` |
 
 Gates locais (`lefthook.yml`): pre-commit formata (prettier, `stage_fixed`) e roda ESLint com cache nos arquivos em stage e o lint das migrations; pre-push roda `1_typecheck` e `2_related`. Nunca `--no-verify`.
 
@@ -72,7 +72,7 @@ O Dono autorizou em 2026-11-04 ([decisão 59](docs/decisoes/59-pivo-cloudflare-d
 
 ## Migrations (expand/contract no D1)
 
-- Mudou `packages/db/src/schema.ts`? Gere a migration com `pnpm db:generate -- --name <nome>` e commite o SQL. O CI falha se schema e migrations divergirem.
+- Mudou `packages/db/src/schema/*.ts`? Gere a migration com `pnpm db:generate -- --name <nome>` e commite o SQL. O CI falha se schema e migrations divergirem.
 - **Expand** só adiciona: tabela, índice, coluna nullable ou com `DEFAULT`.
 - **Contract** (`DROP TABLE`/`DROP COLUMN`, `RENAME`, troca de tipo — que no SQLite vira recriação de tabela `__new_*`) vai num **PR separado**, depois que nenhum código no ar usa a estrutura antiga, e começa com a linha `-- contract: <motivo>`. Sem essa linha o lint recusa.
 - Migration que já está na `master` é **imutável**: corrige-se com outra migration.
@@ -96,5 +96,5 @@ Ele aplica as migrations pendentes no `foode-prod`, roda o seed idempotente dos 
 
 - `ci.yml` (PR `opened`/`synchronize`/`reopened`/`ready_for_review` e push na `master`): lint, drift schema↔migrations, typecheck, testes sem banco, testes com D1 (workerd), build OpenNext + bundle da api, prova das migrations no D1 efêmero.
 - `deploy.yml` (push na `master` e disparo pelo `db-migrate`): build, secrets do GitHub → Workers (`--secrets-file`; vazios são omitidos — Sentry ainda sem DSN), publica api → web → admin e roda o smoke (`/health`, Storefront, login do Painel, bindings). URLs do smoke: variables `SMOKE_API_URL`/`SMOKE_WEB_URL`/`SMOKE_ADMIN_URL` ou workers.dev da conta.
-- Secrets do GitHub: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `MILLIONSEND_API_KEY`, `SENTRY_DSN_API`/`SENTRY_DSN_WEB`/`SENTRY_DSN_ADMIN` (opcionais). Variables: `D1_PROD_DATABASE_ID`, `CLOUDFLARE_ZONE_ID`, `FOODE_OPS_EMAILS`.
+- Secrets do GitHub: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `MILLIONSEND_API_KEY`, `BETTER_AUTH_SECRET` e `TURNSTILE_SECRET_KEY` (obrigatórios no deploy da api), `SENTRY_DSN_API`/`SENTRY_DSN_WEB`/`SENTRY_DSN_ADMIN` (opcionais). Variables: `D1_PROD_DATABASE_ID`, `CLOUDFLARE_ZONE_ID`, `FOODE_OPS_EMAILS`, `TURNSTILE_SITE_KEY` (widget do Painel), `BETTER_AUTH_URL` e `EMAIL_FROM` (opcionais: sobrescrevem o padrão do `apps/api/wrangler.jsonc`).
 - Custom domains (`foodedelivery.com.br`, `admin.`, `api.`) entram no Ticket 25, quando a zona ficar ativa.
