@@ -44,6 +44,7 @@
 - [ ] Testes: código (expiração, 5 tentativas, reenvio em 30 s, uso único, hash), rate limit, CPF inválido/duplicado, telefone duplicado, vínculo só na mesma Loja, login indisponível sem secrets, Cupom de boas-vindas não emitido para conta com Pedido (inclusive Guest vinculado) na Loja e emitido em outra Loja sem Pedido; Cupom com limite de usos sob concorrência, validade, dias da semana, teto %, pedido mínimo, cross-Loja. Rotas com D1 via `@cloudflare/vitest-plugin` só no CI; whatsmiau fake no limite HTTP.
 - [ ] UI segue as [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) (U1–U4, §6 criar conta) e [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) (CUP-01 a CUP-05, NAV-01, T-06, T-08) aplicáveis e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, regra separada da apresentação, matriz de papéis em module, testes que afirmam comportamento).
 - [ ] Revisão de segurança no `/code-review`: CPF e telefone fora de logs/Sentry, enumeração de contas impossível pelas mensagens de erro.
+- [ ] Checkout: se o telefone digitado tem conta Foode, oferecer "Entrar com WhatsApp"; após o código, preencher com os dados da conta em qualquer Loja; sem código, nada da conta é exibido ([68](../../../docs/decisoes/68-busca-telefone-com-conta.md)).
 
 ## Comments
 
@@ -61,3 +62,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: magic link e vínculo por e-mail saem (65); entram código WhatsApp de 4 dígitos, CPF obrigatório e único, um telefone/CPF por conta, troca de número pelo Ops, vínculo por telefone verificado na mesma Loja, P-CUP-1, P-CUP-2, P-CUP-3, P-CUP-5, P-7.1; vários endereços salvos fora (64). Bloqueio passa a ser o 24a (o 24 foi dividido).
 
 - 2026-11-05 — Decisão [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md): Cupom de boas-vindas é de primeira compra por Loja (Pedido Guest vinculado bloqueia; uso único por conta por Loja); conflito de conta orienta o suporte pelo widget de chat do Storefront quando ativo (sem canal enquanto desligado, risco aceito).
+
+- 2026-11-05 — Decisão [68](../../../docs/decisoes/68-busca-telefone-com-conta.md): busca por telefone com conta usa o código do WhatsApp e os dados da conta.
