@@ -4,7 +4,7 @@ OBJETIVO
 Executar a fila de .scratch/mvp-foode-delivery/HANDOFF.md (Tickets 21→30) até o app estar em produção na Cloudflare, pronto para testes do Dono.
 
 CONTEXTO (leia antes de agir)
-~/.claude/CLAUDE.md; AGENTS.md; CONTEXT.md; .scratch/mvp-foode-delivery/{HANDOFF.md,spec.md}; docs/decisoes/59–62; ADRs 0006–0007; o ticket da vez. Decisões fechadas: não reabra; conflito real → pergunte ao Dono.
+~/.claude/CLAUDE.md; AGENTS.md; CONTEXT.md; .scratch/mvp-foode-delivery/{HANDOFF.md,spec.md}; docs/decisoes/59–62; ADRs 0006–0007; o ticket da vez. Decisões fechadas: não reabra; conflito real → pergunte ao Dono. Os docs do pivô estão na branch docs/pivo-cloudflare-efi-391f: a branch do Ticket 21 parte dela (o PR do 21 leva os docs à master).
 
 FLUXO POR TICKET
 1. Leia o ticket e quebre em tarefas. Se houver UI e API, faça antes (ou peça a um subagente) um commit de contrato (schemas Zod em @foode/shared).
