@@ -29,6 +29,7 @@ import { PIX_KEY_TYPE_LABEL } from "../../../../lib/ops-labels";
 import { SubmitButton } from "./submit-button";
 import { ActionNotice, SectionHeading, SelectField } from "./fields";
 import { useDirtyForm } from "./use-dirty-form";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 type SlugCheck = (
@@ -408,7 +409,7 @@ function PayoutFields({
 export function CreateStoreForm({ action, checkSlug }: { action: Action; checkSlug: SlugCheck }) {
   const [state, formAction] = useActionState(action, IDLE_FORM);
   return (
-    <form action={formAction} noValidate className="space-y-10">
+    <ActionForm action={formAction} state={state} noValidate className="space-y-10">
       <section aria-labelledby="sec-loja" className="space-y-5">
         <SectionHeading
           id="sec-loja"
@@ -441,7 +442,7 @@ export function CreateStoreForm({ action, checkSlug }: { action: Action; checkSl
         </p>
         <SubmitButton>Cadastrar Loja</SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -475,7 +476,14 @@ function EditSection({
 
   return (
     <section aria-labelledby={headingId} id={id} className="scroll-mt-8">
-      <form ref={ref} action={formAction} onChange={onChange} noValidate className="space-y-5">
+      <ActionForm
+        formRef={ref}
+        action={formAction}
+        state={state}
+        onChange={onChange}
+        noValidate
+        className="space-y-5"
+      >
         <input type="hidden" name="storeId" value={storeId} />
         <input type="hidden" name="sections" value={section} />
         <SectionHeading id={headingId} description={description}>
@@ -493,7 +501,7 @@ function EditSection({
             <ActionNotice state={dirty && state.status === "success" ? IDLE_FORM : state} />
           </div>
         </div>
-      </form>
+      </ActionForm>
     </section>
   );
 }

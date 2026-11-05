@@ -38,7 +38,7 @@ function revalidateCoupons() {
 
 export const createCoupon: CouponAction = async (_prev, formData) => {
   const parsed = parseCouponCreate(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.couponCreate(caller, parsed.data));
   if (!result.ok)
     return rpcFailure(result.error, { conflict: { field: "code", message: CODE_TAKEN } });
@@ -52,7 +52,7 @@ export async function updateCoupon(
   formData: FormData,
 ): Promise<FormState> {
   const parsed = parseCouponUpdate(formData, couponId);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.couponUpdate(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {
@@ -91,7 +91,7 @@ export const deleteCoupon: CouponAction = async (_prev, formData) => {
 
 export const saveWelcomeCoupon: CouponAction = async (_prev, formData) => {
   const parsed = parseWelcomeCoupon(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira os campos destacados.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.welcomeCouponSet(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error);
   revalidateCoupons();

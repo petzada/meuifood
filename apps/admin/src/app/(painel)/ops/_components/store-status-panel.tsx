@@ -16,6 +16,7 @@ import { ONBOARDING_CHECK_LABEL, STORE_STATUS_LABEL } from "../../../../lib/ops-
 import { CheckMark, StoreStatusBadge } from "./badges";
 import { ActionNotice, SectionHeading, TextareaField } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -83,7 +84,7 @@ export function StoreStatusPanel({
       </div>
 
       {canActivate ? (
-        <form action={activateAction} className="space-y-3">
+        <ActionForm action={activateAction} state={activateState} className="space-y-3">
           <input type="hidden" name="storeId" value={storeId} />
           {missing.length > 0 ? (
             <p role="status" className="text-sm text-[var(--color-body)]">
@@ -99,7 +100,7 @@ export function StoreStatusPanel({
           <SubmitButton disabled={missing.length > 0} pendingLabel="Ativando...">
             {status === "suspended" ? "Reativar Loja" : "Ativar Loja"}
           </SubmitButton>
-        </form>
+        </ActionForm>
       ) : null}
 
       {canSuspend ? (
@@ -116,7 +117,7 @@ export function StoreStatusPanel({
             aria-labelledby={dialogTitleId}
             className="w-[min(92vw,32rem)] rounded-3xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] p-0 text-[var(--color-ink)] backdrop:bg-black/40"
           >
-            <form action={suspendAction} className="space-y-5 p-6">
+            <ActionForm action={suspendAction} state={suspendState} className="space-y-5 p-6">
               <input type="hidden" name="storeId" value={storeId} />
               <h3 id={dialogTitleId} className="text-xl font-bold tracking-[-0.02em]">
                 Suspender {storeName}?
@@ -143,7 +144,7 @@ export function StoreStatusPanel({
                 </Button>
                 <SubmitButton pendingLabel="Suspendendo...">Confirmar suspensão</SubmitButton>
               </div>
-            </form>
+            </ActionForm>
           </dialog>
         </div>
       ) : null}

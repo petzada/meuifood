@@ -194,7 +194,7 @@ describe("Slug", () => {
     });
     const state = data(await onboarding.onboardingGet(owner));
     expect(state.slug).toBe(slug);
-    expect(state.checklist.items.find((entry) => entry.item === "slug")?.done).toBe(true);
+    expect(state.checklist.items.map((entry) => entry.item)).not.toContain("slug");
     const trail = await db
       .store(
         (await db.access.storeContext({

@@ -11,6 +11,7 @@ import { BILLING_CYCLE_LABEL, CARD_MODE_HINT, CARD_MODE_LABEL } from "../../../.
 import { PeriodBadge } from "./badges";
 import { ActionNotice, SectionHeading, SelectField } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -49,7 +50,7 @@ export function PlanPanel({
         </p>
       )}
 
-      <form action={formAction} noValidate className="space-y-5">
+      <ActionForm action={formAction} state={state} noValidate className="space-y-5">
         <input type="hidden" name="storeId" value={storeId} />
         <div className="grid gap-5 md:grid-cols-2">
           <SelectField
@@ -79,7 +80,7 @@ export function PlanPanel({
         <SubmitButton variant="secondary" pendingLabel="Salvando...">
           Salvar Plano
         </SubmitButton>
-      </form>
+      </ActionForm>
 
       {planHistory.length > 1 ? (
         <details className="text-sm">
@@ -125,7 +126,7 @@ export function CardModePanel({
       >
         Modo do cartão
       </SectionHeading>
-      <form action={formAction} noValidate className="space-y-5">
+      <ActionForm action={formAction} state={state} noValidate className="space-y-5">
         <input type="hidden" name="storeId" value={storeId} />
         <fieldset className="grid gap-3 sm:grid-cols-2">
           <legend className="sr-only">Modo do cartão</legend>
@@ -161,7 +162,7 @@ export function CardModePanel({
         <SubmitButton variant="secondary" pendingLabel="Salvando...">
           Salvar modo do cartão
         </SubmitButton>
-      </form>
+      </ActionForm>
     </section>
   );
 }

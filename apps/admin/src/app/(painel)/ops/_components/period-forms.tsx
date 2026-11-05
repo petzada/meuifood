@@ -30,6 +30,7 @@ import {
 } from "../../../../lib/ops-labels";
 import { ActionNotice, SelectField } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -160,7 +161,8 @@ function RateFields({ errors }: { errors: Record<string, string> }) {
         id="fixed"
         name="fixedCents"
         label="Fixo por transação (R$)"
-        inputMode="decimal"
+        inputMode="numeric"
+        data-money=""
         placeholder="0,00"
         hint="Vazio = R$ 0,00."
         error={errors.fixedCents}
@@ -185,8 +187,9 @@ export function PaymentFeeForm({ action, storeId }: { action: Action; storeId: s
   const formId = useId();
 
   return (
-    <form
+    <ActionForm
       action={formAction}
+      state={state}
       onSubmit={confirm.onSubmit}
       onChange={confirm.cancel}
       noValidate
@@ -231,7 +234,7 @@ export function PaymentFeeForm({ action, storeId }: { action: Action; storeId: s
       </div>
       <ActionNotice state={state} />
       <ConfirmBar {...confirm} label="Cadastrar taxa" />
-    </form>
+    </ActionForm>
   );
 }
 
@@ -246,8 +249,9 @@ export function ProviderCostForm({ action }: { action: Action }) {
   });
 
   return (
-    <form
+    <ActionForm
       action={formAction}
+      state={state}
       onSubmit={confirm.onSubmit}
       onChange={confirm.cancel}
       noValidate
@@ -288,7 +292,7 @@ export function ProviderCostForm({ action }: { action: Action }) {
       </div>
       <ActionNotice state={state} />
       <ConfirmBar {...confirm} label="Cadastrar custo" />
-    </form>
+    </ActionForm>
   );
 }
 
@@ -327,8 +331,9 @@ export function EndPeriodForm({
   }
 
   return (
-    <form
+    <ActionForm
       action={formAction}
+      state={state}
       noValidate
       className="space-y-3 rounded-2xl border border-[var(--color-hairline)] p-3"
     >
@@ -355,6 +360,6 @@ export function EndPeriodForm({
           Voltar
         </button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

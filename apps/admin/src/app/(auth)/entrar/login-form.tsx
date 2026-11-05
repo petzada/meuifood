@@ -1,9 +1,10 @@
 "use client";
 
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 
+import { useFocusFirstError } from "../../../components/action-form";
 import { Field, Notice } from "../../../components/form";
 import { Turnstile, type TurnstileHandle } from "../../../components/turnstile";
 import { AUTH_FAILURE_MESSAGES, signInWithEmail } from "../../../lib/auth-client";
@@ -21,6 +22,9 @@ export function LoginForm({
 }) {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors<LoginInput>>({});
+  const toast = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusFirstError(formRef, errors);
   const [pending, setPending] = useState(false);
   const turnstile = useRef<TurnstileHandle>(null);
 
@@ -45,12 +49,13 @@ export function LoginForm({
       return;
     }
     setPending(false);
-    setErrors({ form: AUTH_FAILURE_MESSAGES[outcome.error] });
+    setErrors({});
+    toast.error(AUTH_FAILURE_MESSAGES[outcome.error]);
     turnstile.current?.reset();
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="space-y-5">
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
       <Field
         id="email"
@@ -73,7 +78,6 @@ export function LoginForm({
       />
       <Turnstile ref={turnstile} siteKey={siteKey} onToken={setTurnstileToken} />
       {errors.turnstileToken ? <Notice tone="error">{errors.turnstileToken}</Notice> : null}
-      {errors.form ? <Notice tone="error">{errors.form}</Notice> : null}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Entrando..." : "Entrar no Painel"}
       </Button>

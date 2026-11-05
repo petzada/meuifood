@@ -2,7 +2,9 @@
 // "Avisar no WhatsApp" com texto por status e link de acompanhamento, Imprimir e Cancelar com
 // confirmação que nomeia o Pedido e a consequência (T-12).
 import type { OrderDetail } from "@foode/shared/order";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 

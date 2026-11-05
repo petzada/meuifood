@@ -57,6 +57,7 @@ export {
   ONBOARDING_AUDIT_ACTIONS,
   type OnboardingAuditAction,
   type OnboardingChecklistFacts,
+  type OwnerPlanSummaryRow,
   type OwnerProfileData,
   type OwnerProfileRow,
   type PublicShowcaseRow,
@@ -80,7 +81,6 @@ export {
   type OpsStoreDetailRow,
   type OpsStoreListRow,
   type OpsUpdateStoreData,
-  saoPauloMonth,
 } from "./ops-db";
 export {
   type FulfillmentSettingsData,
@@ -179,3 +179,4 @@ export {
   type RecordPixChargeInput,
   type WebhookEventInput,
 } from "./payment-db";
+export { saoPauloMonth, saoPauloMonthRange } from "./month-orders";

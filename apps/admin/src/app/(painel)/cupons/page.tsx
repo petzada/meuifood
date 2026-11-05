@@ -1,13 +1,13 @@
 import { Button, OutlineContainer } from "@foode/ui";
 import Link from "next/link";
 
-import { Notice } from "../../../components/form";
 import { painelRead } from "../../../lib/painel-rpc";
 import { requirePermission } from "../../../lib/session";
 import { SectionHeading } from "../ops/_components/fields";
 import { CouponTable } from "./_components/coupon-table";
 import { WelcomeCouponForm } from "./_components/welcome-form";
 import { deleteCoupon, saveWelcomeCoupon, setCouponActive } from "./actions";
+import { ToastNotice } from "../../../components/toast-notice";
 
 // `/cupons` (Ticket 13, NAV-01: só o Dono, `store.settings`): Cupom de boas-vindas no topo
 // (CUP-04) e a lista de Cupons promocionais (CUP-01). Operador e Ops não chegam aqui.
@@ -39,7 +39,7 @@ export default async function CouponsPage({ searchParams }: { searchParams?: Sea
         </Button>
       </header>
 
-      {created ? <Notice tone="success">Cupom criado.</Notice> : null}
+      {created ? <ToastNotice message="Cupom criado." /> : null}
 
       <WelcomeCouponForm action={saveWelcomeCoupon} initial={overview.welcome} />
 

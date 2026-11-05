@@ -23,6 +23,9 @@ export const ROUTES: readonly RouteRule[] = [
   { prefix: "/cupons", permission: "store.settings", label: "Cupons" },
   { prefix: "/configuracoes", permission: "store.settings", label: "Configurações" },
   { prefix: "/equipe", permission: "store.members", label: "Equipe" },
+  // Plano do Dono (decisão 72): só leitura, aberto pelo banner da sidebar (sem item no menu até o
+  // Ticket 14 montar o grupo Financeiro).
+  { prefix: "/plano", permission: "store.settings" },
   // Área Ops (OPS-01): menu próprio, uma linha por área, todas sob `ops.area`.
   { prefix: "/ops", permission: "ops.area", label: "Lojas" },
   { prefix: "/ops/faixas", permission: "ops.area", label: "Faixas" },

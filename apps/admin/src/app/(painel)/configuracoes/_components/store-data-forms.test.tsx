@@ -1,7 +1,9 @@
 // Componente (decisão 67): Link personalizado verificado enquanto digita com o link resultante
 // visível e o aviso de que links antigos continuam funcionando; vitrine com contador da
 // descrição e upload de logo que recusa tipo/tamanho no cliente antes de enviar.
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -205,7 +205,6 @@ describe("vitrine (P-VIS-1..3)", () => {
 describe("checklist do Dono (ONB-01, ONB-02, ONB-04)", () => {
   const complete: OwnerChecklistFacts = {
     hasWhatsapp: true,
-    slugConfirmed: true,
     openingPeriods: 2,
     pickupEnabled: false,
     deliveryConfigured: true,
@@ -217,7 +216,6 @@ describe("checklist do Dono (ONB-01, ONB-02, ONB-04)", () => {
   it("Loja nova: tudo pendente, só Plano não acionável, sem ordem forçada", () => {
     const checklist = buildOwnerChecklist({
       hasWhatsapp: false,
-      slugConfirmed: false,
       openingPeriods: 0,
       pickupEnabled: false,
       deliveryConfigured: false,
@@ -227,13 +225,12 @@ describe("checklist do Dono (ONB-01, ONB-02, ONB-04)", () => {
     });
     expect(checklist.items.map((entry) => entry.item)).toEqual([
       "contact",
-      "slug",
       "hours",
       "fulfillment",
       "menu",
       "plan",
     ]);
-    expect(checklist.pendingCount).toBe(6);
+    expect(checklist.pendingCount).toBe(5);
     expect(checklist.items.filter((entry) => !entry.actionable).map((entry) => entry.item)).toEqual(
       ["plan"],
     );
