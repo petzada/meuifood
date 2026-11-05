@@ -1,6 +1,8 @@
 // Worker `foode-web` (Storefront, Next via OpenNext). Decisão 59.
 // Build: `pnpm build:cf` (opennextjs-cloudflare build). Deploy só pelo CI (deploy.yml).
-// Sem routes/custom domains até a zona foodedelivery.com.br ficar ativa (Ticket 25).
+// Custom domain `foodedelivery.com.br` (Ticket 25; o deploy cria o registro DNS e o certificado).
+// `www.foodedelivery.com.br` não chega aqui: Redirect Rule da zona (301 para o apex, mesmo caminho
+// e query). O workers.dev segue ligado como fallback do smoke.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "foode-web",
@@ -8,6 +10,7 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  "routes": [{ "pattern": "foodedelivery.com.br", "custom_domain": true }],
   "preview_urls": false,
   "observability": { "enabled": true },
   "assets": {

@@ -1,5 +1,5 @@
 // Origem pública do Storefront para montar links absolutos (acompanhamento do Pedido no
-// "Avisar no WhatsApp"). `STOREFRONT_ORIGIN` sobrescreve (workers.dev até o Ticket 25); o
+// "Avisar no WhatsApp"). `STOREFRONT_ORIGIN` sobrescreve (wrangler.jsonc: o domínio próprio); o
 // padrão é o domínio da decisão 15.
 export const DEFAULT_STOREFRONT_ORIGIN = "https://foodedelivery.com.br";
 

@@ -9,7 +9,10 @@ import {
 } from "./sender";
 import { inviteEmail, passwordResetEmail, setPasswordUrl } from "./templates";
 
-const ENV = { MILLIONSEND_API_KEY: "ms_chave_de_teste", EMAIL_FROM: "Foode <no-reply@foode.test>" };
+const ENV = {
+  MILLIONSEND_API_KEY: "ms_chave_de_teste",
+  EMAIL_FROM: "Foode <nao-responda@foode.test>",
+};
 const EMAIL: TransactionalEmail = {
   to: "dono@loja.test",
   subject: "Assunto",
