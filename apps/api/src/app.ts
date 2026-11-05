@@ -37,6 +37,41 @@ export const PHONE_LOOKUP_MAX_BODY_BYTES = 8 * 1024;
 /** Teto do corpo do evento do funil (`{"event":"checkout_start"}`). */
 export const FUNNEL_EVENT_MAX_BODY_BYTES = 1024;
 
+const STOREFRONT_SLUG_PATH = /^\/storefront\/lojas\/([^/]+)(\/.*)?$/u;
+
+/**
+ * 308 do link antigo para o atual (decisão 69) ou null se o caminho não é de Loja / o slug não
+ * está no histórico. `Location` relativo: mesmo caminho e query, com o slug atual.
+ */
+export async function storefrontSlugRedirect(
+  requestUrl: string,
+  currentSlugOf: (slug: string) => Promise<string | null>,
+): Promise<Response | null> {
+  const url = new URL(requestUrl);
+  const match = STOREFRONT_SLUG_PATH.exec(url.pathname);
+  if (!match) return null;
+  let slug: string;
+  try {
+    slug = decodeURIComponent(match[1]!);
+  } catch {
+    return null;
+  }
+  const current = await currentSlugOf(slug);
+  if (!current || current === slug) return null;
+  return Response.json(
+    { error: "slug_moved", currentSlug: current },
+    {
+      status: 308,
+      headers: {
+        location: `/storefront/lojas/${current}${match[2] ?? ""}${url.search}`,
+        "x-foode-current-slug": current,
+        // A Loja pode voltar ao link antigo: o redirecionamento não fica em cache.
+        "cache-control": "no-store",
+      },
+    },
+  );
+}
+
 /** Caminho sem o token da página do Pedido (dá acesso a dados pessoais): nunca em log. */
 export function redactPath(path: string): string {
   return path.replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
@@ -56,6 +91,33 @@ export function createApp() {
   });
 
   const storefront = new Hono<AppEnv>();
+
+  // Link personalizado antigo (decisão 69): toda rota `/storefront/lojas/:slug/*` que daria 404
+  // com um slug do histórico responde 308 para o MESMO caminho com o link atual (um salto, query
+  // preservada, qualquer estado da Loja). Corpo `{ error: "slug_moved", currentSlug }` e header
+  // `x-foode-current-slug`, para o web (fetch com `redirect: "manual"`) responder 308 para
+  // `/loja/{atual}{subcaminho}?{query}`. Só consulta o histórico quando a rota deu 404: custo zero
+  // no caminho feliz e sem efeito colateral (slug do histórico nunca é o atual de uma Loja).
+  storefront.use("*", async (c, next) => {
+    await next();
+    if (c.res.status !== 404) return;
+    try {
+      const redirect = await storefrontSlugRedirect(c.req.url, (slug) =>
+        c.var.db.storefront.currentSlugForHistorical(slug),
+      );
+      if (redirect) c.res = redirect;
+    } catch (error) {
+      // Falha na consulta do histórico não troca o 404 original por 500.
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          message: "slug_history_lookup_failed",
+          cause: error instanceof Error ? error.message : "desconhecido",
+        }),
+      );
+    }
+  });
+
   storefront.get("/lojas/:slug", async (c) => {
     const store = await c.var.db.storefront.publicStoreBySlug(c.req.param("slug"));
     if (!store) return c.json({ error: "store_not_found" }, 404);

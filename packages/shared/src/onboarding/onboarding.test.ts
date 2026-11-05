@@ -9,6 +9,8 @@ import {
   funnelEventRequestSchema,
   funnelReportInputSchema,
   isStoreBrandImageKey,
+  movedStorePath,
+  storefrontSlugMovedSchema,
   type OwnerChecklistFacts,
   ownerProfileInputSchema,
   slugFormatIssue,
@@ -337,5 +339,25 @@ describe("funil próprio (P-REL-4)", () => {
     expect(
       buildFunnelReport("2026-11-01", "2026-11-01", []).stepConversionBps.item_view,
     ).toBeNull();
+  });
+});
+
+describe("link antigo → atual (decisão 69)", () => {
+  it("troca só o slug e preserva subcaminho e query", () => {
+    expect(movedStorePath("/loja/antigo/pedido/abc?utm_source=qr", "atual")).toBe(
+      "/loja/atual/pedido/abc?utm_source=qr",
+    );
+    expect(movedStorePath("/loja/antigo?item=x", "atual")).toBe("/loja/atual?item=x");
+    expect(movedStorePath("/loja/antigo", "atual")).toBe("/loja/atual");
+  });
+
+  it("corpo do 308", () => {
+    expect(storefrontSlugMovedSchema.parse({ error: "slug_moved", currentSlug: "atual" })).toEqual({
+      error: "slug_moved",
+      currentSlug: "atual",
+    });
+    expect(
+      storefrontSlugMovedSchema.safeParse({ error: "slug_moved", currentSlug: "A" }).success,
+    ).toBe(false);
   });
 });

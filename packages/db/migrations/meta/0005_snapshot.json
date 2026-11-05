@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a34f05ac-3330-496d-9703-288efe6747fa",
+  "id": "936e1766-5bd4-4df3-b0dc-5b47fb00054d",
   "prevId": "f059e49b-ae92-4939-9c45-6047f2fb7ebb",
   "tables": {
     "audit_events": {
@@ -3965,6 +3965,69 @@
         "store_showcases_updated_at_utc": {
           "name": "store_showcases_updated_at_utc",
           "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "store_slug_history": {
+      "name": "store_slug_history",
+      "columns": {
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "replaced_at": {
+          "name": "replaced_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_slug_history_store_idx": {
+          "name": "store_slug_history_store_idx",
+          "columns": [
+            "store_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_slug_history_store_id_stores_id_fk": {
+          "name": "store_slug_history_store_id_stores_id_fk",
+          "tableFrom": "store_slug_history",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_slug_history_slug_format": {
+          "name": "store_slug_history_slug_format",
+          "value": "length(\"slug\") BETWEEN 3 AND 63 AND \"slug\" NOT GLOB '*[^a-z0-9-]*' AND \"slug\" NOT GLOB '-*' AND \"slug\" NOT GLOB '*-'"
+        },
+        "store_slug_history_replaced_at_utc": {
+          "name": "store_slug_history_replaced_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"replaced_at\") IS \"replaced_at\""
         }
       }
     }

@@ -26,6 +26,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuthSession, FoodeAuth } from "./auth/auth";
+import { storefrontSlugRedirect } from "./app";
 import { createOnboardingService } from "./onboarding-service";
 import { toStorefrontShowcase } from "./showcase";
 
@@ -59,6 +60,7 @@ describe("migration 0005", () => {
       "CREATE TABLE `store_funnel_daily`",
       "CREATE TABLE `store_onboarding`",
       "CREATE TABLE `store_showcases`",
+      "CREATE TABLE `store_slug_history`",
     ]);
   });
 
@@ -78,7 +80,7 @@ describe("migration 0005", () => {
       migration.indexOf("CREATE TABLE `store_onboarding`"),
     );
     expect(funnelTable).not.toMatch(/ip|phone|cookie|consumer|user/i);
-    expect(migration.match(/strftime\('%Y-%m-%dT%H:%M:%fZ', "\w+"\) IS "\w+"/g)?.length).toBe(8);
+    expect(migration.match(/strftime\('%Y-%m-%dT%H:%M:%fZ', "\w+"\) IS "\w+"/g)?.length).toBe(9);
   });
 });
 
@@ -287,5 +289,41 @@ describe("vitrine pública", () => {
       pixels: { metaPixelId: "123456789012345", googleTagId: "G-ABC1234" },
     });
     expect(JSON.stringify(showcase)).not.toContain('"stores/');
+  });
+});
+
+describe("link antigo → atual (decisão 69)", () => {
+  const lookup = async (slug: string) => (slug === "antigo" ? "atual" : null);
+
+  it("308 para o mesmo subcaminho e query com o link atual", async () => {
+    const response = await storefrontSlugRedirect(
+      "https://api.test/storefront/lojas/antigo/pedidos/tok123?item=abc&utm_source=qr",
+      lookup,
+    );
+    expect(response?.status).toBe(308);
+    expect(response?.headers.get("location")).toBe(
+      "/storefront/lojas/atual/pedidos/tok123?item=abc&utm_source=qr",
+    );
+    expect(response?.headers.get("x-foode-current-slug")).toBe("atual");
+    expect(response?.headers.get("cache-control")).toBe("no-store");
+    expect(await response?.json()).toEqual({ error: "slug_moved", currentSlug: "atual" });
+  });
+
+  it("raiz da Loja também redireciona", async () => {
+    const response = await storefrontSlugRedirect(
+      "https://api.test/storefront/lojas/antigo",
+      lookup,
+    );
+    expect(response?.headers.get("location")).toBe("/storefront/lojas/atual");
+  });
+
+  it("slug fora do histórico, caminho fora de Loja ou escape inválido = null", async () => {
+    await expect(
+      storefrontSlugRedirect("https://api.test/storefront/lojas/outro/estado", lookup),
+    ).resolves.toBeNull();
+    await expect(storefrontSlugRedirect("https://api.test/media/x", lookup)).resolves.toBeNull();
+    await expect(
+      storefrontSlugRedirect("https://api.test/storefront/lojas/%E0%A4%A/estado", lookup),
+    ).resolves.toBeNull();
   });
 });

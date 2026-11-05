@@ -325,17 +325,25 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
     /** O Slug está livre? (sem reservar; a gravação confere de novo pelo UNIQUE). */
     async slugStatus(slug: string): Promise<"current" | "taken" | "free"> {
       const row = await d1
-        .prepare(`SELECT id FROM stores WHERE slug = ?`)
+        .prepare(
+          `SELECT id AS storeId, 'current' AS kind FROM stores WHERE slug = ?1
+           UNION ALL
+           SELECT store_id AS storeId, 'history' AS kind FROM store_slug_history WHERE slug = ?1
+           LIMIT 1`,
+        )
         .bind(slug)
-        .first<{ id: string }>();
+        .first<{ storeId: string; kind: "current" | "history" }>();
       if (!row) return "free";
-      return row.id === storeId ? "current" : "taken";
+      if (row.storeId !== storeId) return "taken";
+      // Link antigo desta Loja: pode voltar a ser o atual (sai do histórico).
+      return row.kind === "current" ? "current" : "free";
     },
 
     /**
-     * Troca (ou confirma) o Slug: UPDATE + Slug confirmado + auditoria `before`/`after` num batch.
-     * Slug de outra Loja = `slug_unavailable` (UNIQUE), nada gravado. Sem histórico/redirect:
-     * links e QR antigos param de funcionar (aviso na UI, LNK-02).
+     * Troca (ou confirma) o Link personalizado (decisão 69), num único batch: reserva (link no
+     * histórico de OUTRA Loja = `slug_unavailable`), tira o novo do histórico desta Loja (voltar a
+     * um link antigo), grava o anterior no histórico, UPDATE da Loja, Slug confirmado e auditoria
+     * `before`/`after`. Slug atual de outra Loja = `slug_unavailable` (UNIQUE). Nada gravado em erro.
      */
     async setSlug(slug: string): Promise<void> {
       requireOwner();
@@ -347,8 +355,13 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
       if (!current) throw new FoodeDbError("forbidden");
       const now = utcNow();
       const changed = current.slug !== slug;
+      const guard = {
+        sql: `EXISTS (SELECT 1 FROM stores WHERE id = ? AND slug = ?)`,
+        params: [storeId, current.slug],
+      };
       try {
         await d1.batch([
+          ...(changed ? slugChangeStatements(d1, storeId, current.slug, slug, now, guard) : []),
           d1
             .prepare(`UPDATE stores SET slug = ?, updated_at = ? WHERE id = ? AND slug = ?`)
             .bind(slug, now, storeId, current.slug),
@@ -366,6 +379,18 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
         if (isUniqueViolation(error)) throw new FoodeDbError("slug_unavailable");
         throw error;
       }
+    },
+
+    /** Links antigos desta Loja (mais recente primeiro). */
+    async slugHistory(): Promise<{ slug: string; replacedAt: string }[]> {
+      const { results } = await d1
+        .prepare(
+          `SELECT slug, replaced_at AS replacedAt FROM store_slug_history
+           WHERE store_id = ? ORDER BY replaced_at DESC, slug`,
+        )
+        .bind(storeId)
+        .all<{ slug: string; replacedAt: string }>();
+      return results;
     },
 
     /**
@@ -508,6 +533,70 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
       return results;
     },
   };
+}
+
+/**
+ * Reserva de link antigo (decisão 69): falha com UNIQUE se `slug` está no histórico de OUTRA Loja
+ * (reinsere a própria linha existente, o que viola a PK). Sem linha alheia, não faz nada. Vai
+ * no mesmo batch da escrita do Slug (criação ou troca), antes do UPDATE/INSERT em `stores`.
+ */
+export function slugReservationGuard(
+  d1: D1Database,
+  storeId: string,
+  slug: string,
+): D1PreparedStatement {
+  return d1
+    .prepare(
+      `INSERT INTO store_slug_history (slug, store_id, replaced_at)
+       SELECT slug, store_id, replaced_at FROM store_slug_history WHERE slug = ? AND store_id <> ?`,
+    )
+    .bind(slug, storeId);
+}
+
+/**
+ * Statements de troca de Link personalizado `from` → `to` (decisão 69), para o mesmo batch do
+ * UPDATE em `stores`: reserva, tira `to` do histórico desta Loja (voltar a um link antigo) e grava
+ * `from` no histórico. `guard` (SQL + params) condiciona as escritas ao mesmo estado que o UPDATE
+ * confere, para nada ficar gravado se o UPDATE não passar.
+ */
+export function slugChangeStatements(
+  d1: D1Database,
+  storeId: string,
+  from: string,
+  to: string,
+  now: string,
+  guard: { sql: string; params: unknown[] },
+): D1PreparedStatement[] {
+  return [
+    slugReservationGuard(d1, storeId, to),
+    d1
+      .prepare(`DELETE FROM store_slug_history WHERE slug = ? AND store_id = ? AND ${guard.sql}`)
+      .bind(to, storeId, ...guard.params),
+    d1
+      .prepare(
+        `INSERT INTO store_slug_history (slug, store_id, replaced_at) SELECT ?, ?, ? WHERE ${guard.sql}`,
+      )
+      .bind(from, storeId, now, ...guard.params),
+  ];
+}
+
+/**
+ * Link atual da Loja dona de um link antigo (Storefront, decisão 69): um salto só, qualquer
+ * estado da Loja. null = não é link antigo.
+ */
+export async function currentSlugForHistorical(
+  d1: D1Database,
+  slug: string,
+): Promise<string | null> {
+  if (!SLUG_PATTERN.test(slug)) return null;
+  const row = await d1
+    .prepare(
+      `SELECT s.slug AS slug FROM store_slug_history h JOIN stores s ON s.id = h.store_id
+       WHERE h.slug = ?`,
+    )
+    .bind(slug)
+    .first<{ slug: string }>();
+  return row?.slug ?? null;
 }
 
 /** Respostas de perfil da Loja (Dono da Loja e Ops); null = não respondidas. */

@@ -17,6 +17,7 @@ import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
 import { FoodeDbError } from "./errors";
 import {
   createOnboardingOps,
+  currentSlugForHistorical,
   publicShowcaseOf,
   type PublicShowcaseRow,
   recordFunnelEvent,
@@ -280,6 +281,14 @@ export function createFoodeDb(d1: D1Database) {
        */
       showcaseOf(storeId: string): Promise<PublicShowcaseRow | null> {
         return publicShowcaseOf(d1, storeId);
+      },
+
+      /**
+       * Link personalizado antigo (decisão 69): o link atual da Loja dona, para o 308 do
+       * Storefront (um salto, qualquer estado da Loja); null = não é link antigo.
+       */
+      currentSlugForHistorical(slug: string): Promise<string | null> {
+        return currentSlugForHistorical(d1, slug);
       },
 
       /** Funil próprio (Ticket 28): +1 no contador do dia para a Loja `active` do Slug. */

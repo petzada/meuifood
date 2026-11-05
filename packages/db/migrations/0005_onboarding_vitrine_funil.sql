@@ -58,3 +58,14 @@ CREATE TABLE `store_showcases` (
 	CONSTRAINT "store_showcases_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at"),
 	CONSTRAINT "store_showcases_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
 );
+--> statement-breakpoint
+CREATE TABLE `store_slug_history` (
+	`slug` text PRIMARY KEY NOT NULL,
+	`store_id` text NOT NULL,
+	`replaced_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "store_slug_history_slug_format" CHECK(length("slug") BETWEEN 3 AND 63 AND "slug" NOT GLOB '*[^a-z0-9-]*' AND "slug" NOT GLOB '-*' AND "slug" NOT GLOB '*-'),
+	CONSTRAINT "store_slug_history_replaced_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "replaced_at") IS "replaced_at")
+);
+--> statement-breakpoint
+CREATE INDEX `store_slug_history_store_idx` ON `store_slug_history` (`store_id`);

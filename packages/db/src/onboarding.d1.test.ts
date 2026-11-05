@@ -93,3 +93,31 @@ describe("escritas do Dono", () => {
     await expect(ownerA.setPixels({ metaPixelId: "123", googleTagId: null })).rejects.toThrow();
   });
 });
+
+describe("histórico de Link personalizado (decisão 69)", () => {
+  it("troca na mesma escrita; reserva entre Lojas; voltar ao antigo", async () => {
+    const ownerA = db.store(await contextOf(fx.ownerA.id, fx.storeA.id)).onboarding();
+    const ownerB = db.store(await contextOf(fx.ownerB.id, fx.storeB.id)).onboarding();
+    const original = fx.storeA.slug;
+    const next = `novo-${crypto.randomUUID().slice(0, 8)}`;
+    await ownerA.setSlug(next);
+    expect(await db.storefront.currentSlugForHistorical(original)).toBe(next);
+    expect(await db.storefront.currentSlugForHistorical(next)).toBeNull();
+    expect(await ownerB.slugStatus(original)).toBe("taken");
+    expect(await ownerA.slugStatus(original)).toBe("free");
+    await expect(ownerB.setSlug(original)).rejects.toMatchObject({ code: "slug_unavailable" });
+    expect((await ownerB.settings()).slug).toBe(fx.storeB.slug);
+    expect(await ownerB.slugHistory()).toEqual([]);
+
+    await ownerA.setSlug(original);
+    expect((await ownerA.slugHistory()).map((row) => row.slug)).toEqual([next]);
+    expect(await db.storefront.currentSlugForHistorical(original)).toBeNull();
+    expect(await db.storefront.currentSlugForHistorical(next)).toBe(original);
+  });
+
+  it("confirmar o mesmo link não grava histórico", async () => {
+    const ownerA = db.store(await contextOf(fx.ownerA.id, fx.storeA.id)).onboarding();
+    await ownerA.setSlug(fx.storeA.slug);
+    expect(await ownerA.slugHistory()).toEqual([]);
+  });
+});

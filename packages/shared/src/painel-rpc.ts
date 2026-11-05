@@ -402,12 +402,17 @@ export interface PainelRpc {
   /** Dados da Loja (contato, endereço, cadastro do Ops só leitura), vitrine e Pixel. */
   storeSettingsGet(caller: PainelCaller): Promise<RpcResult<OwnerStoreSettings>>;
 
-  /** Disponibilidade do Slug enquanto digita (não reserva); rate limit = `rate_limited`. */
+  /**
+   * Disponibilidade do Link personalizado enquanto digita (não reserva); considera os links antigos
+   * de outras Lojas (`taken`); link antigo da própria Loja = disponível. Rate limit = `rate_limited`.
+   */
   storeCheckSlug(caller: PainelCaller, input: StoreSlugInput): Promise<RpcResult<SlugAvailability>>;
 
   /**
    * Troca/confirma o Slug (marca o item "Slug" do checklist). Formato ou reservado =
-   * `invalid_input`; de outra Loja = `conflict`. Links e QR antigos param de funcionar.
+   * `invalid_input`; atual OU antigo (histórico) de outra Loja = `conflict` (reserva, decisão 69).
+   * O anterior vai para o histórico e continua funcionando (308 no Storefront); voltar a um link
+   * antigo da própria Loja o tira do histórico.
    */
   storeSetSlug(
     caller: PainelCaller,

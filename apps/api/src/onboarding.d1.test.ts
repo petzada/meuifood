@@ -207,12 +207,117 @@ describe("Slug", () => {
       action: "store.slug_changed",
       metadata: { before: { slug: fx.storeA.slug }, after: { slug } },
     });
-    // O Slug antigo deixa de responder no Storefront.
+    // O link antigo continua funcionando: 308 para o atual (decisão 69).
     const old = await createApp().fetch(
       new Request(`${API}/storefront/lojas/${fx.storeA.slug}/estado`),
       testEnv(),
     );
-    expect(old.status).toBe(404);
+    expect(old.status).toBe(308);
+    expect(old.headers.get("location")).toBe(`/storefront/lojas/${slug}/estado`);
+  });
+});
+
+describe("Link personalizado: histórico e redirecionamento (decisão 69)", () => {
+  const get = (path: string, init?: RequestInit) =>
+    createApp().fetch(new Request(`${API}${path}`, init), testEnv());
+  const fresh = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+
+  it("troca grava o anterior; um salto só depois de várias trocas; query e subcaminho preservados", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const original = fx.storeA.slug;
+    const second = fresh("segundo");
+    const third = fresh("terceiro");
+    data(await onboarding.storeSetSlug(owner, { slug: second }));
+    data(await onboarding.storeSetSlug(owner, { slug: third }));
+
+    for (const old of [original, second]) {
+      const response = await get(
+        `/storefront/lojas/${old}/pedidos/token-qualquer?item=abc&utm_source=qr`,
+      );
+      expect(response.status).toBe(308);
+      expect(response.headers.get("location")).toBe(
+        `/storefront/lojas/${third}/pedidos/token-qualquer?item=abc&utm_source=qr`,
+      );
+      expect(response.headers.get("x-foode-current-slug")).toBe(third);
+      expect(await response.json()).toEqual({ error: "slug_moved", currentSlug: third });
+    }
+    // POST também (308 preserva método e corpo).
+    const event = await get(`/storefront/lojas/${original}/eventos`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": randomIp() },
+      body: JSON.stringify({ event: "visit" }),
+    });
+    expect(event.status).toBe(308);
+    // Link atual responde normalmente (sem redirecionar) e slug desconhecido segue 404.
+    expect((await get(`/storefront/lojas/${third}`)).status).toBe(200);
+    expect((await get(`/storefront/lojas/${fresh("nunca-usado")}/estado`)).status).toBe(404);
+  });
+
+  it("link antigo fica reservado: outra Loja (Dono ou Ops) recebe conflict", async () => {
+    const ownerA = await loginAs(fx.ownerA);
+    const original = fx.storeA.slug;
+    data(await onboarding.storeSetSlug(ownerA, { slug: fresh("novo-a") }));
+
+    const ownerB = await loginAs(fx.ownerB);
+    expect(data(await onboarding.storeCheckSlug(ownerB, { slug: original }))).toMatchObject({
+      available: false,
+      reason: "taken",
+    });
+    await expect(onboarding.storeSetSlug(ownerB, { slug: original })).resolves.toEqual({
+      ok: false,
+      error: "conflict",
+    });
+    const opsService = createOpsService({ db, auth });
+    const opsCaller = await loginAs(fx.ops);
+    await expect(
+      opsService.opsUpdateStore(opsCaller, { storeId: fx.storeB.id, slug: original }),
+    ).resolves.toEqual({ ok: false, error: "conflict" });
+    await expect(
+      opsService.opsCreateStore(opsCaller, {
+        slug: original,
+        name: "Concorrente",
+        ...storeProfileFixture(),
+      }),
+    ).resolves.toEqual({ ok: false, error: "conflict" });
+    // Nada mudou na Loja B e o antigo ainda aponta para A.
+    expect(data(await onboarding.storeSettingsGet(ownerB)).slug).toBe(fx.storeB.slug);
+    expect((await get(`/storefront/lojas/${original}/estado`)).status).toBe(308);
+  });
+
+  it("voltar a um link antigo o tira do histórico; o intermediário passa a redirecionar", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const original = fx.storeA.slug;
+    const middle = fresh("meio");
+    data(await onboarding.storeSetSlug(owner, { slug: middle }));
+    expect(data(await onboarding.storeCheckSlug(owner, { slug: original })).available).toBe(true);
+    data(await onboarding.storeSetSlug(owner, { slug: original }));
+
+    expect((await get(`/storefront/lojas/${original}`)).status).toBe(200);
+    const fromMiddle = await get(`/storefront/lojas/${middle}`);
+    expect(fromMiddle.status).toBe(308);
+    expect(fromMiddle.headers.get("location")).toBe(`/storefront/lojas/${original}`);
+    const context = await db.access.storeContext({ userId: fx.ownerA.id, storeId: fx.storeA.id });
+    expect((await db.store(context!).onboarding().slugHistory()).map((row) => row.slug)).toEqual([
+      middle,
+    ]);
+  });
+
+  it("Ops troca o link: o anterior também vai para o histórico; Loja suspensa continua redirecionando", async () => {
+    const opsService = createOpsService({ db, auth });
+    const opsCaller = await loginAs(fx.ops);
+    const original = fx.storeB.slug;
+    const next = fresh("ops-b");
+    data(await opsService.opsUpdateStore(opsCaller, { storeId: fx.storeB.id, slug: next }));
+    const ops = await db.access.opsContext(fx.ops.id);
+    await db
+      .ops(ops!)
+      .changeStoreStatus(fx.storeB.id, "suspended", { allowedFrom: ["active"], reason: "teste" });
+    const response = await get(`/storefront/lojas/${original}/estado`);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(`/storefront/lojas/${next}/estado`);
+    // Isolamento: o histórico de B não aparece para A.
+    const contextA = await db.access.storeContext({ userId: fx.ownerA.id, storeId: fx.storeA.id });
+    expect(await db.store(contextA!).onboarding().slugHistory()).toEqual([]);
   });
 });
 

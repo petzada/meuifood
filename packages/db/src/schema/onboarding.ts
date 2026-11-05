@@ -7,10 +7,14 @@
 //   (`stores/{store_id}/brand/...`), Instagram e IDs de Pixel. Sem linha = vitrine vazia.
 // - `store_onboarding` (1:1, interno): respostas de perfil (uso interno da Foode; Dono da Loja e
 //   Ops leem, Storefront nunca), Slug confirmado pelo Dono e "Loja pronta" já vista.
+// - `store_slug_history` (decisão 69): Links personalizados antigos de cada Loja. O link antigo é
+//   único globalmente (PK) e fica reservado à Loja: o Storefront responde 308 para o link atual
+//   e nenhuma outra Loja pode usá-lo. Invariante (código de @foode/db, na mesma escrita): um slug
+//   nunca está ao mesmo tempo em `stores.slug` e aqui.
 // - `store_funnel_daily`: contadores agregados por Loja, dia civil de São Paulo e evento. Sem
 //   dado pessoal (nenhum IP, telefone, cookie ou id de Consumidor).
 import { sql } from "drizzle-orm";
-import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { inList, stores, users, utcCheck, utcNowDefault } from "./fundacao";
 
@@ -155,6 +159,28 @@ export const storeOnboarding = sqliteTable(
   ],
 );
 
+export const storeSlugHistory = sqliteTable(
+  "store_slug_history",
+  {
+    slug: text("slug").primaryKey(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id),
+    /** Quando deixou de ser o link atual. */
+    replacedAt: text("replaced_at").notNull().default(utcNowDefault),
+  },
+  (table) => [
+    index("store_slug_history_store_idx").on(table.storeId),
+    check(
+      "store_slug_history_slug_format",
+      sql.raw(
+        `length("slug") BETWEEN 3 AND 63 AND "slug" NOT GLOB '*[^a-z0-9-]*' AND "slug" NOT GLOB '-*' AND "slug" NOT GLOB '*-'`,
+      ),
+    ),
+    check("store_slug_history_replaced_at_utc", utcCheck("replaced_at")),
+  ],
+);
+
 export const storeFunnelDaily = sqliteTable(
   "store_funnel_daily",
   {
@@ -178,4 +204,5 @@ export const storeFunnelDaily = sqliteTable(
 
 export type StoreShowcaseRow = typeof storeShowcases.$inferSelect;
 export type StoreOnboardingRow = typeof storeOnboarding.$inferSelect;
+export type StoreSlugHistoryRow = typeof storeSlugHistory.$inferSelect;
 export type StoreFunnelDailyRow = typeof storeFunnelDaily.$inferSelect;

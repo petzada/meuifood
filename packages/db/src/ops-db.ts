@@ -16,7 +16,12 @@
 import type { OpsContext } from "./context";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError, isUniqueViolation } from "./errors";
-import { ownerProfileOf, type OwnerProfileRow } from "./onboarding-db";
+import {
+  ownerProfileOf,
+  type OwnerProfileRow,
+  slugChangeStatements,
+  slugReservationGuard,
+} from "./onboarding-db";
 import type { BILLING_CYCLES, CardMode, StoreStatus } from "./schema";
 
 type BillingCycle = (typeof BILLING_CYCLES)[number];
@@ -663,6 +668,13 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
       ),
     ];
     if (profile) statements.push(upsertProfile(before.id, profile, now, guard));
+    // Decisão 69: troca de Link personalizado pelo Ops também guarda o anterior e respeita a
+    // reserva de links antigos de outras Lojas (UNIQUE → `slug_unavailable`).
+    if (next.slug !== before.slug) {
+      statements.unshift(
+        ...slugChangeStatements(d1, before.id, before.slug, next.slug, now, guard),
+      );
+    }
     // Por último: muda `updated_at` (a versão que os passos anteriores conferiram).
     statements.push(
       d1
@@ -684,7 +696,7 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
     try {
       results = await d1.batch(statements);
     } catch (error) {
-      // O perfil é UPSERT; o único UNIQUE que sobra no batch é o Slug.
+      // O perfil é UPSERT; os UNIQUE que sobram no batch são do Slug (atual ou histórico).
       if (isUniqueViolation(error)) throw new FoodeDbError("slug_unavailable");
       throw error;
     }
@@ -763,6 +775,8 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
       };
       try {
         await d1.batch([
+          // Link antigo reservado a outra Loja (decisão 69) = UNIQUE → `slug_unavailable`.
+          slugReservationGuard(d1, storeId, input.slug),
           d1
             .prepare(
               `INSERT INTO stores (id, slug, name, status, created_at, updated_at)

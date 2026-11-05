@@ -29,8 +29,9 @@ export const storeSlugInputSchema = z.object({ slug: storeSlugSchema });
 export type StoreSlugInput = z.input<typeof storeSlugInputSchema>;
 
 /**
- * Verificação de disponibilidade enquanto o Dono digita (não reserva nada). A gravação confere
- * de novo (`stores_slug_unique`): corrida = `conflict`.
+ * Verificação de disponibilidade enquanto o Dono digita (não reserva nada). `taken` inclui link
+ * antigo de outra Loja (reservado, decisão 69); link antigo da própria Loja volta como disponível.
+ * A gravação confere de novo na mesma escrita: corrida = `conflict`.
  */
 export type SlugAvailability =
   | { slug: string; available: true; url: string }
@@ -46,6 +47,30 @@ export function slugFormatIssue(raw: string): {
   if (parsed.success) return { slug: parsed.data, issue: null };
   const reserved = parsed.error.issues.some((issue) => issue.code === "custom");
   return { slug, issue: reserved ? "reserved" : "invalid" };
+}
+
+// ---- Link antigo → link atual (decisão 69) -----------------------------------------------
+
+/**
+ * Toda rota `/storefront/lojas/{link-antigo}/...` da api responde 308 com `Location` =
+ * `/storefront/lojas/{atual}/...` (mesmo subcaminho e query), este header e o corpo
+ * `storefrontSlugMovedSchema`. O web chama com `redirect: "manual"` e responde 308 para
+ * `/loja/{atual}{subcaminho}?{query}` (`movedStorePath`). Um salto só; vale para Loja suspensa.
+ */
+export const STOREFRONT_CURRENT_SLUG_HEADER = "x-foode-current-slug";
+
+export const storefrontSlugMovedSchema = z.object({
+  error: z.literal("slug_moved"),
+  currentSlug: z.string().regex(/^(?=.{3,63}$)[a-z0-9]+(?:-[a-z0-9]+)*$/u),
+});
+export type StorefrontSlugMoved = z.infer<typeof storefrontSlugMovedSchema>;
+
+/**
+ * Caminho público com o link atual: troca o 1º segmento depois de `/loja/` e preserva subcaminho
+ * e query. Ex.: `/loja/antigo/pedido/abc?utm=x` → `/loja/atual/pedido/abc?utm=x`.
+ */
+export function movedStorePath(pathWithQuery: string, currentSlug: string): string {
+  return pathWithQuery.replace(/^\/loja\/[^/?#]+/u, `/loja/${currentSlug}`);
 }
 
 // ---- Contato e endereço (CFG-04, P-CFG-4) ------------------------------------------------
