@@ -3,7 +3,16 @@
 // - entrypoint RPC `PainelApi` (src/painel.ts): só por service binding (admin).
 // Deploy só pelo CI (.github/workflows/deploy.yml). Sem routes/custom domains até a zona
 // foodedelivery.com.br ficar ativa (Ticket 25): publica em workers.dev.
-// Segredos (SENTRY_DSN, MILLIONSEND_API_KEY) via `wrangler secret bulk` no deploy.
+// Segredos (SENTRY_DSN, MILLIONSEND_API_KEY, BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) chegam no
+// deploy (`--secrets-file`, sincronizados dos secrets do GitHub).
+// Vars de Auth (Ticket 22): os valores abaixo são o padrão; o deploy sobrescreve com as GitHub
+// variables BETTER_AUTH_URL e EMAIL_FROM quando existirem (`--var`).
+// - BETTER_AUTH_URL: URL pública do Painel (o admin repassa /api/auth/*): base dos links e origem
+//   confiável. Hoje o workers.dev do admin; vira o domínio do Painel no Ticket 25.
+// - EMAIL_FROM: remetente da MillionSend. Enquanto foodedelivery.com.br não estiver verificado lá,
+//   o envio falha de forma controlada (log `email_send_failed` com o status, sem dados pessoais).
+// CPU: o hash de senha padrão do Better Auth (scrypt nativo) custa ~100 ms por login; o teto do
+// Workers Paid (30 s de CPU por request) basta, sem `limits.cpu_ms`.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "foode-api",
@@ -15,6 +24,8 @@
   "observability": { "enabled": true },
   "vars": {
     "ENVIRONMENT": "production",
+    "BETTER_AUTH_URL": "https://foode-admin.marciopetigrosso.workers.dev",
+    "EMAIL_FROM": "Foode <no-reply@foodedelivery.com.br>",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).
