@@ -1,12 +1,18 @@
 "use client";
 
-// Equipe do Dono (EQP-01): membros da Loja ativa, convite de Operador (Turnstile) e remoção com
-// confirmação que nomeia a pessoa e a consequência (T-12). Feedback no Toast (decisão 72).
+// Equipe do Dono (EQP-01): membros da Loja ativa, convite de Operador (Turnstile) em modal de
+// cadastro (decisão 74) e remoção com confirmação que nomeia a pessoa e a consequência (T-12).
+// Feedback no Toast (decisão 72).
 import type { StoreMemberView } from "@foode/shared";
-import { Badge, Button, OutlineContainer } from "@foode/ui";
-import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { Badge, Button } from "@foode/ui";
+import { useActionState, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ActionForm } from "../../../../components/action-form";
+import {
+  CadastroFooter,
+  CadastroModal,
+  StepNavButton,
+} from "../../../../components/cadastro-modal";
 import { Field } from "../../../../components/form";
 import { OverlayDialog } from "../../../../components/overlay-dialog";
 import { Turnstile, type TurnstileHandle } from "../../../../components/turnstile";
@@ -25,26 +31,51 @@ function displayName(member: StoreMemberView): string {
   return member.name.trim() || member.email;
 }
 
-function InviteForm({ action, siteKey }: { action: Action; siteKey: string }) {
+function InviteModal({
+  action,
+  onClose,
+  siteKey,
+}: {
+  action: Action;
+  onClose: () => void;
+  siteKey: string;
+}) {
   const [state, formAction] = useActionState(action, IDLE_FORM);
   const [token, setToken] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
   const turnstile = useRef<TurnstileHandle>(null);
-  const headingId = useId();
 
-  // Cada token vale uma verificação: depois de qualquer resposta, pede outro.
+  // Cada token vale uma verificação: depois de qualquer resposta, pede outro. Sucesso fecha (o
+  // Toast confirma o envio).
   useEffect(() => {
     if (state.status !== "idle") turnstile.current?.reset();
-  }, [state]);
+    if (state.status === "success") onClose();
+  }, [onClose, state]);
 
   return (
-    <OutlineContainer as="section" aria-labelledby={headingId} className="space-y-5 p-6">
-      <SectionHeading
-        id={headingId}
-        description="A pessoa recebe por e-mail um link para definir a senha e entrar no Painel desta Loja."
+    <CadastroModal
+      open
+      size="md"
+      title="Convidar Operador"
+      description="A pessoa recebe por e-mail um link para definir a senha e entrar no Painel desta Loja."
+      dirty={dirty}
+      onClose={onClose}
+    >
+      <ActionForm
+        action={formAction}
+        state={state}
+        noValidate
+        resetOnSuccess={false}
+        onChange={(event) => {
+          const form = event.currentTarget as HTMLFormElement;
+          setDirty(
+            Array.from(form.querySelectorAll<HTMLInputElement>("input:not([type=hidden])")).some(
+              (input) => input.value !== "",
+            ),
+          );
+        }}
+        className="space-y-5"
       >
-        Convidar Operador
-      </SectionHeading>
-      <ActionForm action={formAction} state={state} noValidate className="space-y-5">
         <input type="hidden" name="turnstileToken" value={token ?? ""} />
         <div className="grid gap-5 md:grid-cols-2">
           <Field
@@ -54,6 +85,7 @@ function InviteForm({ action, siteKey }: { action: Action; siteKey: string }) {
             label="E-mail"
             inputMode="email"
             autoComplete="off"
+            autoFocus
             error={state.errors.email}
           />
           <Field
@@ -67,9 +99,14 @@ function InviteForm({ action, siteKey }: { action: Action; siteKey: string }) {
         </div>
         <Turnstile ref={turnstile} siteKey={siteKey} onToken={setToken} />
         <ActionNotice state={state} />
-        <SubmitButton pendingLabel="Enviando...">Convidar Operador</SubmitButton>
+        <CadastroFooter>
+          <StepNavButton variant="text" onClick={onClose}>
+            Cancelar
+          </StepNavButton>
+          <SubmitButton pendingLabel="Enviando...">Enviar convite</SubmitButton>
+        </CadastroFooter>
       </ActionForm>
-    </OutlineContainer>
+    </CadastroModal>
   );
 }
 
@@ -128,13 +165,20 @@ export function TeamPanel({
   siteKey: string;
 }) {
   const [removing, setRemoving] = useState<StoreMemberView | null>(null);
+  const [inviting, setInviting] = useState(false);
   const listId = useId();
   const close = () => setRemoving(null);
+  const closeInvite = useCallback(() => setInviting(false), []);
 
   return (
     <div className="space-y-8">
       <section aria-labelledby={listId} className="space-y-4">
-        <SectionHeading id={listId}>Quem tem acesso</SectionHeading>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <SectionHeading id={listId}>Quem tem acesso</SectionHeading>
+          <Button type="button" aria-haspopup="dialog" onClick={() => setInviting(true)}>
+            Convidar Operador
+          </Button>
+        </div>
         {members.length === 0 ? (
           <EmptyState title="Ninguém além de você ainda.">
             Convide um Operador para ajudar na fila de Pedidos.
@@ -178,7 +222,7 @@ export function TeamPanel({
         )}
       </section>
 
-      <InviteForm action={invite} siteKey={siteKey} />
+      {inviting ? <InviteModal action={invite} onClose={closeInvite} siteKey={siteKey} /> : null}
 
       {removing ? <RemoveDialog action={remove} member={removing} onClose={close} /> : null}
     </div>

@@ -10,14 +10,13 @@ import {
   type CouponView,
 } from "@foode/shared/coupon";
 import { formatBRL } from "@foode/shared/money";
-import { Button } from "@foode/ui";
-import Link from "next/link";
 import { useActionState } from "react";
 
 import { validityLabelPt, weekdaysLabelPt } from "../../../../lib/coupon-forms";
 import { IDLE_FORM } from "../../../../lib/ops-forms";
 import { ActionNotice, EmptyState } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
+import { OpenCouponButton } from "./coupon-cadastros";
 import type { CouponFormAction } from "./coupon-form";
 
 const STATUS_GLYPH: Record<CouponStatus, string> = {
@@ -61,12 +60,13 @@ function RowActions({
   const nextActive = !coupon.active;
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <Link
-        href={`/cupons/${coupon.id}`}
-        className="font-bold text-[var(--color-ink)] underline-offset-4 hover:underline"
+      <OpenCouponButton
+        modal={{ kind: "edit", couponId: coupon.id }}
+        variant="link"
+        aria-label={`Editar ${coupon.code}`}
       >
         Editar
-      </Link>
+      </OpenCouponButton>
       <form action={setActiveAction}>
         <input type="hidden" name="couponId" value={coupon.id} />
         <input type="hidden" name="active" value={String(nextActive)} />
@@ -109,7 +109,7 @@ export function CouponTable({
       <div className="p-6">
         <EmptyState title="Nenhum Cupom ainda. Crie um código para divulgar.">
           <p className="mt-3">
-            <Button href="/cupons/novo">Criar Cupom</Button>
+            <OpenCouponButton modal={{ kind: "new" }}>Criar Cupom</OpenCouponButton>
           </p>
         </EmptyState>
       </div>

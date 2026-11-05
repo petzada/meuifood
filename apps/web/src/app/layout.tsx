@@ -1,3 +1,4 @@
+import { ToastProvider } from "@foode/ui";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -27,7 +28,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        {/* Toast padrão do Foode (decisões 72/74): o mesmo do Painel, também no Storefront. */}
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

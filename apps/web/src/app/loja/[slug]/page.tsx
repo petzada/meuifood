@@ -28,11 +28,15 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       robots: { index: false },
     };
   }
-  return storefrontMetadata(
+  const metadata = storefrontMetadata(
     slug,
     result.menu.name,
     state.kind === "ok" ? state.data.showcase : undefined,
   );
+  // Loja em configuração (prévia, decisão 74): visível pelo link, fora dos buscadores.
+  return result.menu.state === "preview"
+    ? { ...metadata, robots: { index: false, follow: false } }
+    : metadata;
 }
 
 export default async function StorefrontPage({

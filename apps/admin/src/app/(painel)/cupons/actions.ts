@@ -43,7 +43,8 @@ export const createCoupon: CouponAction = async (_prev, formData) => {
   if (!result.ok)
     return rpcFailure(result.error, { conflict: { field: "code", message: CODE_TAKEN } });
   revalidateCoupons();
-  redirect("/cupons?criado=1");
+  // Cadastro em modal (decisão 74): o modal fecha e o Toast confirma; sem redirecionar.
+  return formSuccess(`Cupom ${parsed.data.code} criado.`);
 };
 
 export async function updateCoupon(
@@ -63,7 +64,6 @@ export async function updateCoupon(
     });
   }
   revalidateCoupons();
-  revalidatePath(`/cupons/${couponId}`);
   return formSuccess("Cupom salvo.");
 }
 

@@ -2,6 +2,51 @@
 @import "@foode/shared/brand.css";
 @import "@foode/ui/styles.css";
 
+/* Cadastro em modal (decisão 74): sheet inferior sobe no celular; modal central aparece no
+   desktop; fundo escurecido e desfocado entra em fade. Sem animação com reduced-motion. */
+@keyframes foode-cadastro-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes foode-cadastro-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes foode-cadastro-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.foode-cadastro-sheet {
+  animation: foode-cadastro-sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.foode-cadastro-dialog {
+  animation: foode-cadastro-dialog-in 160ms ease-out;
+}
+.foode-cadastro-backdrop {
+  animation: foode-cadastro-fade-in 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foode-cadastro-sheet,
+  .foode-cadastro-dialog,
+  .foode-cadastro-backdrop {
+    animation: none;
+  }
+}
+
 @theme inline {
   --font-sans: "Nunito Variable", sans-serif;
 }

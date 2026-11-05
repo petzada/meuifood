@@ -371,6 +371,32 @@ describe("Storefront público", () => {
     expect((await get("/storefront/lojas/..%2Fadmin/cardapio")).status).toBe(404);
   });
 
+  it("Loja em onboarding: Cardápio em prévia (state preview); carrinho continua 404", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const { itemId } = await seedBurger(owner);
+    const live = publicMenuSchema.parse(
+      await (await get(`/storefront/lojas/${fx.storeA.slug}/cardapio`)).json(),
+    );
+    expect(live.state).toBeUndefined();
+
+    const ops = await db.access.opsContext(fx.ops.id);
+    await db
+      .ops(ops!)
+      .changeStoreStatus(fx.storeA.id, "onboarding", { allowedFrom: ["active"], reason: "teste" });
+
+    const response = await get(`/storefront/lojas/${fx.storeA.slug}/cardapio`);
+    expect(response.status).toBe(200);
+    const preview = publicMenuSchema.parse(await response.json());
+    expect(preview.state).toBe("preview");
+    expect(preview.categories[0]!.items[0]!.id).toBe(itemId);
+
+    // Sem venda na prévia: o recálculo do carrinho (e o Pedido) seguem só para Loja `active`.
+    const cart = await postCart(fx.storeA.slug, {
+      lines: [{ itemId, quantity: 1, additionalIds: [], complementSelections: {} }],
+    });
+    expect(cart.status).toBe(404);
+  });
+
   it("recálculo do carrinho no servidor soma item + opção paga + Adicional; ignora preço do cliente", async () => {
     const owner = await loginAs(fx.ownerA);
     const { itemId, groupId, additionalId, options } = await seedBurger(owner);

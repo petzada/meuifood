@@ -4,8 +4,9 @@
 // disponibilidade da categoria (CAR-02) e apagar com confirmação (T-12); linhas com foto,
 // Destaque/Esgotado por texto, preço inline (CAR-03) e reordenar por botões (CAR-04).
 import { Badge, Button } from "@foode/ui";
+
+import { OpenCadastroButton } from "./cardapio-cadastros";
 import type { AdminMenuCategory, AdminMenuItem } from "@foode/shared/menu";
-import Link from "next/link";
 import { useActionState, useId, useState } from "react";
 
 import { Field } from "../../../../components/form";
@@ -106,12 +107,13 @@ function ItemRow({
       <div className="flex min-w-0 flex-1 items-center gap-4">
         <Thumbnail item={item} />
         <div className="min-w-0 flex-1">
-          <Link
-            href={`/cardapio/itens/${item.id}`}
-            className="block truncate font-bold text-[var(--color-ink)] underline-offset-4 hover:underline focus-visible:underline"
+          <OpenCadastroButton
+            modal={{ kind: "edit-item", itemId: item.id }}
+            variant="link"
+            className="block max-w-full truncate"
           >
             {item.name}
-          </Link>
+          </OpenCadastroButton>
           {item.description ? (
             <p className="mt-0.5 line-clamp-1 text-sm text-[var(--color-body)]">
               {item.description}
@@ -150,9 +152,14 @@ function ItemRow({
           ids={ids}
           label={item.name}
         />
-        <Button asChild variant="secondary" className="min-h-11 px-4 py-2 text-sm">
-          <Link href={`/cardapio/itens/${item.id}`}>Editar</Link>
-        </Button>
+        <OpenCadastroButton
+          modal={{ kind: "edit-item", itemId: item.id }}
+          variant="secondary"
+          className="min-h-11 px-4 py-2 text-sm"
+          aria-label={`Editar ${item.name}`}
+        >
+          Editar
+        </OpenCadastroButton>
       </div>
     </li>
   );
@@ -168,7 +175,6 @@ export function ItemsPanel({
   const [renaming, setRenaming] = useState(false);
   const headingId = useId();
   const ids = category.items.map((item) => item.id);
-  const newItemHref = `/cardapio/itens/novo?categoria=${category.id}`;
   const hasItems = category.items.length > 0;
 
   return (
@@ -205,9 +211,6 @@ export function ItemsPanel({
                 idName="categoryId"
                 label={`Categoria ${category.name}`}
               />
-              <Button asChild>
-                <Link href={newItemHref}>Adicionar item</Link>
-              </Button>
             </div>
           </div>
         )}
@@ -228,12 +231,9 @@ export function ItemsPanel({
       ) : (
         <EmptyState title="Nenhum item nesta categoria.">
           <p>
-            Adicione o primeiro item com nome, preço e foto. Complementos e Adicionais entram na
-            página do item.
+            Use <strong>Adicionar item</strong> no topo da página: nome, preço e foto primeiro;
+            Complementos e Adicionais nas etapas seguintes.
           </p>
-          <Button asChild className="mt-4">
-            <Link href={newItemHref}>Adicionar item em {category.name}</Link>
-          </Button>
         </EmptyState>
       )}
 

@@ -66,4 +66,34 @@ describe("Toast", () => {
     expect(toasts).toHaveLength(3);
     expect(toasts.map((toast) => toast.textContent)).toEqual(["Salvo 2", "Salvo 3", "Salvo 4"]);
   });
+  it("ação de um toque (Storefront: Ver carrinho/Desfazer) roda e fecha; duração própria", () => {
+    const onUndo = vi.fn();
+    function WithAction() {
+      const toast = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            toast.show("X-Burger removido", {
+              action: { label: "Desfazer", onClick: onUndo },
+              durationMs: 5000,
+            })
+          }
+        >
+          remover
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <WithAction />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "remover" }));
+    act(() => vi.advanceTimersByTime(TOAST_DURATION_MS));
+    expect(screen.getByRole("status")).toHaveTextContent("X-Burger removido");
+    fireEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
 });

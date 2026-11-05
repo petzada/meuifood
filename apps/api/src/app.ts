@@ -159,10 +159,14 @@ export function createApp() {
   // Cardápio público (Ticket 23): 200 = `publicMenuSchema` de @foode/shared/menu (só categorias
   // disponíveis e com itens; itens indisponíveis vêm com `available: false`; opções com
   // `priceCents`; até 4 `featured`; `imageUrl` = MEDIA_PUBLIC_BASE_URL + chave). A Loja sai SÓ do
-  // Slug da URL, nunca de `store_id` do navegador. 404 `store_not_found` para Slug inexistente ou
-  // Loja fora de `active` (o Storefront mostra "Cardápio indisponível").
+  // Slug da URL, nunca de `store_id` do navegador. Loja em `onboarding` (decisão 74): 200 com
+  // `state: "preview"` (o Storefront mostra o Cardápio sem checkout; carrinho, cotação e Pedido
+  // continuam recusando). 404 `store_not_found` para Slug inexistente ou Loja `suspended` (o
+  // Storefront mostra "Cardápio indisponível").
   storefront.get("/lojas/:slug/cardapio", async (c) => {
-    const menu = await c.var.db.storefront.publicMenuBySlug(c.req.param("slug"));
+    const menu = await c.var.db.storefront.publicMenuBySlug(c.req.param("slug"), {
+      includePreview: true,
+    });
     if (!menu) return c.json({ error: "store_not_found" }, 404);
     return c.json(toPublicMenu(menu, mediaBaseUrl(c.env.MEDIA_PUBLIC_BASE_URL, c.req.url)));
   });

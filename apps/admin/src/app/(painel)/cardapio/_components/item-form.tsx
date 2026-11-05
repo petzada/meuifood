@@ -1,23 +1,26 @@
 "use client";
 
-// Dados do item (CAR-05, seção "Dados"): nome, descrição com contador, preço em R$, foto,
-// categoria (edição: mover), disponibilidade e Destaque com o aviso do teto (P-5.5).
-// Criação: botão sempre habilitado, valida no envio. Edição: "Salvar alterações" só com
-// mudança e aviso ao sair (T-06).
+// Dados do item (etapa/aba "Dados" do cadastro em modal, decisão 74): nome, preço em R$,
+// descrição com contador, categoria (com "+ Nova categoria" no cadastro), foto, disponibilidade e
+// Destaque com o aviso do teto (P-5.5).
+// - `variant="wizard"` (cadastro): "Continuar" sempre habilitado, valida no envio (T-06); depois
+//   de criado (`draftItemId`), Continuar sem mudança só avança e com mudança salva antes.
+// - `variant="tab"` (edição): "Salvar alterações" só com mudança (T-06).
 import type { AdminMenuCategory, AdminMenuItem } from "@foode/shared/menu";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
+import { ActionForm } from "../../../../components/action-form";
+import { CadastroFooter } from "../../../../components/cadastro-modal";
 import { Field } from "../../../../components/form";
 import type { UploadResult } from "../../../../lib/menu-forms";
-import { featuredFull, featuredHint } from "../../../../lib/menu-labels";
+import { featuredFull, featuredHint, NEW_CATEGORY } from "../../../../lib/menu-labels";
 import { centsToInput } from "../../../../lib/ops-format";
-import { IDLE_FORM } from "../../../../lib/ops-forms";
+import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, SelectField, TextareaField } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
-import type { MenuAction } from "../actions";
+import type { CreatedState, MenuAction } from "../actions";
 import { ImageField } from "./image-field";
-import { ActionForm } from "../../../../components/action-form";
 
 const DESCRIPTION_MAX = 600;
 
@@ -67,26 +70,56 @@ export function ItemForm({
   action,
   categories,
   categoryId,
+  draftItemId = null,
+  extraActions,
   featuredCount,
   item,
+  onDirtyChange,
+  onSaved,
   upload,
+  variant = "tab",
 }: {
   action: MenuAction;
   categories: Pick<AdminMenuCategory, "id" | "name">[];
-  /** Categoria da criação (vem da URL) ou atual do item. */
-  categoryId: string;
+  /** Categoria inicial (a aberta no Cardápio) ou a atual do item. */
+  categoryId: string | null;
+  /** Item já criado por esta etapa (Voltar no cadastro): o envio passa a salvar alterações. */
+  draftItemId?: string | null;
+  /** Ações à esquerda do envio no rodapé (ex.: Apagar item). */
+  extraActions?: ReactNode;
   featuredCount: number;
   /** Ausente = criação. */
   item: AdminMenuItem | null;
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Depois de salvar (ou de "Continuar" sem mudança num item já criado). */
+  onSaved?: (state: CreatedState) => void;
   upload: (formData: FormData) => Promise<UploadResult>;
+  variant?: "tab" | "wizard";
 }) {
-  const [state, formAction] = useActionState(action, IDLE_FORM);
+  const [state, formAction] = useActionState<FormState, FormData>(action, IDLE_FORM);
   // A foto só é refeita depois de salvar com sucesso (erro mantém o que foi digitado como mudança).
   const { dirty, onChange, ref } = useDirtyForm(state.status === "success" ? state : null);
   const id = useId();
   const [descriptionLength, setDescriptionLength] = useState(item?.description.length ?? 0);
-  const editing = item !== null;
+  const savedId = item?.id ?? draftItemId;
+  const editing = savedId !== null;
+  const wizard = variant === "wizard";
   const full = featuredFull(featuredCount, item?.featured ?? false);
+  const noCategories = categories.length === 0;
+  const [category, setCategory] = useState<string>(categoryId ?? categories[0]?.id ?? NEW_CATEGORY);
+  const newCategory = !editing && (noCategories || category === NEW_CATEGORY);
+
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+
+  const reported = useRef<FormState | null>(null);
+  useEffect(() => {
+    if (state.status !== "success" || reported.current === state) return;
+    reported.current = state;
+    const saved = state as CreatedState;
+    // Categoria criada junto com o item: o seletor passa a apontar para ela.
+    if (saved.categoryId) setCategory(saved.categoryId);
+    onSaved?.(saved);
+  }, [onSaved, state]);
 
   return (
     <ActionForm
@@ -94,10 +127,17 @@ export function ItemForm({
       action={formAction}
       state={state}
       onChange={onChange}
+      resetOnSuccess={false}
+      onSubmit={(event) => {
+        // Etapa já salva e sem mudança: "Continuar" só avança (nada a enviar).
+        if (wizard && editing && !dirty) {
+          event.preventDefault();
+          onSaved?.({ ...IDLE_FORM, status: "success", ...(savedId ? { itemId: savedId } : {}) });
+        }
+      }}
       className="space-y-6"
     >
-      {editing ? <input type="hidden" name="itemId" value={item.id} /> : null}
-      {!editing ? <input type="hidden" name="categoryId" value={categoryId} /> : null}
+      {editing ? <input type="hidden" name="itemId" value={savedId ?? ""} /> : null}
 
       <div className="grid gap-5 md:grid-cols-[1fr_12rem]">
         <Field
@@ -131,27 +171,50 @@ export function ItemForm({
         defaultValue={item?.description ?? ""}
         placeholder="Ingredientes, tamanho, o que vem junto."
         maxLength={DESCRIPTION_MAX}
+        rows={3}
         onChange={(event) => setDescriptionLength(event.currentTarget.value.length)}
         error={state.errors.description}
         hint={`${descriptionLength} de ${DESCRIPTION_MAX} caracteres.`}
       />
 
-      {editing && categories.length > 1 ? (
-        <SelectField
-          id={`${id}-category`}
-          name="categoryId"
-          label="Categoria"
-          defaultValue={categoryId}
-          error={state.errors.categoryId}
-          hint="Mudar de categoria leva o item para o fim da lista da nova categoria."
-        >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </SelectField>
-      ) : null}
+      <div className="grid gap-5 md:grid-cols-2">
+        {noCategories && !editing ? (
+          <input type="hidden" name="categoryId" value={NEW_CATEGORY} />
+        ) : (
+          <SelectField
+            id={`${id}-category`}
+            name="categoryId"
+            label="Categoria"
+            value={category}
+            onChange={(event) => setCategory(event.currentTarget.value)}
+            error={state.errors.categoryId}
+            hint={
+              editing
+                ? "Mudar de categoria leva o item para o fim da lista da nova categoria."
+                : "O item entra no fim da categoria."
+            }
+          >
+            {categories.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+            {!editing ? <option value={NEW_CATEGORY}>+ Nova categoria</option> : null}
+          </SelectField>
+        )}
+        {newCategory ? (
+          <Field
+            id={`${id}-new-category`}
+            name="newCategoryName"
+            label={noCategories ? "Categoria do item" : "Nome da nova categoria"}
+            placeholder="Ex.: Lanches"
+            maxLength={120}
+            autoComplete="off"
+            error={state.errors.newCategoryName}
+            hint="A categoria é criada junto com o item."
+          />
+        ) : null}
+      </div>
 
       <ImageField
         initialKey={item?.imageObjectKey ?? null}
@@ -190,23 +253,20 @@ export function ItemForm({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <ActionNotice state={state} />
-        {editing && !dirty && state.status !== "success" ? (
+      {/* No cadastro, o Toast de sucesso vem só no fim (ao concluir as etapas). */}
+      <ActionNotice state={wizard && state.status === "success" ? IDLE_FORM : state} />
+      <CadastroFooter>
+        {extraActions ? <div className="mr-auto">{extraActions}</div> : null}
+        {!wizard && !dirty ? (
           <p className="text-sm text-[var(--color-muted)]">Nenhuma alteração para salvar.</p>
         ) : null}
         <SubmitButton
-          disabled={editing && !dirty}
+          disabled={!wizard && !dirty}
           pendingLabel={editing ? "Salvando..." : "Criando..."}
         >
-          {editing ? "Salvar alterações" : "Criar item"}
+          {wizard ? "Continuar" : "Salvar alterações"}
         </SubmitButton>
-        {!editing ? (
-          <p className="text-sm text-[var(--color-body)]">
-            Depois de criar, você monta Complementos e Adicionais na página do item.
-          </p>
-        ) : null}
-      </div>
+      </CadastroFooter>
     </ActionForm>
   );
 }

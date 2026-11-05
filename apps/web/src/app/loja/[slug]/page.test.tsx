@@ -190,4 +190,20 @@ describe("storefront /loja/[slug]", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(ids.burger).toMatch(/^[0-9a-f-]{36}$/u);
   });
+  it("Loja em configuração (prévia): renderiza o Cardápio com a faixa e fica fora do índice", async () => {
+    // Showcase completo (descrição + logo) indexaria uma Loja ativa; a prévia nunca indexa.
+    apiFetch.mockImplementation(async (path: string) =>
+      path.endsWith("/cardapio")
+        ? jsonResponse({ ...publicMenu, state: "preview" })
+        : jsonResponse({ error: "store_not_found" }, 404),
+    );
+    const html = await render();
+    expect(html).toContain("Esta Loja ainda não está recebendo pedidos.");
+    expect(html).toContain("X-Burger");
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "lanchonete-do-ze" }),
+    });
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
 });

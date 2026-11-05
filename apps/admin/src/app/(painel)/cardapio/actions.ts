@@ -32,13 +32,19 @@ import {
   parseUpdateItem,
   type UploadResult,
 } from "../../../lib/menu-forms";
-import { availabilityLabel, MENU_CONFLICT_MESSAGES } from "../../../lib/menu-labels";
+import { availabilityLabel, MENU_CONFLICT_MESSAGES, NEW_CATEGORY } from "../../../lib/menu-labels";
 import { formError, formSuccess, text, type FormState } from "../../../lib/ops-forms";
 import { RPC_ERROR_MESSAGE } from "../../../lib/ops-labels";
 import { painelRpc } from "../../../lib/painel-rpc";
 import { formatBRL } from "@foode/shared/money";
 
 export type MenuAction = (prev: FormState, formData: FormData) => Promise<FormState>;
+
+/** Resultado de cadastro no modal: o id criado volta para o cliente (etapas, foco, Toast). */
+export type CreatedState = FormState & { categoryId?: string; itemId?: string };
+
+/** id fictício só para validar os campos do item antes de criar a categoria nova. */
+const PROBE_CATEGORY_ID = "00000000-0000-4000-8000-000000000000";
 
 /** Erro da RPC → estado do formulário: no campo quando se sabe qual, senão no topo. */
 function rpcFailure(
@@ -52,7 +58,6 @@ function rpcFailure(
 }
 
 const CARDAPIO = "/cardapio";
-const itemPath = (itemId: string) => `${CARDAPIO}/itens/${itemId}`;
 const categoryPath = (categoryId: string) => `${CARDAPIO}?categoria=${categoryId}`;
 
 function revalidateMenu() {
@@ -64,14 +69,21 @@ const GONE = (what: string) => ({ not_found: { message: `${what} não existe mai
 
 // ---- Categorias ----
 
-/** CAR-07: depois de criar, a página abre a categoria com a oferta "Adicionar item". */
+/**
+ * Cadastro de categoria no modal (decisão 74): devolve o id para o Painel abrir a categoria nova
+ * e mostrar o Toast; não redireciona (o modal fecha do lado do cliente).
+ */
 export const createCategory: MenuAction = async (_prev, formData) => {
   const parsed = parseCreateCategory(formData);
   if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.menuCreateCategory(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error);
   revalidateMenu();
-  redirect(`${categoryPath(result.data.categoryId)}&aviso=categoria-criada`);
+  const state: CreatedState = {
+    ...formSuccess(`Categoria ${parsed.data.name} criada.`),
+    categoryId: result.data.categoryId,
+  };
+  return state;
 };
 
 export const renameCategory: MenuAction = async (_prev, formData) => {
@@ -127,22 +139,63 @@ const ITEM_FAILURES = {
   },
 } as const;
 
-export const createItem: MenuAction = async (_prev, formData) => {
+/**
+ * Etapa "Dados" do cadastro de item no modal (decisão 74). Sem `itemId`: cria o item (e, se
+ * pedido, a categoria nova junto — o 1º item do onboarding não exige criar a categoria antes) e
+ * devolve o id para as etapas Complementos/Adicionais. Com `itemId` (Voltar à etapa, aba Dados da
+ * edição): salva as alterações. Os campos do item são validados ANTES de criar a categoria.
+ */
+export const saveItemDraft: MenuAction = async (_prev, formData) => {
+  const itemId = text(formData, "itemId").trim();
+  if (itemId) {
+    const parsed = parseUpdateItem(formData);
+    if (!parsed.ok) return formError(parsed.errors);
+    const result = await painelRpc((api, caller) => api.menuUpdateItem(caller, parsed.data));
+    if (!result.ok) return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("Este item") });
+    revalidateMenu();
+    const state: CreatedState = {
+      ...formSuccess("Alterações do item salvas."),
+      itemId,
+      ...(parsed.data.categoryId ? { categoryId: parsed.data.categoryId } : {}),
+    };
+    return state;
+  }
+
+  let categoryId = text(formData, "categoryId").trim();
+  const wantsNewCategory = categoryId === "" || categoryId === NEW_CATEGORY;
+  if (wantsNewCategory) {
+    const probe = new FormData();
+    for (const [key, value] of formData.entries()) probe.append(key, value);
+    probe.set("categoryId", PROBE_CATEGORY_ID);
+    const fields = parseCreateItem(probe);
+    const categoryForm = new FormData();
+    categoryForm.set("name", text(formData, "newCategoryName"));
+    const category = parseCreateCategory(categoryForm);
+    const errors = {
+      ...(fields.ok ? {} : fields.errors),
+      ...(category.ok ? {} : { newCategoryName: "Informe o nome da categoria (ex.: Lanches)." }),
+    };
+    if (!fields.ok || !category.ok) return formError(errors);
+    const created = await painelRpc((api, caller) => api.menuCreateCategory(caller, category.data));
+    if (!created.ok) return rpcFailure(created.error);
+    categoryId = created.data.categoryId;
+    formData.set("categoryId", categoryId);
+  }
+
   const parsed = parseCreateItem(formData);
   if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.menuCreateItem(caller, parsed.data));
-  if (!result.ok) return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("A categoria") });
+  if (!result.ok) {
+    if (wantsNewCategory) revalidateMenu();
+    return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("A categoria") });
+  }
   revalidateMenu();
-  redirect(`${itemPath(result.data.itemId)}?aviso=item-criado`);
-};
-
-export const updateItem: MenuAction = async (_prev, formData) => {
-  const parsed = parseUpdateItem(formData);
-  if (!parsed.ok) return formError(parsed.errors);
-  const result = await painelRpc((api, caller) => api.menuUpdateItem(caller, parsed.data));
-  if (!result.ok) return rpcFailure(result.error, { ...ITEM_FAILURES, ...GONE("Este item") });
-  revalidateMenu();
-  return formSuccess("Alterações do item salvas.");
+  const state: CreatedState = {
+    ...formSuccess(`${parsed.data.name} criado.`),
+    categoryId,
+    itemId: result.data.itemId,
+  };
+  return state;
 };
 
 /** Preço inline (P-CAR-5, CAR-03): só grava no Enter ou no ✓ da tela. */

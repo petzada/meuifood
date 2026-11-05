@@ -4,6 +4,7 @@ export {
   MAX_ADDITIONALS_PER_ITEM,
   MAX_COMPLEMENT_OPTIONS,
   MAX_FEATURED_ITEMS,
+  PUBLIC_MENU_STATES,
   additionalSchema,
   complementGroupSchema,
   complementOptionSchema,
@@ -21,6 +22,7 @@ export {
   type ComplementOption,
   type MenuCategory,
   type MenuItem,
+  type PublicMenuState,
   type PublicMenu,
 } from "./schema.js";
 

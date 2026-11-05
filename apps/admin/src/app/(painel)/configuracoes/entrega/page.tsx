@@ -2,7 +2,7 @@ import { OutlineContainer } from "@foode/ui";
 
 import { painelRead, painelRpc } from "../../../../lib/painel-rpc";
 import { requirePermission } from "../../../../lib/session";
-import { saveFulfillment } from "../actions";
+import { saveDeliveryRate, saveFulfillment } from "../actions";
 import { FulfillmentForm } from "../_components/fulfillment-form";
 import { SettingsHeader } from "../_components/settings-nav";
 
@@ -29,6 +29,7 @@ export default async function EntregaPage() {
               : null
           }
           initial={settings}
+          saveRate={saveDeliveryRate}
           storeId={session.activeStore?.id ?? "loja"}
         />
       </OutlineContainer>

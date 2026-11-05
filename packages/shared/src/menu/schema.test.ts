@@ -17,6 +17,12 @@ describe("publicMenuSchema", () => {
     expect(indexMenuItems(parsed).get(burger.id)?.name).toBe("X-Burger");
   });
 
+  it("estado do Cardápio: ausente = live; preview na Loja em onboarding; outro valor recusa", () => {
+    expect(publicMenuSchema.parse(publicMenu).state).toBeUndefined();
+    expect(publicMenuSchema.parse({ ...publicMenu, state: "preview" }).state).toBe("preview");
+    expect(publicMenuSchema.safeParse({ ...publicMenu, state: "fechado" }).success).toBe(false);
+  });
+
   it("normaliza o slug e rejeita slug inválido", () => {
     expect(storeSlugSchema.parse("  Lanchonete-Do-Ze ")).toBe("lanchonete-do-ze");
     for (const slug of ["", "-abc", "abc-", "a b", "loja_1", "ção"]) {

@@ -11,7 +11,7 @@ import {
   pixSecondsLeft,
   pixStateLabelPt,
 } from "@foode/shared/payment";
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import { CheckCircle, Copy, SpinnerGap } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
@@ -28,11 +28,12 @@ async function defaultCopy(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
-type CopyState = "idle" | "copied" | "failed";
+type CopyState = "idle" | "failed";
 
 export function PixPayment({ copy = defaultCopy, menuHref, now = Date.now, pix }: PixPaymentProps) {
   const [secondsLeft, setSecondsLeft] = useState(() => pixSecondsLeft(pix.expiresAt, now()));
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  const toast = useToast();
 
   useEffect(() => {
     setSecondsLeft(pixSecondsLeft(pix.expiresAt, now()));
@@ -45,7 +46,8 @@ export function PixPayment({ copy = defaultCopy, menuHref, now = Date.now, pix }
     if (!pix.copyPaste) return;
     try {
       await copy(pix.copyPaste);
-      setCopyState("copied");
+      setCopyState("idle");
+      toast.success("Código copiado");
     } catch {
       setCopyState("failed");
     }
@@ -116,13 +118,12 @@ export function PixPayment({ copy = defaultCopy, menuHref, now = Date.now, pix }
               Copiar código
             </span>
           </Button>
-          <p className="min-h-5 text-sm text-[var(--color-body)]" role="status">
-            {copyState === "copied"
-              ? "Código copiado"
-              : copyState === "failed"
-                ? "Não deu para copiar. Selecione o código e copie manualmente."
-                : ""}
-          </p>
+          {/* Sucesso no Toast (decisão 74); falha fica aqui, junto do código a copiar. */}
+          {copyState === "failed" ? (
+            <p className="text-sm text-[var(--color-body)]" role="alert">
+              Não deu para copiar. Selecione o código e copie manualmente.
+            </p>
+          ) : null}
           <p className="text-sm text-[var(--color-body)]">
             {secondsLeft > 0 ? (
               <>

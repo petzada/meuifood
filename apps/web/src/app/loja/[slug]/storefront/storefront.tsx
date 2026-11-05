@@ -17,7 +17,7 @@ import {
 } from "@foode/shared/menu";
 import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { StorefrontStoreState } from "@foode/shared/order";
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -37,7 +37,6 @@ import { firePixelEvent, type PixelWindow } from "./pixels";
 import { itemShareUrl, shareLink, shareOutcomeMessagePt, storeShareUrl } from "./share";
 import { StoreHeader, type StoreBranding } from "./store-header";
 import { describeAvailability } from "./store-status";
-import { Toast, useToast } from "./toast";
 import { useStoreCart } from "./use-store-cart";
 
 export type StorefrontProps = {
@@ -73,7 +72,8 @@ export function Storefront({
   const itemsById = useMemo(() => indexMenuItems(menu), [menu]);
   const featured = useMemo(() => featuredItems(menu), [menu]);
   const { cart, dispatch } = useStoreCart(menu.slug);
-  const { dismiss, show, toast } = useToast();
+  const toast = useToast();
+  const show = toast.show;
 
   const [query, setQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
@@ -103,6 +103,8 @@ export function Storefront({
   const openItem = openItemId ? (itemsById.get(openItemId) ?? null) : null;
   const itemOpen = openItem !== null;
   const pixels = state?.showcase?.pixels ?? null;
+  /** Loja em `onboarding` (decisão 74): Cardápio em prévia, sem checkout. */
+  const preview = menu.state === "preview";
 
   // Funil próprio (uma vez por sessão e etapa, sem dado pessoal) e Pixel da Loja (Ticket 28).
   useEffect(() => {
@@ -171,9 +173,9 @@ export function Storefront({
       });
     }
     closeItemSheet();
-    show(`${item?.name ?? "Item"} adicionado`, {
-      label: "Ver carrinho",
-      onClick: () => setCartOpen(true),
+    show(`${item?.name ?? "Item"} adicionado ao carrinho`, {
+      action: { label: "Ver carrinho", onClick: () => setCartOpen(true) },
+      tone: "success",
     });
   }
 
@@ -181,14 +183,13 @@ export function Storefront({
     const view = summary.lines[lineIndex];
     if (!view) return;
     dispatch({ lineIndex, type: "remove" });
-    show(
-      `${view.item?.name ?? "Item"} removido`,
-      {
+    show(`${view.item?.name ?? "Item"} removido`, {
+      action: {
         label: "Desfazer",
         onClick: () => dispatch({ line: view.line, lineIndex, type: "restore" }),
       },
-      5000,
-    );
+      durationMs: 5000,
+    });
   }
 
   function handleEdit(lineIndex: number) {
@@ -225,6 +226,18 @@ export function Storefront({
           })
         }
       />
+
+      {preview ? (
+        <div className="mx-auto max-w-3xl px-4 pt-4 md:px-8">
+          <p
+            className="rounded-2xl border border-[var(--color-accent)] px-4 py-3 text-sm font-bold text-[var(--color-ink)]"
+            role="status"
+          >
+            Esta Loja ainda não está recebendo pedidos. Você pode ver o Cardápio; o pedido abre
+            quando a Loja começar a funcionar.
+          </p>
+        </div>
+      ) : null}
 
       {menu.categories.length === 0 ? (
         <section className="mx-auto max-w-3xl px-4 py-10 md:px-8">
@@ -322,6 +335,7 @@ export function Storefront({
 
       <CartSheet
         availability={availability}
+        preview={preview}
         cart={cart}
         deliveryMinimumCents={state?.delivery?.minimumOrderCents ?? null}
         itemsById={itemsById}
@@ -339,8 +353,6 @@ export function Storefront({
         onOpen={() => setCartOpen(true)}
         subtotalCents={summary.subtotalCents}
       />
-
-      <Toast onDismiss={dismiss} toast={toast} />
     </main>
   );
 }

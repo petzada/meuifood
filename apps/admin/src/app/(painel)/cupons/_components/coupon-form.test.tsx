@@ -42,9 +42,14 @@ function setup() {
 }
 
 describe("CouponForm (criar)", () => {
-  it("envio vazio destaca o código e o valor sem chamar a RPC", async () => {
+  it("envio vazio volta à etapa Desconto e destaca o código e o valor sem chamar a RPC", async () => {
     const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByRole("region", { name: "Etapa: Validade e limites" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Criar Cupom" }));
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Etapa: Desconto" })).toBeVisible(),
+    );
     await waitFor(() =>
       expect(screen.getByLabelText("Código")).toHaveAttribute("aria-invalid", "true"),
     );
@@ -61,6 +66,11 @@ describe("CouponForm (criar)", () => {
     expect(screen.getByLabelText("Desconto (%)")).toHaveValue("15");
     expect(screen.getByLabelText("Teto do desconto em R$ (opcional)")).toHaveValue("R$ 20,00");
     expect(screen.getByLabelText("Limite total de usos (opcional)")).toHaveValue("100");
+    // Etapa 2 (Validade e limites): Voltar/Continuar não perdem nada do que foi preenchido.
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(screen.getByLabelText("Código")).toHaveValue("SEMANA15");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
     const days = within(screen.getByRole("group", { name: "Dias da semana" }));
     expect(days.getByRole("checkbox", { name: "segunda" })).toBeChecked();
     expect(days.getByRole("checkbox", { name: "quinta" })).toBeChecked();
@@ -74,8 +84,10 @@ describe("CouponForm (criar)", () => {
     // Ajusta: tira a quinta, põe o sábado, pedido mínimo e validade.
     await user.click(days.getByRole("checkbox", { name: "quinta" }));
     await user.click(days.getByRole("checkbox", { name: "sábado" }));
-    // Máscara em centavos: digitar 3000 vira R$ 30,00.
+    // Máscara em centavos: digitar 3000 vira R$ 30,00 (campo da etapa 1).
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
     await user.type(screen.getByLabelText("Pedido mínimo em R$ (opcional)"), "3000");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
     await user.type(screen.getByLabelText("Vale até (opcional)"), "2026-11-30");
     expect(screen.getByRole("status")).toHaveTextContent(
       "em Pedidos a partir de R$ 30,00 em itens, segunda, terça, quarta e sábado, até 100 usos, válido até 30/11/2026.",
