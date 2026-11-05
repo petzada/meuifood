@@ -2,8 +2,10 @@
 // Painel nunca fala com a api: o servidor do admin chama estes métodos pelo binding `API`.
 import type {
   InviteMemberInput,
+  MemberStatus,
   OpsInviteOwnerInput,
   RemoveMemberInput,
+  ResendInviteInput,
   SwitchActiveStoreInput,
 } from "./auth/schemas.js";
 import type { ActiveStore, RpcResult, SessionCtx } from "./auth/types.js";
@@ -119,6 +121,8 @@ export type StoreMemberView = {
   email: string;
   name: string;
   role: ActiveStore["role"];
+  /** `invited` até a pessoa definir a senha pelo link do convite; depois `active`. */
+  status: MemberStatus;
 };
 
 export interface PainelRpc {
@@ -163,6 +167,17 @@ export interface PainelRpc {
    * cada request). Sem outra membership, as sessões do usuário são revogadas.
    */
   removeMember(caller: PainelCaller, input: RemoveMemberInput): Promise<RpcResult<null>>;
+
+  /**
+   * Dono reenvia o convite (link novo de definir senha, 72 h) a um membro da Loja ativa que
+   * ainda não definiu senha (`status: "invited"`). Já ativo = `conflict`; id de outra Loja =
+   * `not_found`. Rate limit por Dono (o mesmo dos convites) e por membro (1 a cada 5 min).
+   * Audita `membership.invite_resent`.
+   */
+  resendInvite(
+    caller: PainelCaller,
+    input: ResendInviteInput,
+  ): Promise<RpcResult<{ membershipId: string }>>;
 
   // ---- Cardápio (Ticket 23). Só o Dono da Loja ATIVA (`can(role, "store.menu")`); Operador e
   // Ops recebem `forbidden`. Entradas validadas com os schemas `menu*InputSchema` de

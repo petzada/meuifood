@@ -2,10 +2,11 @@ import { painelRead } from "../../../lib/painel-rpc";
 import { requirePermission } from "../../../lib/session";
 import { turnstileSiteKey } from "../../../lib/turnstile";
 import { TeamPanel } from "./_components/team-panel";
-import { inviteOperator, removeMember } from "./actions";
+import { inviteOperator, removeMember, resendInvite } from "./actions";
 
 // `/equipe` (feedback do Dono, item 9; EQP-01): só o Dono (`store.members`). Lista a equipe da
-// Loja ativa, convida Operador por e-mail e remove acesso com confirmação que nomeia a pessoa.
+// Loja ativa com a situação de cada membro, convida Operador por e-mail, reenvia o convite de quem
+// ainda não definiu senha e remove acesso com confirmação que nomeia a pessoa.
 export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
@@ -28,6 +29,7 @@ export default async function TeamPage() {
         invite={inviteOperator}
         members={members}
         remove={removeMember}
+        resend={resendInvite}
         siteKey={turnstileSiteKey()}
       />
     </section>

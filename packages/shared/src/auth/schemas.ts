@@ -70,6 +70,17 @@ export const removeMemberInputSchema = z.object({
   membershipId: z.uuid(),
 });
 
+/**
+ * Situação do membro na Equipe (EQP-01), derivada do que já existe no banco: `active` = já
+ * definiu senha (conta `credential` com senha); `invited` = convite enviado e ainda sem senha.
+ */
+export const memberStatusSchema = z.enum(["invited", "active"]);
+
+/** Dono reenvia o convite de quem ainda não definiu senha (Loja ATIVA da sessão). */
+export const resendInviteInputSchema = z.object({
+  membershipId: z.uuid(),
+});
+
 /** Troca da Loja ativa no seletor; o servidor confere a membership antes de aceitar. */
 export const switchActiveStoreInputSchema = z.object({
   storeId: z.uuid(),
@@ -85,4 +96,6 @@ export type SetPasswordInput = z.infer<typeof setPasswordInputSchema>;
 export type InviteMemberInput = z.infer<typeof inviteMemberInputSchema>;
 export type OpsInviteOwnerInput = z.infer<typeof opsInviteOwnerInputSchema>;
 export type RemoveMemberInput = z.infer<typeof removeMemberInputSchema>;
+export type MemberStatus = z.infer<typeof memberStatusSchema>;
+export type ResendInviteInput = z.infer<typeof resendInviteInputSchema>;
 export type SwitchActiveStoreInput = z.infer<typeof switchActiveStoreInputSchema>;

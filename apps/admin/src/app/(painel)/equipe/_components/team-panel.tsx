@@ -1,13 +1,14 @@
 "use client";
 
-// Equipe do Dono (EQP-01): membros da Loja ativa, convite de Operador (Turnstile) em modal de
-// cadastro (decisão 74) e remoção com confirmação que nomeia a pessoa e a consequência (T-12).
+// Equipe do Dono (EQP-01): membros da Loja ativa com a situação ("Convite enviado" ou "Ativo"),
+// convite de Operador (Turnstile) em modal de cadastro (decisão 74), reenvio do convite para quem
+// ainda não definiu senha e remoção com confirmação que nomeia a pessoa e a consequência (T-12).
 // Feedback no Toast (decisão 72).
 import type { StoreMemberView } from "@foode/shared";
 import { Badge, Button } from "@foode/ui";
 import { useActionState, useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { ActionForm } from "../../../../components/action-form";
+import { ActionForm, useFormPending } from "../../../../components/action-form";
 import {
   CadastroFooter,
   CadastroModal,
@@ -27,8 +28,44 @@ const ROLE_LABEL: Record<StoreMemberView["role"], string> = {
   operator: "Operador",
 };
 
+const STATUS_BADGE: Record<
+  StoreMemberView["status"],
+  { label: string; tone: "accent" | "success" }
+> = {
+  invited: { label: "Convite enviado", tone: "accent" },
+  active: { label: "Ativo", tone: "success" },
+};
+
 function displayName(member: StoreMemberView): string {
   return member.name.trim() || member.email;
+}
+
+function ResendButton({ name }: { name: string }) {
+  const pending = useFormPending();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-label={`Reenviar convite para ${name}`}
+      className="inline-flex min-h-11 items-center rounded-full border border-[var(--color-hairline)] px-4 text-sm font-bold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] focus-visible:outline-3 focus-visible:outline-[var(--color-primary-soft)] disabled:cursor-wait disabled:opacity-60"
+    >
+      {pending ? "Reenviando..." : "Reenviar convite"}
+    </button>
+  );
+}
+
+/** Reenvio do convite: um clique, sem modal (não é destrutivo); o Toast confirma. */
+function ResendInviteForm({ action, member }: { action: Action; member: StoreMemberView }) {
+  const [state, formAction] = useActionState(action, IDLE_FORM);
+  const name = displayName(member);
+  return (
+    <ActionForm action={formAction} state={state} resetOnSuccess={false}>
+      <input type="hidden" name="membershipId" value={member.membershipId} />
+      <input type="hidden" name="name" value={name} />
+      <ActionNotice state={state} />
+      <ResendButton name={name} />
+    </ActionForm>
+  );
 }
 
 function InviteModal({
@@ -156,12 +193,14 @@ export function TeamPanel({
   invite,
   members,
   remove,
+  resend,
   siteKey,
 }: {
   currentUserId: string;
   invite: Action;
   members: StoreMemberView[];
   remove: Action;
+  resend: Action;
   siteKey: string;
 }) {
   const [removing, setRemoving] = useState<StoreMemberView | null>(null);
@@ -187,6 +226,7 @@ export function TeamPanel({
           <ul className="grid gap-3">
             {members.map((member) => {
               const self = member.userId === currentUserId;
+              const status = STATUS_BADGE[member.status];
               return (
                 <li
                   key={member.membershipId}
@@ -200,6 +240,7 @@ export function TeamPanel({
                       <Badge tone={member.role === "owner" ? "primary" : "neutral"}>
                         {ROLE_LABEL[member.role]}
                       </Badge>
+                      <Badge tone={status.tone}>{status.label}</Badge>
                       {self ? (
                         <span className="text-sm text-[var(--color-muted)]">(você)</span>
                       ) : null}
@@ -207,13 +248,18 @@ export function TeamPanel({
                     <p className="truncate text-sm text-[var(--color-muted)]">{member.email}</p>
                   </div>
                   {self ? null : (
-                    <button
-                      type="button"
-                      onClick={() => setRemoving(member)}
-                      className="inline-flex min-h-11 items-center rounded-full border border-[var(--color-hairline)] px-4 text-sm font-bold text-[var(--color-error)] transition-colors hover:border-[var(--color-error)] focus-visible:outline-3 focus-visible:outline-[var(--color-primary-soft)]"
-                    >
-                      Remover acesso de {displayName(member)}
-                    </button>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      {member.status === "invited" ? (
+                        <ResendInviteForm action={resend} member={member} />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setRemoving(member)}
+                        className="inline-flex min-h-11 items-center rounded-full border border-[var(--color-hairline)] px-4 text-sm font-bold text-[var(--color-error)] transition-colors hover:border-[var(--color-error)] focus-visible:outline-3 focus-visible:outline-[var(--color-primary-soft)]"
+                      >
+                        Remover acesso de {displayName(member)}
+                      </button>
+                    </div>
                   )}
                 </li>
               );
