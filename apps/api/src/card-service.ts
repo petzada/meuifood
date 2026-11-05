@@ -259,7 +259,27 @@ export type CardService = {
   handleAbacatePayCardEvent(
     event: Extract<AbacatePayWebhookEvent, { kind: "transparent" }>,
   ): Promise<CardWebhookReply>;
+  /**
+   * Varredura do Cron (Ticket 12/15), idempotente: tentativa `processing` sem desfecho além de
+   * `CARD_PROCESSING_GIVE_UP_MS` vira recusada (`provider_unavailable`, libera outra tentativa) e
+   * tentativa em análise é conferida no provedor (aprovada confirma; recusada declina) — o mesmo
+   * que a página do Pedido faz ao ser lida, sem depender de alguém abri-la. Uma falha não
+   * interrompe as demais.
+   */
+  expireStaleCardAttempts(now?: Date): Promise<ExpireStaleCardSummary>;
 };
+
+export type ExpireStaleCardSummary = {
+  /** Tentativas `processing` recusadas por falta de desfecho. */
+  gaveUp: number;
+  /** Tentativas em análise conferidas no provedor. */
+  checked: number;
+  /** Itens que falharam (provedor fora etc.); ficam para a próxima rodada. */
+  failed: number;
+};
+
+/** Máximo de tentativas por rodada da varredura. */
+export const CARD_STALE_BATCH_LIMIT = 50;
 
 function warn(message: string, fields: Record<string, unknown> = {}) {
   console.warn(JSON.stringify({ level: "warn", message, ...fields }));
@@ -641,9 +661,8 @@ export function createCardService(deps: CardServiceDeps): CardService {
   }
 
   /** Consulta autenticada de uma tentativa em análise (limitada por `checkedAt`). */
-  async function reconcile(intent: CardIntentView) {
+  async function reconcile(intent: CardIntentView, now: Date = clock()) {
     if (intent.intentState !== "pending" || !intent.providerChargeId) return;
-    const now = clock();
     const lastCheck = intent.checkedAt ? Date.parse(intent.checkedAt) : 0;
     if (now.getTime() - lastCheck < CARD_RECONCILE_INTERVAL_MS) return;
     await db.cardPayments.markChecked(intent.intentId, now.toISOString());
@@ -671,10 +690,10 @@ export function createCardService(deps: CardServiceDeps): CardService {
   }
 
   /** Tentativa sem desfecho além do prazo: recusada como indisponível (libera outra). */
-  async function giveUpIfStale(intent: CardIntentView) {
+  async function giveUpIfStale(intent: CardIntentView, now: Date = clock()) {
     if (intent.intentState !== "creating") return;
     const since = Date.parse(intent.attemptStartedAt ?? intent.createdAt);
-    if (clock().getTime() - since <= CARD_PROCESSING_GIVE_UP_MS) return;
+    if (now.getTime() - since <= CARD_PROCESSING_GIVE_UP_MS) return;
     await decline(intent, "provider_unavailable", {
       providerChargeId: null,
       providerStatus: null,
@@ -718,6 +737,30 @@ export function createCardService(deps: CardServiceDeps): CardService {
       } catch (error) {
         warn("card_charge_ensure_failed", { code: errorCode(error) });
       }
+    },
+
+    async expireStaleCardAttempts(now = clock()) {
+      const summary: ExpireStaleCardSummary = { gaveUp: 0, checked: 0, failed: 0 };
+      const stale = await db.cardPayments.staleAttempts(
+        new Date(now.getTime() - CARD_PROCESSING_GIVE_UP_MS).toISOString(),
+        new Date(now.getTime() - CARD_RECONCILE_INTERVAL_MS).toISOString(),
+        CARD_STALE_BATCH_LIMIT,
+      );
+      for (const intent of stale) {
+        try {
+          if (intent.intentState === "creating") {
+            await giveUpIfStale(intent, now);
+            summary.gaveUp += 1;
+          } else {
+            await reconcile(intent, now);
+            summary.checked += 1;
+          }
+        } catch (error) {
+          summary.failed += 1;
+          warn("card_stale_attempt_failed", { provider: intent.provider, code: errorCode(error) });
+        }
+      }
+      return summary;
     },
 
     async viewForOrder(orderId, options) {

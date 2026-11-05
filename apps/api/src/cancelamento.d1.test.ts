@@ -32,6 +32,8 @@ import { sha256Hex } from "./order-crypto";
 import { createOrderService, type OrderService } from "./order-service";
 import { abacatePayFromEnv, createPixService } from "./pix-service";
 import { signAbacatePayBody } from "./providers/abacatepay/webhook";
+import type { Env } from "./env";
+import { createPaymentMaintenance } from "./payment-maintenance";
 import { createRefundService, refundGatewaysFromEnv } from "./refund-service";
 import { createStorefrontService } from "./storefront-service";
 
@@ -83,6 +85,8 @@ let abacateRefunds: string[];
 let efiRefunds: number[];
 let abacateRefundFails: boolean;
 let efiRefundFails: boolean;
+/** Desfecho do próximo one-step da Efí: aprovado, em análise ou sem resposta (rede). */
+let efiOneStep: "approved" | "waiting" | "network";
 const realFetch = globalThis.fetch;
 
 function randomIp(): string {
@@ -158,6 +162,7 @@ async function fakeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
     return json({ access_token: "token-efi-teste", expires_in: 600 });
   }
   if (url === `${EFI_BASE}/v1/charge/one-step`) {
+    if (efiOneStep === "network") throw new TypeError("fetch failed");
     const body = JSON.parse(String(init?.body)) as {
       items: { value: number }[];
       metadata: { custom_id: string };
@@ -165,12 +170,12 @@ async function fakeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
     const chargeId = 700_000 + Math.floor(Math.random() * 99_999);
     const amount = body.items[0]!.value;
     efiCharges.set(chargeId, { amount, customId: body.metadata.custom_id });
-    efiStatus.set(chargeId, "approved");
+    efiStatus.set(chargeId, efiOneStep === "waiting" ? "waiting" : "approved");
     return json({
       code: 200,
       data: {
         charge_id: chargeId,
-        status: "approved",
+        status: efiStatus.get(chargeId),
         total: amount,
         custom_id: body.metadata.custom_id,
       },
@@ -390,6 +395,7 @@ beforeEach(async () => {
   efiRefunds = [];
   abacateRefundFails = false;
   efiRefundFails = false;
+  efiOneStep = "approved";
   fx = await seedTwoStores(env.DB);
   db = createFoodeDb(env.DB);
   const email: EmailSender = { send: async () => ({ id: "email" }) };
@@ -754,5 +760,55 @@ describe("PIX vencido sem pagamento", () => {
     expect(await db.refunds.reversalsOfOrder(orderId)).toEqual([
       expect.objectContaining({ kind: "annulment" }),
     ]);
+  });
+});
+
+describe("Cartão sem desfecho (varredura do Cron)", () => {
+  const maintenance = () =>
+    createPaymentMaintenance(env as unknown as Env, { fetch: viaGlobalFetch });
+
+  it("processing além de 5 min vira recusado; em análise é conferido e aprovado; idempotente", async () => {
+    efiOneStep = "network";
+    const lost = await createOrder(
+      fx.storeA.slug,
+      body(itemId, { method: "credit", card: efiCard() }),
+    );
+    expect((await db.cardPayments.latestOfOrder(lost.orderId))?.state).toBe("processing");
+    efiOneStep = "waiting";
+    const waiting = await createOrder(
+      fx.storeA.slug,
+      body(itemId, { method: "credit", card: efiCard() }),
+    );
+    const pending = (await db.cardPayments.latestOfOrder(waiting.orderId))!;
+    expect(pending.state).toBe("pending");
+
+    // Antes do prazo: nada (a varredura usa o relógio passado, não o da página).
+    await expect(maintenance().expireStaleCardAttempts(OPEN_NOW)).resolves.toEqual({
+      gaveUp: 0,
+      checked: 0,
+      failed: 0,
+    });
+
+    efiStatus.set(Number(pending.providerChargeId), "approved");
+    const later = new Date(OPEN_NOW.getTime() + 6 * 60_000);
+    await expect(maintenance().expireStaleCardAttempts(later)).resolves.toEqual({
+      gaveUp: 1,
+      checked: 1,
+      failed: 0,
+    });
+    expect(await db.cardPayments.latestOfOrder(lost.orderId)).toMatchObject({
+      state: "declined",
+      declineReason: "provider_unavailable",
+    });
+    expect(await db.cardPayments.latestOfOrder(waiting.orderId)).toMatchObject({
+      state: "approved",
+      intentState: "paid",
+    });
+    // Repetir não muda nada.
+    await expect(maintenance().expireStaleCardAttempts(later)).resolves.toEqual({
+      gaveUp: 0,
+      checked: 0,
+      failed: 0,
+    });
   });
 });
