@@ -111,5 +111,12 @@ export function Turnstile({
     );
   }
 
-  return <div ref={container} className="min-h-[65px]" aria-label="Verificação de segurança" />;
+  return (
+    <div
+      ref={container}
+      className="min-h-[65px]"
+      role="group"
+      aria-label="Verificação de segurança"
+    />
+  );
 }

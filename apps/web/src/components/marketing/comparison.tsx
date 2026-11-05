@@ -25,7 +25,10 @@ export function Comparison() {
               </th>
               {COMPETITORS.map((competitor) => (
                 <th key={competitor.key} className="is-other" scope="col">
-                  <span className="mk-compare__brand" style={{ color: competitor.brandColor }}>
+                  <span
+                    className="mk-compare__brand text-[var(--color-ink)]"
+                    style={{ borderColor: competitor.brandColor }}
+                  >
                     Outra plataforma
                   </span>
                 </th>
