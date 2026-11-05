@@ -123,10 +123,14 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     return createOpsService({ db: createFoodeDb(this.env.DB), auth });
   }
 
-  /** Pedidos e configuração operacional (contrato do 24a; regras no 24b): order-service.ts. */
+  /** Pedidos e configuração operacional (Ticket 24a; telas no 24b): order-service.ts. */
   private orders(): OrderService {
     const { auth } = this.deps();
-    return createOrderService({ db: createFoodeDb(this.env.DB), auth });
+    return createOrderService({
+      db: createFoodeDb(this.env.DB),
+      auth,
+      orderTokenSecret: this.env.ORDER_TOKEN_SECRET,
+    });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */

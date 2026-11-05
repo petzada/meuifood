@@ -2,21 +2,20 @@
 // Storefront (`/storefront/*`), as imagens do Cardápio (`/media/*`, decisão 64) e webhooks dos
 // provedores (`/webhooks/*`). Operações do Painel NÃO passam por aqui: ficam no entrypoint
 // `PainelApi` (painel.ts), alcançável só por service binding.
-import { createFoodeDb, type FoodeDb, type PublicStoreMenu } from "@foode/db";
+import { createFoodeDb, type FoodeDb } from "@foode/db";
 import type { ApiHealth } from "@foode/shared";
-import {
-  cartQuoteRequestSchema,
-  cartSubtotalCents,
-  indexMenuItems,
-  type PublicMenu,
-  publicMenuSchema,
-} from "@foode/shared/menu";
+import { cartQuoteRequestSchema, cartSubtotalCents, indexMenuItems } from "@foode/shared/menu";
 import * as Sentry from "@sentry/cloudflare";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
+import { createTurnstileVerifier } from "./auth/turnstile";
 import type { Env } from "./env";
-import { mediaBaseUrl, menuImageUrl, serveMenuImage } from "./media";
+import { mediaBaseUrl, serveMenuImage } from "./media";
+import { toPublicMenu } from "./public-menu";
+import { createStorefrontService } from "./storefront-service";
+
+export { toPublicMenu };
 
 type AppEnv = { Bindings: Env; Variables: { db: FoodeDb } };
 
@@ -32,30 +31,12 @@ export async function apiHealth(db: FoodeDb): Promise<ApiHealth> {
 /** Teto do corpo do recálculo do carrinho (50 linhas cabem com folga). */
 export const CART_QUOTE_MAX_BODY_BYTES = 64 * 1024;
 
-/**
- * Converte o Cardápio do D1 no contrato público e valida com `publicMenuSchema` (o mesmo schema
- * que o Storefront parseia). Sem `store_id`, sem chave interna de imagem: só `imageUrl`.
- */
-export function toPublicMenu(menu: PublicStoreMenu, baseUrl: string | null): PublicMenu {
-  return publicMenuSchema.parse({
-    slug: menu.slug,
-    name: menu.name,
-    categories: menu.categories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      items: category.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        priceCents: item.priceCents,
-        available: item.available,
-        featured: item.featured,
-        imageUrl: menuImageUrl(baseUrl, item.imageObjectKey),
-        complementGroups: item.complementGroups,
-        additionals: item.additionals,
-      })),
-    })),
-  });
+/** Teto do corpo da busca por telefone e do "Sou eu" (token do Turnstile ≤ 2 KiB). */
+export const PHONE_LOOKUP_MAX_BODY_BYTES = 8 * 1024;
+
+/** Caminho sem o token da página do Pedido (dá acesso a dados pessoais): nunca em log. */
+export function redactPath(path: string): string {
+  return path.replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
 }
 
 export function createApp() {
@@ -109,40 +90,77 @@ export function createApp() {
       return c.json(cartSubtotalCents(indexMenuItems(publicMenu), parsed.data));
     },
   );
-  // ---- Ticket 24a (CONTRATO; a fatia API troca cada 501 pela operação em @foode/db). A Loja sai
-  // SÓ do Slug da URL e precisa estar `active` (senão 404 `store_not_found`). Schemas em
+  // ---- Ticket 24a: checkout, Pedido e busca por telefone (regras em storefront-service.ts). A
+  // Loja sai SÓ do Slug da URL e precisa estar `active` (senão 404 `store_not_found`). Schemas em
   // @foode/shared/order; corpo inválido = 400 `invalid_input`.
+  const service = (c: Context<AppEnv>) =>
+    createStorefrontService({
+      db: c.var.db,
+      turnstile: createTurnstileVerifier(c.env),
+      orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
+      phoneLookupIpSalt: c.env.PHONE_LOOKUP_IP_SALT,
+    });
+  const jsonBody = (c: Context<AppEnv>): Promise<unknown> =>
+    c.req.json<unknown>().catch(() => undefined);
+  const limit = (maxSize: number) =>
+    bodyLimit({ maxSize, onError: (c) => c.json({ error: "invalid_input" }, 413) });
 
   // Estado da Loja + "Sobre a Loja": 200 = `storefrontStoreStateSchema` (aberta até / fechada com
   // próxima abertura / Pausa, por `storeOpenState` em America/Sao_Paulo; horários; Delivery com
   // só bairros ativos ou Taxa fixa; Retirada com endereço; meios com taxa vigente; bandeiras).
-  storefront.get("/lojas/:slug/estado", (c) => c.json({ error: "not_implemented" }, 501));
+  storefront.get("/lojas/:slug/estado", async (c) => {
+    const reply = await service(c).state(c.req.param("slug"));
+    return c.json(reply.body, reply.status);
+  });
 
   // Cotação do checkout: corpo `checkoutQuoteRequestSchema`, 200 = `checkoutQuoteResponseSchema`
   // (preços, Delivery, mínimo e meios recalculados no servidor; nada gravado).
-  storefront.post("/lojas/:slug/checkout/cotacao", (c) =>
-    c.json({ error: "not_implemented" }, 501),
-  );
+  storefront.post("/lojas/:slug/checkout/cotacao", limit(CART_QUOTE_MAX_BODY_BYTES), async (c) => {
+    const reply = await service(c).quote(c.req.param("slug"), await jsonBody(c));
+    return c.json(reply.body, reply.status);
+  });
 
   // Criação idempotente do Pedido: corpo `checkoutCreateRequestSchema`; 201 novo, 200 replay
   // (mesma chave e corpo), erros com `checkoutErrorHttpStatus` = `checkoutCreateResponseSchema`.
-  // Loja ativa, Pausa, horário, Retirada e bairro conferidos na mesma escrita (`batch` +
-  // INSERT … SELECT condicional + constraints).
-  storefront.post("/lojas/:slug/pedidos", (c) => c.json({ error: "not_implemented" }, 501));
+  // Loja ativa, Pausa, horário, Retirada, bairro, mínimo e itens conferidos na mesma escrita
+  // (`batch` + INSERT … SELECT condicional + constraints).
+  storefront.post("/lojas/:slug/pedidos", limit(CART_QUOTE_MAX_BODY_BYTES), async (c) => {
+    const reply = await service(c).create(c.req.param("slug"), await jsonBody(c));
+    return c.json(reply.body, reply.status);
+  });
 
   // Página do Pedido: 200 = `orderTrackingSchema`; token de outra Loja ou inexistente = 404
-  // `order_not_found` (sem distinguir).
-  storefront.get("/lojas/:slug/pedidos/:token", (c) => c.json({ error: "not_implemented" }, 501));
+  // `order_not_found` (sem distinguir). `no-store`: o corpo tem dados pessoais do Pedido.
+  storefront.get("/lojas/:slug/pedidos/:token", async (c) => {
+    const reply = await service(c).track(c.req.param("slug"), c.req.param("token"));
+    c.header("cache-control", "no-store");
+    return c.json(reply.body, reply.status);
+  });
 
   // Busca por telefone (P-2.1), só Pedidos da mesma Loja: corpo `phoneLookupRequestSchema`
-  // (Turnstile: 403 `captcha_failed`; rate limit por IP: 429 `rate_limited`), 200 =
+  // (Turnstile: 403 `captcha_failed`; rate limit por IP e por telefone: 429 `rate_limited`), 200 =
   // `phoneLookupResponseSchema` mascarada; toda consulta vai para `phone_lookups` sem telefone.
-  storefront.post("/lojas/:slug/clientes/busca", (c) => c.json({ error: "not_implemented" }, 501));
+  // O IP é o `cf-connecting-ip` (o Storefront repassa o do navegador pelo binding).
+  storefront.post("/lojas/:slug/clientes/busca", limit(PHONE_LOOKUP_MAX_BODY_BYTES), async (c) => {
+    const reply = await service(c).lookup(
+      c.req.param("slug"),
+      await jsonBody(c),
+      c.req.header("cf-connecting-ip") ?? null,
+    );
+    c.header("cache-control", "no-store");
+    return c.json(reply.body, reply.status);
+  });
 
   // "Sou eu": corpo `phoneLookupConfirmRequestSchema` (token de uso único, curto), 200 =
   // `phoneLookupConfirmResponseSchema` com os dados completos do último Pedido na mesma Loja.
-  storefront.post("/lojas/:slug/clientes/confirmar", (c) =>
-    c.json({ error: "not_implemented" }, 501),
+  storefront.post(
+    "/lojas/:slug/clientes/confirmar",
+    limit(PHONE_LOOKUP_MAX_BODY_BYTES),
+    async (c) => {
+      const reply = await service(c).confirm(c.req.param("slug"), await jsonBody(c));
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
   );
   app.route("/storefront", storefront);
 
@@ -157,7 +175,9 @@ export function createApp() {
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((error, c) => {
     Sentry.captureException(error);
-    console.error(JSON.stringify({ level: "error", message: error.message, path: c.req.path }));
+    console.error(
+      JSON.stringify({ level: "error", message: error.message, path: redactPath(c.req.path) }),
+    );
     return c.json({ error: "internal_error" }, 500);
   });
 
