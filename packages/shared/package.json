@@ -23,6 +23,10 @@
       "types": "./dist/ops/index.d.ts",
       "default": "./dist/ops/index.js"
     },
+    "./order": {
+      "types": "./dist/order/index.d.ts",
+      "default": "./dist/order/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {

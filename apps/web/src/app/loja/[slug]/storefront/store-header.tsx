@@ -1,8 +1,11 @@
 "use client";
 
-// Cabeçalho compacto da Loja (C1): logo (ou iniciais), nome e "Compartilhar" (P-5.4).
-// Logo e capa só aparecem se o contrato trouxer (Ticket 28); sem eles o layout fecha igual.
-import { ShareNetwork } from "@phosphor-icons/react";
+// Cabeçalho compacto da Loja (C1): logo (ou iniciais), nome, linha de estado (aberta até /
+// fechada com próximo horário / Pausa — decisão 41) com link "Sobre a Loja", e
+// "Compartilhar" (P-5.4). Logo e capa só aparecem se o contrato trouxer (Ticket 28).
+import { Clock, Pause, ShareNetwork } from "@phosphor-icons/react";
+
+import type { StoreAvailabilityView } from "./store-status";
 
 export type StoreBranding = {
   coverUrl?: string | null;
@@ -17,16 +20,22 @@ function initials(name: string): string {
 }
 
 export function StoreHeader({
+  availability,
   branding,
   name,
+  onAbout,
   onShare,
 }: {
+  /** Sem estado (api indisponível): só nome e Compartilhar. */
+  availability?: StoreAvailabilityView | null;
   branding?: StoreBranding;
   name: string;
+  onAbout?: () => void;
   onShare: () => void;
 }) {
   const cover = branding?.coverUrl ?? null;
   const logo = branding?.logoUrl ?? null;
+  const StatusIcon = availability?.kind === "paused" ? Pause : Clock;
 
   return (
     <header className="border-b border-[var(--color-hairline)]">
@@ -53,6 +62,44 @@ export function StoreHeader({
           <h1 className="truncate text-xl font-bold tracking-[-0.02em] text-[var(--color-ink)]">
             {name}
           </h1>
+          {availability ? (
+            <p
+              className={[
+                "mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm",
+                availability.canOrder ? "text-[var(--color-body)]" : "text-[var(--color-ink)]",
+              ].join(" ")}
+            >
+              <span className="inline-flex items-center gap-1">
+                <StatusIcon
+                  aria-hidden
+                  className={
+                    availability.canOrder
+                      ? "text-[var(--color-primary)]"
+                      : "text-[var(--color-muted)]"
+                  }
+                  size={16}
+                  weight="bold"
+                />
+                <span className={availability.canOrder ? "" : "font-bold"}>
+                  {availability.label}
+                </span>
+              </span>
+              {onAbout ? (
+                <>
+                  <span aria-hidden className="text-[var(--color-hairline)]">
+                    |
+                  </span>
+                  <button
+                    className="min-h-6 font-bold text-[var(--color-primary-strong)] underline-offset-2 hover:underline"
+                    onClick={onAbout}
+                    type="button"
+                  >
+                    Sobre a Loja
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <button
           aria-label={`Compartilhar ${name}`}

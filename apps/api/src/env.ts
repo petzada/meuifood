@@ -19,4 +19,12 @@ export type Env = {
   // grava, lê e apaga objetos `stores/{store_id}/menu/{uuid}.{ext}`; sem credenciais S3.
   /** Base pública de leitura = rota `/media` da api, ex.: `https://api.foodedelivery.com.br/media`. */
   MEDIA_PUBLIC_BASE_URL?: string;
+  // Ticket 24a (Pedido). Secrets, só no Worker (nunca em arquivo/log):
+  /**
+   * Chave do HMAC que deriva o token da página do Pedido a partir do id (o banco guarda só o
+   * SHA-256 do token; o Painel remonta o link do "Avisar no WhatsApp"). Trocar invalida os links.
+   */
+  ORDER_TOKEN_SECRET?: string;
+  /** Sal do hash do IP truncado na auditoria/rate limit da busca por telefone (P-2.1). */
+  PHONE_LOOKUP_IP_SALT?: string;
 };

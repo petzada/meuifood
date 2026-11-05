@@ -4,7 +4,7 @@
 
 **Blocked by:** 23 — Portar Cardápio, Complementos e imagens.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus para contrato/API; Fable para o checkout e a página do Pedido, após o commit de contrato.
 
@@ -55,3 +55,7 @@
 - 2026-11-05 — Criado a partir do [Ticket 24](24-portar-operacao-pedido-delivery.md) (dividido em 24a/24b). Consolida os critérios do Storefront com as decisões [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (P-2.1, P-2.2, P-2.3, P-2.4, P-2.5, P-3.1, P-3.3, P-4.1, P-4.2, P-4.3 na exibição, P-4.4 no layout, P-5.1, P-6.1, P-6.2, P-CFG-3, P-CFG-5 na exibição), [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md) (busca por telefone e CEP mantidos com salvaguardas) e [65](../../../docs/decisoes/65-login-consumidor-codigo-whatsapp.md) (busca segue sem código). Dono do contrato do Pedido e da configuração operacional (migration `0004`); o 24b só consome.
 - 2026-11-05 — Critérios consolidados com 63–65.
 - 2026-11-05 — Feedback do Dono no teste visual do Storefront: remover do sheet do carrinho a nota "Taxa de entrega e pagamento entram na próxima etapa"; o carrinho passa a ter o CTA de checkout (critério acrescentado).
+- 2026-11-05 — Commit de contrato (branch `feat/24a-contrato-391f`): migration `0004_storefront_pedido` (Pedido, linhas, histórico de status, busca por telefone auditada; configuração operacional, horários e bairros), `@foode/shared/order` (estados, "aberta agora", configuração, checkout, Storefront, Painel), rotas públicas 501 e RPCs do Painel `not_implemented` com guard. Permissões novas `store.pause` e `orders.cancel` (Dono e Operador). Operações de `packages/db` ficam para a fatia API.
+- 2026-11-05 — Fatia API (branch `feat/24a-api-391f`): `@foode/db` ganha `store(ctx).operation()` (Pausa com quem/papel e auditoria só quando muda; horários, entrega, bandeiras e "Imprimir ao aceitar" só Dono, cada um com auditoria) e `store(ctx).orders()` (fila, detalhe com histórico, avanço/cancelamento por UPDATE condicional no `from` e só destinos válidos do Fulfillment), e `storefront.*` (estado, snapshot do checkout, `createOrder` num `batch` com INSERT…SELECT condicional — Loja `active`, Pausa, dia/HH:MM de São Paulo, Retirada/bairro ativo com a taxa cotada, mínimo, itens disponíveis com o preço cotado — e `ON CONFLICT` da chave de idempotência; busca por telefone com rate limit por IP decidido na própria escrita de `phone_lookups`, "Sou eu" por UPDATE de uso único). O `batch` basta para a contenção (D1 é single-writer); sem Durable Object. Token da página do Pedido = HMAC(`ORDER_TOKEN_SECRET`, id), banco guarda o SHA-256. PIX/Cartão seguem indisponíveis até 26/27 (`LIVE_ONLINE_METHODS` vazio), mesmo com taxa Foode vigente. Secrets sincronizados no `deploy.yml`. O Storefront precisa repassar o `cf-connecting-ip` do navegador nas chamadas da busca por telefone.
+
+- 2026-11-05 — Done (PR do 24a). Contrato `0b26f38`, API `50be24e`, UI `8f74613`; migration `0004_storefront_pedido`. Pendentes: X1 (seção concluída vira linha-resumo) não feito; `/privacidade` com texto provisório para o Dono revisar; token da página do Pedido aparece em logs de requisição (revisão de segurança no 30).

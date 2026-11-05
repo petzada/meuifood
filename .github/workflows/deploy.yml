@@ -107,6 +107,8 @@ jobs:
           MILLIONSEND_API_KEY: ${{ secrets.MILLIONSEND_API_KEY }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          ORDER_TOKEN_SECRET: ${{ secrets.ORDER_TOKEN_SECRET }}
+          PHONE_LOOKUP_IP_SALT: ${{ secrets.PHONE_LOOKUP_IP_SALT }}
         run: |
           umask 077
           dir="$RUNNER_TEMP/secrets"
@@ -114,8 +116,13 @@ jobs:
           # Auth (Ticket 22) não sobe sem o segredo do Better Auth: sem ele a api recusa login.
           : "${BETTER_AUTH_SECRET:?secret BETTER_AUTH_SECRET ausente}"
           : "${TURNSTILE_SECRET_KEY:?secret TURNSTILE_SECRET_KEY ausente}"
+          # Pedido (Ticket 24a): token da página do Pedido e sal do IP da busca por telefone.
+          # Sem eles a criação do Pedido e a busca falham fechadas; trocar o token invalida links.
+          : "${ORDER_TOKEN_SECRET:?secret ORDER_TOKEN_SECRET ausente}"
+          : "${PHONE_LOOKUP_IP_SALT:?secret PHONE_LOOKUP_IP_SALT ausente}"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_API, MILLIONSEND_API_KEY: env.MILLIONSEND_API_KEY,
-                  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY}
+                  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY,
+                  ORDER_TOKEN_SECRET: env.ORDER_TOKEN_SECRET, PHONE_LOOKUP_IP_SALT: env.PHONE_LOOKUP_IP_SALT}
             | with_entries(select(.value != null and .value != ""))' > "$dir/api.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_WEB} | with_entries(select(.value != null and .value != ""))' > "$dir/web.json"
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_ADMIN} | with_entries(select(.value != null and .value != ""))' > "$dir/admin.json"

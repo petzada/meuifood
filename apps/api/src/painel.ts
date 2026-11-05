@@ -57,6 +57,22 @@ import type {
   PlanTierTableView,
   ProviderCostView,
 } from "@foode/shared/ops";
+import type {
+  OrderCancelInput,
+  OrderDetail,
+  OrderRefInput,
+  OrdersList,
+  OrdersListInput,
+  OrderTransitionInput,
+  OrderTransitionResult,
+  PauseState,
+  StoreOperationSettings,
+  StoreSetCardBrandsInput,
+  StoreSetFulfillmentInput,
+  StoreSetHoursInput,
+  StoreSetPauseInput,
+  StoreSetPrintOnAcceptInput,
+} from "@foode/shared/order";
 import * as Sentry from "@sentry/cloudflare";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
@@ -68,6 +84,7 @@ import type { Env } from "./env";
 import { mediaBaseUrl } from "./media";
 import { createMenuService, type MenuService } from "./menu-service";
 import { createOpsService, type OpsService } from "./ops-service";
+import { createOrderService, type OrderService } from "./order-service";
 import { createPainelService, type PainelService } from "./painel-service";
 
 export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
@@ -104,6 +121,16 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
   private ops(): OpsService {
     const { auth } = this.deps();
     return createOpsService({ db: createFoodeDb(this.env.DB), auth });
+  }
+
+  /** Pedidos e configuração operacional (Ticket 24a; telas no 24b): order-service.ts. */
+  private orders(): OrderService {
+    const { auth } = this.deps();
+    return createOrderService({
+      db: createFoodeDb(this.env.DB),
+      auth,
+      orderTokenSecret: this.env.ORDER_TOKEN_SECRET,
+    });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */
@@ -410,5 +437,65 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     input: OpsStoreRefInput,
   ): Promise<RpcResult<OpsAuditEntry[]>> {
     return this.run("opsListStoreAudit", () => this.ops().opsListStoreAudit(caller, input));
+  }
+
+  async ordersList(caller: PainelCaller, input?: OrdersListInput): Promise<RpcResult<OrdersList>> {
+    return this.run("ordersList", () => this.orders().ordersList(caller, input));
+  }
+
+  async ordersGet(caller: PainelCaller, input: OrderRefInput): Promise<RpcResult<OrderDetail>> {
+    return this.run("ordersGet", () => this.orders().ordersGet(caller, input));
+  }
+
+  async ordersTransition(
+    caller: PainelCaller,
+    input: OrderTransitionInput,
+  ): Promise<RpcResult<OrderTransitionResult>> {
+    return this.run("ordersTransition", () => this.orders().ordersTransition(caller, input));
+  }
+
+  async ordersCancel(
+    caller: PainelCaller,
+    input: OrderCancelInput,
+  ): Promise<RpcResult<OrderTransitionResult>> {
+    return this.run("ordersCancel", () => this.orders().ordersCancel(caller, input));
+  }
+
+  async storeOperationGet(caller: PainelCaller): Promise<RpcResult<StoreOperationSettings>> {
+    return this.run("storeOperationGet", () => this.orders().storeOperationGet(caller));
+  }
+
+  async storeSetPause(
+    caller: PainelCaller,
+    input: StoreSetPauseInput,
+  ): Promise<RpcResult<PauseState>> {
+    return this.run("storeSetPause", () => this.orders().storeSetPause(caller, input));
+  }
+
+  async storeSetHours(caller: PainelCaller, input: StoreSetHoursInput): Promise<RpcResult<null>> {
+    return this.run("storeSetHours", () => this.orders().storeSetHours(caller, input));
+  }
+
+  async storeSetFulfillment(
+    caller: PainelCaller,
+    input: StoreSetFulfillmentInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("storeSetFulfillment", () => this.orders().storeSetFulfillment(caller, input));
+  }
+
+  async storeSetCardBrands(
+    caller: PainelCaller,
+    input: StoreSetCardBrandsInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("storeSetCardBrands", () => this.orders().storeSetCardBrands(caller, input));
+  }
+
+  async storeSetPrintOnAccept(
+    caller: PainelCaller,
+    input: StoreSetPrintOnAcceptInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("storeSetPrintOnAccept", () =>
+      this.orders().storeSetPrintOnAccept(caller, input),
+    );
   }
 }

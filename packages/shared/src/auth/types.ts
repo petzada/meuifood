@@ -35,8 +35,10 @@ export type Permission =
   | "store.settings"
   | "store.members"
   | "store.menu"
+  | "store.pause"
   | "orders.view"
-  | "orders.update_status";
+  | "orders.update_status"
+  | "orders.cancel";
 
 export type AuthErrorCode =
   | "unauthenticated"
