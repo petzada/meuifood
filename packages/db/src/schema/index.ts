@@ -10,3 +10,4 @@ export * from "./onboarding";
 export * from "./customers";
 export * from "./coupons";
 export * from "./payments";
+export * from "./leads";

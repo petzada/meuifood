@@ -44,4 +44,7 @@ export type Env = {
   ABACATEPAY_WEBHOOK_SECRET?: string;
   /** Chave pública de assinatura HMAC publicada pela AbacatePay (header X-Webhook-Signature). */
   ABACATEPAY_SIGNING_KEY?: string;
+  // Ticket 31 (leads da landing, decisão 70). Var (não secret): o e-mail do próprio Dono da Foode.
+  /** Destinatário do aviso de lead novo; vazio = lead gravado sem aviso. */
+  LEADS_NOTIFY_EMAIL?: string;
 };

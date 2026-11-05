@@ -1,6 +1,7 @@
 // CTA final (PROPOSTA-LANDING §2.12): bloco com fill suave da primary (`--mk-cta-bg`) e
 // texto em ink, legível (contraste AA conferido em cta-final.test.tsx). Entra com clip-path
 // ao chegar na viewport; formulário ao lado.
+import { turnstileSiteKey } from "../../lib/turnstile";
 import { LeadForm } from "./lead-form";
 
 /** Fundo do CTA final: tom claro da primary; ink (#222) sobre ele passa de 4,5:1 (AA). */
@@ -25,7 +26,7 @@ export function CtaFinal() {
             </p>
           </div>
           <div className="rounded-[var(--radius-container)] border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)]">
-            <LeadForm source="cta-final" />
+            <LeadForm source="cta-final" turnstileSiteKey={turnstileSiteKey()} />
           </div>
         </div>
       </div>

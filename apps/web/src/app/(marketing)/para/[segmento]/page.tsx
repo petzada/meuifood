@@ -12,6 +12,7 @@ import { Plans } from "../../../../components/marketing/plans";
 import { JsonLd, RefundLine, SectionHeading } from "../../../../components/marketing/primitives";
 import { findSegment, SEGMENTS } from "../../../../content/segments";
 import { SITE_NAME, SITE_URL } from "../../../../content/site";
+import { turnstileSiteKey } from "../../../../lib/turnstile";
 
 type Params = Promise<{ segmento: string }>;
 
@@ -204,7 +205,7 @@ export default async function SegmentPage({ params }: { params: Params }) {
             Vamos abrir o canal próprio da sua {segment.name.toLowerCase()}?
           </SectionHeading>
           <div data-reveal>
-            <LeadForm source={`para/${segment.slug}`} />
+            <LeadForm source={`para/${segment.slug}`} turnstileSiteKey={turnstileSiteKey()} />
           </div>
         </div>
       </section>

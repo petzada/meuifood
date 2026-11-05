@@ -93,7 +93,7 @@ export function createMillionSendSender(
 export function sendInBackground(
   sender: EmailSender,
   waitUntil: (promise: Promise<unknown>) => void,
-  kind: "invite" | "invite_notice" | "password_reset",
+  kind: "invite" | "invite_notice" | "password_reset" | "lead_notice",
   email: TransactionalEmail,
 ): void {
   waitUntil(

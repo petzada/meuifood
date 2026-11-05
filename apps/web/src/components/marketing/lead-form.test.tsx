@@ -5,6 +5,15 @@ import { describe, expect, it, vi } from "vitest";
 import type { LeadResponse } from "../../lib/lead";
 import { LeadForm } from "./lead-form";
 
+// Widget do Turnstile trocado por um botão que entrega o token (sem script externo).
+vi.mock("../turnstile", () => ({
+  Turnstile: ({ onToken }: { onToken: (token: string | null) => void }) => (
+    <button onClick={() => onToken("turnstile-token")} type="button">
+      Verificar
+    </button>
+  ),
+}));
+
 async function fill(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Seu nome"), "Ana Souza");
   await user.type(screen.getByLabelText("Seu WhatsApp"), "(11) 99999-1234");
@@ -44,7 +53,7 @@ describe("LeadForm", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Recebemos seu contato.");
   });
 
-  it("com 503 controlado (TODO 31-leads) mostra a mensagem e o atalho do WhatsApp", async () => {
+  it("falha controlada (api fora, captcha, rate limit) mostra a mensagem e o atalho do WhatsApp", async () => {
     const user = userEvent.setup();
     const submit = vi
       .fn<(input: unknown) => Promise<LeadResponse>>()
@@ -60,5 +69,24 @@ describe("LeadForm", () => {
     );
     // O formulário continua preenchido para tentar de novo.
     expect(screen.getByLabelText("Seu nome")).toHaveValue("Ana Souza");
+  });
+
+  it("com Turnstile: exige a verificação e manda o token junto com o lead", async () => {
+    const user = userEvent.setup();
+    const submit = vi
+      .fn<(input: unknown) => Promise<LeadResponse>>()
+      .mockResolvedValue({ ok: true });
+    render(<LeadForm source="hero" submit={submit} turnstileSiteKey="site-key" />);
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Quero falar com a Foode" }));
+    expect(submit).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("verificação de segurança");
+
+    await user.click(screen.getByRole("button", { name: "Verificar" }));
+    await user.click(screen.getByRole("button", { name: "Quero falar com a Foode" }));
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ storeName: "Burger da Ana", turnstileToken: "turnstile-token" }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Recebemos seu contato.");
   });
 });

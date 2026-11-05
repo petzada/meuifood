@@ -59,6 +59,7 @@ import type {
   CouponUpdateInput,
   WelcomeCouponInput,
 } from "@foode/shared/coupon";
+import type { LeadView, OpsListLeadsInput, OpsSetLeadStatusInput } from "@foode/shared/lead";
 import type {
   OpsCustomerChangePhoneInput,
   OpsCustomerFindInput,
@@ -99,6 +100,7 @@ import type {
   StoreSetFulfillmentInput,
   StoreSetHoursInput,
   StoreSetPauseInput,
+  StoreSetDeliveryRateInput,
   StoreSetPrintOnAcceptInput,
 } from "@foode/shared/order";
 import * as Sentry from "@sentry/cloudflare";
@@ -553,6 +555,15 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     );
   }
 
+  async storeSetDeliveryRate(
+    caller: PainelCaller,
+    input: StoreSetDeliveryRateInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("storeSetDeliveryRate", () =>
+      this.orders().storeSetDeliveryRate(caller, input),
+    );
+  }
+
   async onboardingGet(caller: PainelCaller): Promise<RpcResult<OwnerOnboardingState>> {
     return this.run("onboardingGet", () => this.onboarding().onboardingGet(caller));
   }
@@ -672,5 +683,19 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     return this.run("opsCustomerChangePhone", () =>
       this.opsCustomers().opsCustomerChangePhone(caller, input),
     );
+  }
+
+  async opsListLeads(
+    caller: PainelCaller,
+    input: OpsListLeadsInput,
+  ): Promise<RpcResult<LeadView[]>> {
+    return this.run("opsListLeads", () => this.ops().opsListLeads(caller, input));
+  }
+
+  async opsSetLeadStatus(
+    caller: PainelCaller,
+    input: OpsSetLeadStatusInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsSetLeadStatus", () => this.ops().opsSetLeadStatus(caller, input));
   }
 }

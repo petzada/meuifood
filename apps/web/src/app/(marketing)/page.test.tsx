@@ -1,10 +1,20 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FAQ } from "../../content/faq";
 import { LEGAL } from "../../content/site";
 import MarketingLayout from "./layout";
 import Home from "./page";
+
+// Sem rede nem script externo: o Turnstile vira um placeholder e as taxas chegam vazias.
+vi.mock("../../components/turnstile", () => ({ Turnstile: () => null }));
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ fees: [] })),
+  );
+});
 
 // Acessibilidade básica e estrutura da landing (decisão 70): landmarks, um H1, H2 por
 // seção, FAQ em <details>, rodapé institucional, WhatsApp só por /falar e nada da tarifa

@@ -26,3 +26,5 @@
 - 2026-11-05 — Aberto a partir da análise `docs/landing/` e da decisão 70. Número de WhatsApp de vendas fica só em secret (`SALES_WHATSAPP`), configurado pelo orquestrador.
 
 - 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
+
+- 2026-11-05 — Fatia de API (`feat/31-leads-seed-391f`): tabela `leads` (migration 0008, expand), `POST /storefront/leads` (Turnstile + rate limit por IP + aviso pela MillionSend para `LEADS_NOTIFY_EMAIL`), `/ops/leads` no Painel, `/falar` (302 no servidor a partir do secret `SALES_WHATSAPP` do Worker do web) e `GET /storefront/taxas` (tabela padrão vigente) ligada às taxas da landing. Pendentes do ticket: Loja demo e itens de UI/SEO restantes.

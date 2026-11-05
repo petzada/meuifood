@@ -108,3 +108,45 @@ export function passwordResetEmail(input: {
     idempotencyKey: input.idempotencyKey,
   };
 }
+
+const ORDERS_PER_DAY_TEXT = {
+  ate_10: "até 10",
+  "10_a_50": "10 a 50",
+  mais_de_50: "mais de 50",
+} as const;
+
+/**
+ * Aviso de lead novo para a Foode (Ticket 31, decisão 70). Vai só para LEADS_NOTIFY_EMAIL (o
+ * e-mail do próprio Dono da Foode), com os dados que o lojista digitou, para a resposta rápida.
+ */
+export function leadNoticeEmail(input: {
+  to: string;
+  lead: {
+    name: string;
+    whatsapp: string;
+    storeName: string;
+    city: string;
+    ordersPerDay: keyof typeof ORDERS_PER_DAY_TEXT;
+    source?: string | undefined;
+  };
+  opsUrl: string;
+  idempotencyKey: string;
+}): TransactionalEmail {
+  const { lead } = input;
+  const { html, text } = layout(
+    `Novo lead: ${lead.storeName}`,
+    [
+      `${lead.name} (${lead.storeName}, ${lead.city}) pediu contato pela landing.`,
+      `WhatsApp: +${lead.whatsapp}. Pedidos por dia: ${ORDERS_PER_DAY_TEXT[lead.ordersPerDay]}.`,
+      ...(lead.source ? [`Origem: ${lead.source}.`] : []),
+    ],
+    { label: "Ver leads no Ops", url: input.opsUrl },
+  );
+  return {
+    to: input.to,
+    subject: `Novo lead da landing: ${lead.storeName}`,
+    html,
+    text,
+    idempotencyKey: input.idempotencyKey,
+  };
+}

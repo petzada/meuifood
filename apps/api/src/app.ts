@@ -9,9 +9,12 @@ import * as Sentry from "@sentry/cloudflare";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
+import { panelUrlOf } from "./auth/auth";
 import { createTurnstileVerifier } from "./auth/turnstile";
 import { type CustomerReply, createCustomerService } from "./customer-service";
+import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
+import { createLeadService } from "./lead-service";
 import { mediaBaseUrl, serveMenuImage, serveStoreImage } from "./media";
 import {
   ABACATEPAY_SECRET_QUERY_PARAM,
@@ -47,6 +50,18 @@ export const CUSTOMER_MAX_BODY_BYTES = 8 * 1024;
 
 /** Teto do corpo do webhook da AbacatePay (o envelope tem poucos KiB). */
 export const WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
+
+/** Teto do corpo do lead da landing (5 campos curtos + token do Turnstile ≤ 2 KiB). */
+export const LEAD_MAX_BODY_BYTES = 8 * 1024;
+
+/** Link do aviso de lead: `/ops/leads` no Painel (BETTER_AUTH_URL); null sem Painel. */
+export function opsLeadsUrlOf(env: Pick<Env, "BETTER_AUTH_URL">): string | null {
+  try {
+    return new URL("/ops/leads", panelUrlOf(env)).href;
+  } catch {
+    return null;
+  }
+}
 
 /** Teto do corpo do evento do funil (`{"event":"checkout_start"}`). */
 export const FUNNEL_EVENT_MAX_BODY_BYTES = 1024;
@@ -308,6 +323,40 @@ export function createApp() {
   storefront.get("/lojas/:slug/conta/pedidos", async (c) =>
     customerResponse(c, await customer(c).orders(c.req.param("slug"), cookieOf(c))),
   );
+  // ---- Ticket 31 (decisão 70): leads da landing e tabela padrão de taxas (lead-service.ts).
+  const leads = (c: Context<AppEnv>) =>
+    createLeadService({
+      db: c.var.db,
+      turnstile: createTurnstileVerifier(c.env),
+      email: createMillionSendSender(c.env),
+      waitUntil: (promise) => {
+        try {
+          c.executionCtx.waitUntil(promise);
+        } catch {
+          // Sem ExecutionContext (testes com `app.request`): o envio segue solto.
+          void promise.catch(() => undefined);
+        }
+      },
+      ipSalt: c.env.PHONE_LOOKUP_IP_SALT,
+      notifyEmail: c.env.LEADS_NOTIFY_EMAIL,
+      opsLeadsUrl: opsLeadsUrlOf(c.env),
+    });
+
+  // Lead da landing: corpo `leadCreateRequestSchema` (@foode/shared/lead). 201 `{ ok: true }`;
+  // 400 `invalid_input`; 429 `rate_limited` (hash do IP truncado); 403 `captcha_failed`.
+  storefront.post("/leads", limit(LEAD_MAX_BODY_BYTES), async (c) => {
+    const reply = await leads(c).create(await jsonBody(c), ipOf(c));
+    c.header("cache-control", "no-store");
+    return c.json(reply.body, reply.status);
+  });
+
+  // Tabela padrão Foode vigente (PIX, Crédito Normal/Rápido) para a landing:
+  // `publicDefaultFeesResponseSchema`. Cache curto: mudança de taxa aparece em minutos.
+  storefront.get("/taxas", async (c) => {
+    const body = await leads(c).defaultFees();
+    c.header("cache-control", "public, max-age=300");
+    return c.json(body);
+  });
   app.route("/storefront", storefront);
 
   // Imagens do Cardápio (decisão 64): leitura pública só de chaves `stores/{uuid}/menu/{uuid}.{ext}`.

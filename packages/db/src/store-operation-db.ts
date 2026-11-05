@@ -77,6 +77,8 @@ export type OperationSettings = {
   pickupEta: OperationEta | null;
   cardBrands: { debit: string[]; credit: string[] };
   printOnAccept: boolean;
+  /** R$/km do Delivery em centavos (decisão 73); null = não configurado. */
+  deliveryRatePerKmCents: number | null;
 };
 
 export type FulfillmentSettingsData = {
@@ -104,6 +106,7 @@ export const STORE_OPERATION_AUDIT = {
   fulfillment: "store.fulfillment.update",
   cardBrands: "store.card_brands.update",
   printOnAccept: "store.print_on_accept.update",
+  deliveryRate: "store.delivery_rate.update",
 } as const;
 
 export type OperationResult<T> =
@@ -126,6 +129,7 @@ type SettingsRow = {
   debitBrands: string;
   creditBrands: string;
   printOnAccept: number;
+  deliveryRatePerKmCents: number | null;
 };
 type NeighborhoodRow = { id: string; name: string; feeCents: number; active: number };
 
@@ -135,7 +139,8 @@ const SELECT_SETTINGS = `SELECT st.paused AS paused, st.paused_at AS pausedAt,
   st.delivery_fixed_fee_cents AS fixedFeeCents, st.delivery_minimum_order_cents AS minimumOrderCents,
   st.delivery_eta_min_minutes AS deliveryEtaMin, st.delivery_eta_max_minutes AS deliveryEtaMax,
   st.pickup_eta_min_minutes AS pickupEtaMin, st.pickup_eta_max_minutes AS pickupEtaMax,
-  st.debit_brands AS debitBrands, st.credit_brands AS creditBrands, st.print_on_accept AS printOnAccept
+  st.debit_brands AS debitBrands, st.credit_brands AS creditBrands, st.print_on_accept AS printOnAccept,
+  st.delivery_rate_per_km_cents AS deliveryRatePerKmCents
   FROM store_operation_settings st LEFT JOIN users u ON u.id = st.paused_by_user_id
   WHERE st.store_id = ?`;
 const SELECT_HOURS = `SELECT weekday, opens_at AS opensAt, closes_at AS closesAt
@@ -194,6 +199,7 @@ export function buildOperationSettings(
       credit: row ? brandList(row.creditBrands) : [],
     },
     printOnAccept: row?.printOnAccept === 1,
+    deliveryRatePerKmCents: row?.deliveryRatePerKmCents ?? null,
   };
 }
 
@@ -453,6 +459,36 @@ export function createOperationOps(d1: D1Database, context: StoreContext) {
           )
           .bind(printOnAccept ? 1 : 0, now, storeId),
         audit(STORE_OPERATION_AUDIT.printOnAccept, now, { printOnAccept }),
+      ]);
+    },
+
+    /**
+     * R$/km do Delivery (decisão 73; só Dono). `null` limpa. Idempotente: o mesmo valor não grava
+     * nem audita. O valor (1..MENU_MAX_CENTS) já vem validado pelo Zod; o UPDATE confere de novo.
+     */
+    async setDeliveryRate(ratePerKmCents: number | null): Promise<void> {
+      requireOwner();
+      if (
+        ratePerKmCents !== null &&
+        !(Number.isSafeInteger(ratePerKmCents) && ratePerKmCents > 0)
+      ) {
+        throw new FoodeDbError("invalid_input", "R$/km inválido");
+      }
+      const current = await readOperationSettings(d1, storeId);
+      if (current.deliveryRatePerKmCents === ratePerKmCents) return;
+      const now = utcNow();
+      await d1.batch([
+        ensureRow(),
+        audit(STORE_OPERATION_AUDIT.deliveryRate, now, {
+          before: current.deliveryRatePerKmCents,
+          after: ratePerKmCents,
+        }),
+        d1
+          .prepare(
+            `UPDATE store_operation_settings SET delivery_rate_per_km_cents = ?, updated_at = ?
+             WHERE store_id = ?`,
+          )
+          .bind(ratePerKmCents, now, storeId),
       ]);
     },
   };
