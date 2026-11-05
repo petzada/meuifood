@@ -2,7 +2,8 @@
 // usa o mesmo mapa só para esconder navegação (nunca como controle de acesso).
 // Operador: Pedidos (ver, avançar, cancelar) e Pausa (decisão 63, P-OPE-4). Ops: só /ops.
 // Dono: tudo da sua Loja. `store.settings` (horários, entrega, bandeiras, "Imprimir ao aceitar")
-// continua só do Dono.
+// continua só do Dono. `store.finance` (Ticket 14, NAV-01/NAV-02): Plano, Relatórios, Repasses e
+// agregados — só do Dono; o Operador não vê dinheiro da Loja, e o Ops vê pelo `/ops`.
 import type { Role } from "./schemas.js";
 import type { Permission } from "./types.js";
 
@@ -10,6 +11,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   foode_ops: ["ops.area"],
   owner: [
     "store.settings",
+    "store.finance",
     "store.members",
     "store.menu",
     "store.pause",

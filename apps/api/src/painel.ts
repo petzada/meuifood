@@ -60,6 +60,21 @@ import type {
   CouponUpdateInput,
   WelcomeCouponInput,
 } from "@foode/shared/coupon";
+import type {
+  FinanceReport,
+  OpsMarginInput,
+  OpsMarginView,
+  OpsPayoutAdjustmentInput,
+  OpsPayoutBatchesInput,
+  OpsPayoutBatchView,
+  OpsPayoutMarkPaidInput,
+  OpsPayoutMarkPaidResult,
+  OpsPayoutsDueView,
+  OwnerPayoutsInput,
+  OwnerPayoutsView,
+  ReportCsvExport,
+  ReportInput,
+} from "@foode/shared/finance";
 import type { LeadView, OpsListLeadsInput, OpsSetLeadStatusInput } from "@foode/shared/lead";
 import type {
   OpsCustomerChangePhoneInput,
@@ -115,6 +130,7 @@ import { createCouponService, type CouponService } from "./coupon-service";
 import { createOpsCustomerService, type OpsCustomerService } from "./customer-service";
 import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
+import { createFinanceService, type FinanceService } from "./finance-service";
 import { mediaBaseUrl } from "./media";
 import { createMenuService, type MenuService } from "./menu-service";
 import { createOnboardingService, type OnboardingService } from "./onboarding-service";
@@ -194,6 +210,12 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
   private opsCustomers(): OpsCustomerService {
     const { auth } = this.deps();
     return createOpsCustomerService({ db: createFoodeDb(this.env.DB), auth });
+  }
+
+  /** Financeiro (Ticket 14): Dono `store.finance` e Ops `ops.area`; finance-service.ts. */
+  private finance(): FinanceService {
+    const { auth } = this.deps();
+    return createFinanceService({ db: createFoodeDb(this.env.DB), auth });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */
@@ -711,5 +733,57 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     input: OpsSetLeadStatusInput,
   ): Promise<RpcResult<null>> {
     return this.run("opsSetLeadStatus", () => this.ops().opsSetLeadStatus(caller, input));
+  }
+
+  async reportsGet(caller: PainelCaller, input: ReportInput): Promise<RpcResult<FinanceReport>> {
+    return this.run("reportsGet", () => this.finance().reportsGet(caller, input));
+  }
+
+  async reportsExportCsv(
+    caller: PainelCaller,
+    input: ReportInput,
+  ): Promise<RpcResult<ReportCsvExport>> {
+    return this.run("reportsExportCsv", () => this.finance().reportsExportCsv(caller, input));
+  }
+
+  async payoutsGet(
+    caller: PainelCaller,
+    input: OwnerPayoutsInput,
+  ): Promise<RpcResult<OwnerPayoutsView>> {
+    return this.run("payoutsGet", () => this.finance().payoutsGet(caller, input));
+  }
+
+  async opsPayoutsDue(caller: PainelCaller): Promise<RpcResult<OpsPayoutsDueView>> {
+    return this.run("opsPayoutsDue", () => this.finance().opsPayoutsDue(caller));
+  }
+
+  async opsPayoutMarkPaid(
+    caller: PainelCaller,
+    input: OpsPayoutMarkPaidInput,
+  ): Promise<RpcResult<OpsPayoutMarkPaidResult>> {
+    return this.run("opsPayoutMarkPaid", () => this.finance().opsPayoutMarkPaid(caller, input));
+  }
+
+  async opsPayoutAdjustmentCreate(
+    caller: PainelCaller,
+    input: OpsPayoutAdjustmentInput,
+  ): Promise<RpcResult<{ adjustmentId: string }>> {
+    return this.run("opsPayoutAdjustmentCreate", () =>
+      this.finance().opsPayoutAdjustmentCreate(caller, input),
+    );
+  }
+
+  async opsPayoutBatches(
+    caller: PainelCaller,
+    input: OpsPayoutBatchesInput,
+  ): Promise<RpcResult<OpsPayoutBatchView[]>> {
+    return this.run("opsPayoutBatches", () => this.finance().opsPayoutBatches(caller, input));
+  }
+
+  async opsMarginReport(
+    caller: PainelCaller,
+    input: OpsMarginInput,
+  ): Promise<RpcResult<OpsMarginView>> {
+    return this.run("opsMarginReport", () => this.finance().opsMarginReport(caller, input));
   }
 }
