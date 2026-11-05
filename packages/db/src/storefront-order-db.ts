@@ -473,26 +473,28 @@ export function createStorefrontOrderOps(d1: D1Database) {
       now: string;
     }): Promise<PhoneLookupConfirmed | null> {
       if (!SLUG_PATTERN.test(input.slug)) return null;
-      const [, found] = await d1.batch([
-        d1
-          .prepare(
-            `UPDATE phone_lookups SET confirmed_at = ?
-             WHERE confirm_token_hash = ? AND result = 'found' AND confirmed_at IS NULL
-               AND confirm_expires_at > ? AND store_id = ${ACTIVE_STORE_BY_SLUG}`,
-          )
-          .bind(input.now, input.confirmTokenHash, input.now, input.slug),
-        d1
-          .prepare(
-            `SELECT o.customer_name AS customerName, o.customer_phone_e164 AS customerPhone,
-                    o.delivery_postal_code AS postalCode, o.delivery_street AS street,
-                    o.delivery_number AS number, o.delivery_complement AS complement,
-                    o.delivery_reference AS reference, o.delivery_neighborhood AS neighborhood
-             FROM phone_lookups l JOIN orders o ON o.store_id = l.store_id AND o.id = l.matched_order_id
-             WHERE l.confirm_token_hash = ? AND l.confirmed_at = ?
-               AND l.store_id = ${ACTIVE_STORE_BY_SLUG}`,
-          )
-          .bind(input.confirmTokenHash, input.now, input.slug),
-      ]);
+      // Consome o token numa escrita só (uso único): só quem de fato marcou `confirmed_at`
+      // recebe o id do Pedido; uma segunda chamada no mesmo instante não acha nada.
+      const consumed = await d1
+        .prepare(
+          `UPDATE phone_lookups SET confirmed_at = ?
+           WHERE confirm_token_hash = ? AND result = 'found' AND confirmed_at IS NULL
+             AND confirm_expires_at > ? AND store_id = ${ACTIVE_STORE_BY_SLUG}
+           RETURNING store_id AS storeId, matched_order_id AS orderId`,
+        )
+        .bind(input.now, input.confirmTokenHash, input.now, input.slug)
+        .first<{ storeId: string; orderId: string | null }>();
+      if (!consumed?.orderId) return null;
+      const found = await d1
+        .prepare(
+          `SELECT o.customer_name AS customerName, o.customer_phone_e164 AS customerPhone,
+                  o.delivery_postal_code AS postalCode, o.delivery_street AS street,
+                  o.delivery_number AS number, o.delivery_complement AS complement,
+                  o.delivery_reference AS reference, o.delivery_neighborhood AS neighborhood
+           FROM orders o WHERE o.store_id = ? AND o.id = ?`,
+        )
+        .bind(consumed.storeId, consumed.orderId)
+        .all();
       type Row = {
         customerName: string;
         customerPhone: string;

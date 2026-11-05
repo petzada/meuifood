@@ -734,7 +734,7 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
             `SELECT e.from_status AS "from", e.to_status AS "to", e.occurred_at AS at,
                     e.actor_role AS actorRole, u.name AS actorName
              FROM order_status_events e LEFT JOIN users u ON u.id = e.actor_user_id
-             WHERE e.store_id = ? AND e.order_id = ? ORDER BY e.occurred_at, e.rowid`,
+             WHERE e.store_id = ? AND e.order_id = ? ORDER BY e.rowid`,
           )
           .bind(storeId, orderId),
       ]);

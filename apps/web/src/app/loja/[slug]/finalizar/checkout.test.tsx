@@ -1,0 +1,400 @@
+// Componente: checkout numa tela só (X1–X9). Validações com CTA que diz o que falta, pedido
+// mínimo, troco, busca pelo telefone mascarada + "Sou eu", lembrar/esquecer dados, envio
+// idempotente e erros do servidor. A api do checkout entra como objeto mocado; Turnstile é
+// um botão que entrega um token.
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { cartStorageKey } from "../storefront/cart-store";
+import { ids, neighborhoodIds, publicMenu, storeState } from "../storefront/fixtures";
+import { Checkout } from "./checkout";
+import type { CheckoutApi } from "./checkout-api";
+import { rememberedCustomerKey } from "./checkout-state";
+
+const router = vi.hoisted(() => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/loja/lanchonete-do-ze/finalizar",
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock("../../../../components/turnstile", () => ({
+  Turnstile: ({ onToken }: { onToken: (token: string | null) => void }) => (
+    <button onClick={() => onToken("turnstile-token")} type="button">
+      Verificação de segurança
+    </button>
+  ),
+}));
+
+const soda4 = [{ additionalIds: [], complementSelections: {}, itemId: ids.soda, quantity: 4 }];
+const soda2 = [{ additionalIds: [], complementSelections: {}, itemId: ids.soda, quantity: 2 }];
+
+function seedCart(lines = soda4) {
+  window.localStorage.setItem(
+    cartStorageKey("lanchonete-do-ze"),
+    JSON.stringify({ lines, storeSlug: "lanchonete-do-ze" }),
+  );
+}
+
+function fakeApi(overrides: Partial<CheckoutApi> = {}): CheckoutApi {
+  return {
+    confirmPhone: vi.fn(async () => ({ found: false as const })),
+    createOrder: vi.fn(async () => ({
+      accessToken: "a".repeat(40),
+      ok: true as const,
+      orderCode: 12,
+      replayed: false,
+      trackingPath: "/loja/lanchonete-do-ze/pedido/aaaa",
+    })),
+    lookupPhone: vi.fn(async () => ({ found: false as const })),
+    quote: vi.fn(async () => null),
+    ...overrides,
+  };
+}
+
+function setup(options: { api?: CheckoutApi; siteKey?: string; state?: typeof storeState } = {}) {
+  const api = options.api ?? fakeApi();
+  const user = userEvent.setup();
+  render(
+    <Checkout
+      api={api}
+      cepLookup={async () => null}
+      menu={publicMenu}
+      now={Date.parse("2026-11-05T23:00:00.000Z")}
+      siteKey={options.siteKey ?? ""}
+      state={options.state ?? storeState}
+    />,
+  );
+  return { api, user };
+}
+
+const cta = () =>
+  screen.getByRole("button", {
+    name: /Fazer pedido|Preencha|Escolha|Complete|Faltam|Confira|Enviando|indisponíveis/u,
+  });
+
+async function fillBasics(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("WhatsApp"), "11912345678");
+  await user.type(screen.getByLabelText("Nome e sobrenome"), "Maria Souza");
+}
+
+async function fillDelivery(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+  await user.type(screen.getByLabelText("Rua"), "Rua A");
+  await user.type(screen.getByLabelText("Número"), "42");
+  await user.selectOptions(screen.getByLabelText("Bairro"), neighborhoodIds.centro);
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  router.push.mockReset();
+});
+
+describe("Checkout", () => {
+  it("carrinho vazio mostra o aviso e o link para o Cardápio", async () => {
+    setup();
+    expect(await screen.findByText("Seu carrinho está vazio.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver Cardápio" })).toHaveAttribute(
+      "href",
+      "/loja/lanchonete-do-ze",
+    );
+  });
+
+  it("CTA diz o que falta, fica focável e leva o foco à primeira pendência (G2)", async () => {
+    seedCart();
+    const { api, user } = setup();
+    expect(await screen.findByText("Refrigerante lata", { exact: false })).toBeInTheDocument();
+    expect(cta()).toHaveTextContent("Preencha seus dados");
+    expect(cta()).toHaveAttribute("aria-disabled", "true");
+    await user.click(cta());
+    expect(screen.getByLabelText("WhatsApp")).toHaveFocus();
+    expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("Confira os campos destacados.");
+    expect(screen.getByText("Informe seu nome.")).toBeInTheDocument();
+    expect(api.createOrder).not.toHaveBeenCalled();
+
+    await fillBasics(user);
+    expect(cta()).toHaveTextContent("Escolha como receber");
+    await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+    expect(cta()).toHaveTextContent("Complete o endereço");
+  });
+
+  it("Delivery: taxa do bairro entra no total, mínimo bloqueia com 'Faltam R$ X' (K7/P-2.5)", async () => {
+    seedCart(soda2); // R$ 12,00 < mínimo R$ 20,00
+    const { user } = setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await fillDelivery(user);
+    expect(screen.getByRole("option", { name: "Centro · R$ 5,00" })).toBeInTheDocument();
+    expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 17,00");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Faltam R$ 8,00 para o pedido mínimo de R$ 20,00.",
+    );
+    expect(cta()).toHaveTextContent("Faltam R$ 8,00 para o pedido mínimo");
+    expect(cta()).toHaveAttribute("aria-disabled", "true");
+    // Retirada não tem mínimo: libera.
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    expect(cta()).toHaveTextContent("Fazer pedido · R$ 12,00");
+    expect(cta()).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("totais vêm do servidor quando a cotação responde (G7)", async () => {
+    seedCart();
+    const api = fakeApi({
+      quote: vi.fn(async () => ({
+        deliveryFeeCents: 999,
+        discountCents: 0,
+        eta: { maxMinutes: 50, minMinutes: 30 },
+        minimumOrder: null,
+        ok: true as const,
+        paymentMethods: ["on_delivery" as const, "pix" as const],
+        subtotalCents: 2400,
+        totalCents: 3399,
+      })),
+    });
+    const { user } = setup({ api });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await waitFor(() => expect(api.quote).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 33,99"),
+    );
+    expect(screen.getByText(/Previsão: 30–50 min/u)).toBeInTheDocument();
+    // PIX liberado pelo servidor passa a ser selecionável; Cartão segue indisponível.
+    expect(screen.getByRole("radio", { name: /PIX/u })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: /Cartão de crédito/u })).toBeDisabled();
+  });
+
+  it("Pagamento na entrega: bandeiras e 'Troco para' inline validado ≥ total (P-4.2/P-4.3)", async () => {
+    seedCart();
+    const { api, user } = setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    expect(screen.getByRole("radio", { name: /Pagamento na entrega/u })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /PIX/u })).toBeDisabled();
+    expect(screen.getByText("Débito:").nextElementSibling).toHaveTextContent("Visa, Mastercard");
+    expect(screen.getByText("Crédito:").nextElementSibling).toHaveTextContent(
+      "Visa, Mastercard, Elo",
+    );
+    await user.type(screen.getByLabelText("Troco para"), "20");
+    await user.tab();
+    expect(screen.getByText("O troco precisa ser para R$ 24,00 ou mais.")).toBeInTheDocument();
+    expect(cta()).toHaveTextContent("Confira o troco");
+    await user.clear(screen.getByLabelText("Troco para"));
+    await user.type(screen.getByLabelText("Troco para"), "50");
+    expect(cta()).toHaveTextContent("Fazer pedido · R$ 24,00");
+    await user.click(cta());
+    await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+    const [, body] = vi.mocked(api.createOrder).mock.calls[0]!;
+    expect(body.payment).toEqual({ changeForCents: 5000, method: "on_delivery" });
+  });
+
+  it("observação com contador e limite de 200", async () => {
+    seedCart();
+    const { user } = setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    const note = screen.getByLabelText("Alguma observação para a Loja?");
+    expect(note).toHaveAttribute("maxlength", "200");
+    await user.type(note, "apertar a campainha");
+    expect(screen.getByText("19/200")).toBeInTheDocument();
+  });
+
+  it("envia com chave idempotente, lembra os dados, limpa o carrinho e vai ao acompanhamento", async () => {
+    seedCart();
+    const { api, user } = setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await fillDelivery(user);
+    expect(
+      screen.getByRole("checkbox", { name: "Lembrar meus dados neste aparelho" }),
+    ).toBeChecked();
+    await user.click(cta());
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith("/loja/lanchonete-do-ze/pedido/aaaa"),
+    );
+    const [slug, body] = vi.mocked(api.createOrder).mock.calls[0]!;
+    expect(slug).toBe("lanchonete-do-ze");
+    expect(body.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(body.customer).toEqual({ name: "Maria Souza", phone: "(11) 91234-5678" });
+    expect(body.address).toMatchObject({
+      neighborhoodId: neighborhoodIds.centro,
+      number: "42",
+      street: "Rua A",
+    });
+    expect(JSON.stringify(body)).not.toContain("priceCents");
+    expect(window.localStorage.getItem(cartStorageKey("lanchonete-do-ze"))).toBeNull();
+    expect(
+      JSON.parse(window.localStorage.getItem(rememberedCustomerKey("lanchonete-do-ze"))!),
+    ).toMatchObject({
+      address: { neighborhood: "Centro", street: "Rua A" },
+      name: "Maria Souza",
+      phone: "5511912345678",
+    });
+  });
+
+  it("sem 'Lembrar', nada fica no aparelho", async () => {
+    seedCart();
+    const { user } = setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await user.click(screen.getByRole("checkbox", { name: "Lembrar meus dados neste aparelho" }));
+    await user.click(cta());
+    await waitFor(() => expect(router.push).toHaveBeenCalled());
+    expect(window.localStorage.getItem(rememberedCustomerKey("lanchonete-do-ze"))).toBeNull();
+  });
+
+  it("dados lembrados preenchem o formulário e 'Esquecer meus dados' apaga na hora (P-2.2)", async () => {
+    seedCart();
+    window.localStorage.setItem(
+      rememberedCustomerKey("lanchonete-do-ze"),
+      JSON.stringify({
+        address: {
+          complement: null,
+          neighborhood: "Centro",
+          number: "42",
+          postalCode: null,
+          reference: null,
+          street: "Rua A",
+        },
+        name: "Maria Souza",
+        phone: "5511912345678",
+      }),
+    );
+    const { user } = setup({ siteKey: "site-key" });
+    expect(await screen.findByDisplayValue("Maria Souza")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("(11) 91234-5678")).toBeInTheDocument();
+    // Com dados no aparelho não há busca por telefone (nem Turnstile).
+    expect(
+      screen.queryByRole("button", { name: "Verificação de segurança" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+    expect(screen.getByLabelText("Bairro")).toHaveValue(neighborhoodIds.centro);
+    await user.click(screen.getByRole("button", { name: "Esquecer meus dados" }));
+    expect(window.localStorage.getItem(rememberedCustomerKey("lanchonete-do-ze"))).toBeNull();
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("");
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("");
+  });
+
+  it("busca pelo telefone é mascarada e só preenche depois de 'Sou eu' (P-2.1)", async () => {
+    seedCart();
+    const api = fakeApi({
+      confirmPhone: vi.fn(async () => ({
+        address: {
+          complement: "ap 12",
+          neighborhood: "Jardim América",
+          number: "7",
+          postalCode: null,
+          reference: null,
+          street: "Rua das Palmeiras",
+        },
+        customer: { name: "Maria Souza", phone: "5511912345678" },
+        found: true as const,
+      })),
+      lookupPhone: vi.fn(async () => ({
+        confirmToken: "c".repeat(40),
+        found: true as const,
+        masked: { firstName: "Maria", neighborhood: "Jardim América", street: "Rua das Palmeiras" },
+      })),
+    });
+    const { user } = setup({ api, siteKey: "site-key" });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    // Sem telefone válido o Turnstile nem aparece.
+    expect(
+      screen.queryByRole("button", { name: "Verificação de segurança" }),
+    ).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("WhatsApp"), "11912345678");
+    await user.click(screen.getByRole("button", { name: "Verificação de segurança" }));
+    await user.click(screen.getByRole("button", { name: "Buscar meus dados" }));
+    expect(api.lookupPhone).toHaveBeenCalledWith("lanchonete-do-ze", {
+      phone: "(11) 91234-5678",
+      turnstileToken: "turnstile-token",
+    });
+    const found = await screen.findByRole("group", { name: "Pedido anterior encontrado" });
+    expect(found).toHaveTextContent("Maria");
+    expect(found).toHaveTextContent("Rua das Palmeiras, Jardim América");
+    expect(found).not.toHaveTextContent("Souza");
+    expect(found).not.toHaveTextContent("7");
+    // Antes do "Sou eu" o nome segue vazio.
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("");
+    await user.click(within(found).getByRole("button", { name: "Sou eu" }));
+    expect(api.confirmPhone).toHaveBeenCalledWith("lanchonete-do-ze", "c".repeat(40));
+    expect(await screen.findByDisplayValue("Maria Souza")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+    expect(screen.getByLabelText("Rua")).toHaveValue("Rua das Palmeiras");
+    expect(screen.getByLabelText("Número")).toHaveValue("7");
+    expect(screen.getByLabelText("Bairro")).toHaveValue(neighborhoodIds.jardim);
+  });
+
+  it("'Não sou eu' descarta a sugestão sem preencher nada", async () => {
+    seedCart();
+    const api = fakeApi({
+      lookupPhone: vi.fn(async () => ({
+        confirmToken: "c".repeat(40),
+        found: true as const,
+        masked: { firstName: "Maria", neighborhood: null, street: null },
+      })),
+    });
+    const { user } = setup({ api, siteKey: "site-key" });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.type(screen.getByLabelText("WhatsApp"), "11912345678");
+    await user.click(screen.getByRole("button", { name: "Verificação de segurança" }));
+    await user.click(screen.getByRole("button", { name: "Buscar meus dados" }));
+    await user.click(await screen.findByRole("button", { name: "Não sou eu" }));
+    expect(
+      screen.queryByRole("group", { name: "Pedido anterior encontrado" }),
+    ).not.toBeInTheDocument();
+    expect(api.confirmPhone).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("");
+  });
+
+  it("erro do servidor fica acima do CTA com foco; carrinho e formulário são mantidos (X7)", async () => {
+    seedCart();
+    const api = fakeApi({
+      createOrder: vi
+        .fn<CheckoutApi["createOrder"]>()
+        .mockResolvedValueOnce({ error: { code: "store_paused" }, ok: false })
+        .mockResolvedValueOnce({ error: { code: "idempotency_conflict" }, ok: false }),
+    });
+    const { user } = setup({ api });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await user.click(cta());
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("A Loja pausou os pedidos agora. Seu carrinho foi mantido.");
+    expect(alert).toHaveFocus();
+    expect(window.localStorage.getItem(cartStorageKey("lanchonete-do-ze"))).not.toBeNull();
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("Maria Souza");
+    const firstKey = vi.mocked(api.createOrder).mock.calls[0]![1].idempotencyKey;
+    // Retry comum reaproveita a mesma chave; só o conflito gera uma nova.
+    await user.click(cta());
+    await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.createOrder).mock.calls[1]![1].idempotencyKey).toBe(firstKey);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Seu pedido mudou depois do envio");
+  });
+
+  it("Loja fechada bloqueia o envio com o motivo", async () => {
+    seedCart();
+    const { api, user } = setup({
+      state: { ...storeState, availability: { nextOpening: null, state: "closed" } },
+    });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("A Loja está fechada agora.");
+    expect(cta()).toHaveTextContent("Pedidos indisponíveis agora");
+    await user.click(cta());
+    expect(api.createOrder).not.toHaveBeenCalled();
+  });
+
+  it("privacidade e selo 'Ambiente seguro' aparecem acima do CTA (P-6.1/P-6.2)", async () => {
+    seedCart();
+    setup();
+    await screen.findByText("Refrigerante lata", { exact: false });
+    expect(screen.getByRole("link", { name: "Política de Privacidade" })).toHaveAttribute(
+      "href",
+      "/privacidade",
+    );
+    expect(screen.getByText("Ambiente seguro")).toBeInTheDocument();
+  });
+});

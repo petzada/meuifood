@@ -1,7 +1,8 @@
 "use client";
 
-// Raiz do Storefront no navegador: orquestra cabeçalho, busca, Destaques, categorias, sheet
-// do item (aberta por `?item=`), carrinho persistido por Loja, barra fixa e toasts.
+// Raiz do Storefront no navegador: orquestra cabeçalho (com estado da Loja e "Sobre a Loja"),
+// busca, Destaques, categorias, sheet do item (aberta por `?item=`), carrinho persistido por
+// Loja, barra fixa e toasts.
 import {
   MENU_ITEM_SHARE_PARAM,
   MENU_SEARCH_MIN_LENGTH,
@@ -13,10 +14,12 @@ import {
   type MenuItem,
   type PublicMenu,
 } from "@foode/shared/menu";
+import type { StorefrontStoreState } from "@foode/shared/order";
 import { Button } from "@foode/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { AboutStoreSheet } from "./about-store-sheet";
 import { CartBar } from "./cart-bar";
 import { CartSheet } from "./cart-sheet";
 import { cartItemCount, summarizeCart } from "./cart-store";
@@ -27,15 +30,20 @@ import { MenuItemCard } from "./menu-item-card";
 import { MenuSearch } from "./menu-search";
 import { itemShareUrl, shareLink, shareOutcomeMessagePt, storeShareUrl } from "./share";
 import { StoreHeader, type StoreBranding } from "./store-header";
+import { describeAvailability } from "./store-status";
 import { Toast, useToast } from "./toast";
 import { useStoreCart } from "./use-store-cart";
 
 export type StorefrontProps = {
   branding?: StoreBranding;
   menu: PublicMenu;
+  /** Instante de referência para "abre hoje/amanhã" (injetável nos testes). */
+  now?: number;
+  /** Estado da Loja (24a); null enquanto a api não responde — o Cardápio segue visível. */
+  state?: StorefrontStoreState | null;
 };
 
-export function Storefront({ branding, menu }: StorefrontProps) {
+export function Storefront({ branding, menu, now, state = null }: StorefrontProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,6 +54,11 @@ export function Storefront({ branding, menu }: StorefrontProps) {
 
   const [query, setQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const availability = useMemo(
+    () => (state ? describeAvailability(state.availability, now) : null),
+    [now, state],
+  );
   const [editing, setEditing] = useState<{ line: CartLine; lineIndex: number } | null>(null);
   const openedByPushRef = useRef(false);
 
@@ -143,7 +156,9 @@ export function Storefront({ branding, menu }: StorefrontProps) {
     <main className="min-h-dvh bg-[var(--color-canvas)] pb-28">
       <StoreHeader
         {...(branding ? { branding } : {})}
+        availability={availability}
         name={menu.name}
+        {...(state ? { onAbout: () => setAboutOpen(true) } : {})}
         onShare={() =>
           void share({
             text: `Veja o Cardápio de ${menu.name}`,
@@ -228,8 +243,14 @@ export function Storefront({ branding, menu }: StorefrontProps) {
         open={itemOpen}
       />
 
+      {state ? (
+        <AboutStoreSheet onClose={() => setAboutOpen(false)} open={aboutOpen} state={state} />
+      ) : null}
+
       <CartSheet
+        availability={availability}
         cart={cart}
+        deliveryMinimumCents={state?.delivery?.minimumOrderCents ?? null}
         itemsById={itemsById}
         onClose={() => setCartOpen(false)}
         onEdit={handleEdit}

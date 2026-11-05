@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cartStorageKey } from "./cart-store";
-import { ids, publicMenu } from "./fixtures";
+import { ids, publicMenu, storeState } from "./fixtures";
 import { Storefront } from "./storefront";
 
 const nav = vi.hoisted(() => {
@@ -167,6 +167,89 @@ describe("Storefront: carrinho", () => {
     await addSoda(user);
     await user.click(screen.getByRole("button", { name: CART_BAR }));
 
-    expect(await within(cartDialog()).findByText(/R\$\s6,50/u)).toBeInTheDocument();
+    expect((await within(cartDialog()).findAllByText(/R\$\s6,50/u)).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Storefront: estado da Loja e checkout (24a)", () => {
+  const NOW = Date.parse("2026-11-05T23:00:00.000Z");
+
+  function setupWithState(state = storeState) {
+    const user = userEvent.setup();
+    render(<Storefront menu={publicMenu} now={NOW} state={state} />);
+    return { user };
+  }
+
+  it("sem estado (api indisponível) o Cardápio abre sem linha de estado nem 'Sobre a Loja'", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "Sobre a Loja" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aberta até/u)).not.toBeInTheDocument();
+  });
+
+  it("aberta: linha de estado e sheet 'Sobre a Loja' com horários, endereço, mínimo e bandeiras", async () => {
+    const { user } = setupWithState({
+      ...storeState,
+      availability: { closesAt: "2026-11-06T02:00:00.000Z", state: "open" },
+    });
+    expect(screen.getByText("Aberta até 23:00")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Sobre a Loja" }));
+    const sheet = await screen.findByRole("dialog", { name: "Lanchonete do Zé" });
+    expect(within(sheet).getByText("Sexta").nextElementSibling).toHaveTextContent(
+      "11:00–14:00 · 18:00–23:00",
+    );
+    expect(within(sheet).getByText("Terça").nextElementSibling).toHaveTextContent("Fechado");
+    expect(within(sheet).getByText("Rua das Flores, 100")).toBeInTheDocument();
+    expect(within(sheet).getByText(/pedido mínimo R\$\s20,00/u)).toBeInTheDocument();
+    expect(within(sheet).getByText("Pagamento na entrega")).toBeInTheDocument();
+    expect(within(sheet).getByText("Débito:").parentElement).toHaveTextContent("Visa, Mastercard");
+    await user.click(within(sheet).getByRole("button", { name: "Fechar" }));
+  });
+
+  it("endereço da Loja só aparece com Retirada ativa (P-3.3)", async () => {
+    const { user } = setupWithState({ ...storeState, pickup: null });
+    await user.click(screen.getByRole("button", { name: "Sobre a Loja" }));
+    const sheet = await screen.findByRole("dialog", { name: "Lanchonete do Zé" });
+    expect(within(sheet).queryByText("Rua das Flores, 100")).not.toBeInTheDocument();
+    expect(within(sheet).queryByText("Retirada na Loja")).not.toBeInTheDocument();
+  });
+
+  it("carrinho: CTA leva ao checkout e avisa o mínimo do Delivery (K7)", async () => {
+    const { user } = setupWithState();
+    await addSoda(user);
+    await user.click(screen.getByRole("button", { name: CART_BAR }));
+    const cart = cartDialog();
+    expect(within(cart).queryByText(/próxima etapa/u)).not.toBeInTheDocument();
+    expect(within(cart).getByRole("link", { name: /Finalizar pedido/u })).toHaveAttribute(
+      "href",
+      "/loja/lanchonete-do-ze/finalizar",
+    );
+    expect(within(cart).getByRole("status")).toHaveTextContent(
+      "Faltam R$ 14,00 para o pedido mínimo de R$ 20,00 no Delivery.",
+    );
+  });
+
+  it("fechada ou em Pausa: Cardápio visível, estado distinto e checkout bloqueado (decisão 41)", async () => {
+    const { user } = setupWithState({ ...storeState, availability: { state: "paused" } });
+    expect(screen.getByText("Em pausa · pedidos voltam em breve")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /X-Burger/u }).length).toBeGreaterThan(0);
+    await addSoda(user);
+    await user.click(screen.getByRole("button", { name: CART_BAR }));
+    const cart = cartDialog();
+    expect(within(cart).queryByRole("link", { name: /Finalizar pedido/u })).not.toBeInTheDocument();
+    expect(
+      within(cart).getByRole("button", { name: "Pedidos indisponíveis agora" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(within(cart).getByRole("status")).toHaveTextContent(/pausou os pedidos/u);
+  });
+
+  it("fechada mostra o próximo horário", () => {
+    setupWithState({
+      ...storeState,
+      availability: {
+        nextOpening: { at: "2026-11-06T14:00:00.000Z", opensAt: "11:00", weekday: 5 },
+        state: "closed",
+      },
+    });
+    expect(screen.getByText("Fechada · abre amanhã às 11:00")).toBeInTheDocument();
   });
 });
