@@ -11,7 +11,7 @@ CREATE TABLE `audit_events` (
 	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "audit_events_action_not_blank" CHECK(length(trim("action")) > 0),
 	CONSTRAINT "audit_events_metadata_json" CHECK(json_valid("metadata")),
-	CONSTRAINT "audit_events_occurred_at_utc" CHECK("occurred_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z')
+	CONSTRAINT "audit_events_occurred_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "occurred_at") IS "occurred_at")
 );
 --> statement-breakpoint
 CREATE INDEX `audit_events_store_idx` ON `audit_events` (`store_id`,`occurred_at`);--> statement-breakpoint
@@ -24,7 +24,7 @@ CREATE TABLE `store_memberships` (
 	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "store_memberships_role" CHECK("role" IN ('owner', 'operator')),
-	CONSTRAINT "store_memberships_created_at_utc" CHECK("created_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z')
+	CONSTRAINT "store_memberships_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at")
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `store_memberships_store_user_unique` ON `store_memberships` (`store_id`,`user_id`);--> statement-breakpoint
@@ -39,8 +39,8 @@ CREATE TABLE `stores` (
 	CONSTRAINT "stores_slug_format" CHECK(length("slug") BETWEEN 3 AND 63 AND "slug" NOT GLOB '*[^a-z0-9-]*' AND "slug" NOT GLOB '-*' AND "slug" NOT GLOB '*-'),
 	CONSTRAINT "stores_name_not_blank" CHECK(length(trim("name")) > 0),
 	CONSTRAINT "stores_status" CHECK("status" IN ('onboarding', 'active', 'suspended')),
-	CONSTRAINT "stores_created_at_utc" CHECK("created_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'),
-	CONSTRAINT "stores_updated_at_utc" CHECK("updated_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z')
+	CONSTRAINT "stores_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at"),
+	CONSTRAINT "stores_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `stores_slug_unique` ON `stores` (`slug`);--> statement-breakpoint
@@ -56,8 +56,8 @@ CREATE TABLE `users` (
 	CONSTRAINT "users_email_lowercase" CHECK("email" = lower("email") AND "email" LIKE '%_@_%'),
 	CONSTRAINT "users_email_verified_bool" CHECK("email_verified" IN (0, 1)),
 	CONSTRAINT "users_platform_role" CHECK("platform_role" IS NULL OR "platform_role" IN ('foode_ops')),
-	CONSTRAINT "users_created_at_utc" CHECK("created_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'),
-	CONSTRAINT "users_updated_at_utc" CHECK("updated_at" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z')
+	CONSTRAINT "users_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at"),
+	CONSTRAINT "users_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4ad4830c-ea0b-4046-91a3-b228d2c94c48",
+  "id": "b9c87b94-1d58-405a-b901-ce88ed4d869e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "audit_events": {
@@ -117,7 +117,7 @@
         },
         "audit_events_occurred_at_utc": {
           "name": "audit_events_occurred_at_utc",
-          "value": "\"occurred_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
         }
       }
     },
@@ -215,7 +215,7 @@
         },
         "store_memberships_created_at_utc": {
           "name": "store_memberships_created_at_utc",
-          "value": "\"created_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
         }
       }
     },
@@ -295,11 +295,11 @@
         },
         "stores_created_at_utc": {
           "name": "stores_created_at_utc",
-          "value": "\"created_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
         },
         "stores_updated_at_utc": {
           "name": "stores_updated_at_utc",
-          "value": "\"updated_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
         }
       }
     },
@@ -394,11 +394,11 @@
         },
         "users_created_at_utc": {
           "name": "users_created_at_utc",
-          "value": "\"created_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
         },
         "users_updated_at_utc": {
           "name": "users_updated_at_utc",
-          "value": "\"updated_at\" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'"
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
         }
       }
     }

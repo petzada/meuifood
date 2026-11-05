@@ -20,11 +20,13 @@ export type PlatformRole = (typeof PLATFORM_ROLES)[number];
 /** Default de coluna de data: agora, em ISO-8601 UTC com milissegundos. */
 const utcNowDefault = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
-/** CHECK que exige o formato ISO-8601 UTC com milissegundos. */
+/**
+ * CHECK que exige o formato ISO-8601 UTC com milissegundos: o valor tem de sobreviver intacto à
+ * normalização do `strftime` (data inválida vira NULL e `IS` falha). Sem GLOB: o D1 limita padrões
+ * LIKE/GLOB a 50 bytes ("LIKE or GLOB pattern too complex").
+ */
 function utcCheck(column: string) {
-  return sql.raw(
-    `"${column}" GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-6][0-9].[0-9][0-9][0-9]Z'`,
-  );
+  return sql.raw(`strftime('%Y-%m-%dT%H:%M:%fZ', "${column}") IS "${column}"`);
 }
 
 function inList(column: string, values: readonly string[]) {
