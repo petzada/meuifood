@@ -21,6 +21,18 @@ export type OnboardingCheck = (typeof ONBOARDING_CHECKS)[number];
 
 export type OnboardingChecklist = { check: OnboardingCheck; done: boolean }[];
 
+/**
+ * O que precisa estar feito para ativar a Loja: cadastro (perfil + repasse), Dono convidado e
+ * Plano vigente. Modo do cartão e taxas não bloqueiam: meio sem taxa vigente só fica fora do
+ * checkout (decisão 61). A api confere de novo no banco, no mesmo batch da ativação.
+ */
+export const ACTIVATION_REQUIRED_CHECKS = [
+  "profile",
+  "payout",
+  "owner_invited",
+  "plan",
+] as const satisfies readonly OnboardingCheck[];
+
 export type StorePlanView = {
   id: string;
   cycle: BillingCycle;

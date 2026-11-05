@@ -6,16 +6,23 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  ACTIVATION_REQUIRED_CHECKS as DB_ACTIVATION_REQUIRED_CHECKS,
   BILLING_CYCLES as DB_BILLING_CYCLES,
   CARD_MODES as DB_CARD_MODES,
   FEE_PAYMENT_METHODS as DB_FEE_PAYMENT_METHODS,
   type FoodeDb,
+  FoodeDbError,
+  ONBOARDING_CHECKS as DB_ONBOARDING_CHECKS,
+  OPS_AUDIT_ACTIONS as DB_OPS_AUDIT_ACTIONS,
   PAYMENT_PROVIDERS as DB_PAYMENT_PROVIDERS,
   PIX_KEY_TYPES as DB_PIX_KEY_TYPES,
   PROVIDER_OPERATIONS as DB_PROVIDER_OPERATIONS,
 } from "@foode/db";
 import {
+  ACTIVATION_REQUIRED_CHECKS,
   BILLING_CYCLES,
+  ONBOARDING_CHECKS,
+  OPS_AUDIT_ACTIONS,
   CARD_MODES,
   FEE_PAYMENT_METHODS,
   PAYMENT_PROVIDERS,
@@ -123,6 +130,16 @@ function fakeService(who: "anon" | "ops" | "owner" | "operator") {
       opsContext: async () => (who === "ops" ? { userId: "u1" } : null),
       storeContext: async () => (role ? { storeId: STORE_ID, userId: "u1", role } : null),
     },
+    // Só alcançado com OpsContext; Dono/Operador nunca chegam aqui.
+    ops: () => {
+      if (who !== "ops") throw new Error("db.ops sem OpsContext");
+      return {
+        listPlanTierTables: async () => [],
+        updateStore: async () => {
+          throw new FoodeDbError("slug_unavailable");
+        },
+      };
+    },
   } as unknown as FoodeDb;
   return createOpsService({ db, auth });
 }
@@ -150,10 +167,26 @@ describe("RPCs Ops (contrato)", () => {
     ).resolves.toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("foode_ops passa o guard (corpo ainda not_implemented)", async () => {
+  it("foode_ops passa o guard e opera em db.ops(context)", async () => {
     await expect(fakeService("ops").opsListPlanTiers(caller)).resolves.toEqual({
-      ok: false,
-      error: "not_implemented",
+      ok: true,
+      data: [],
     });
+  });
+
+  it("FoodeDbError vira código (Slug usado = conflict)", async () => {
+    await expect(
+      fakeService("ops").opsUpdateStore(caller, { storeId: STORE_ID, slug: "loja-b" }),
+    ).resolves.toEqual({ ok: false, error: "conflict" });
+  });
+});
+
+describe("constantes D1 × @foode/shared/ops", () => {
+  it.each([
+    ["ONBOARDING_CHECKS", DB_ONBOARDING_CHECKS, ONBOARDING_CHECKS],
+    ["ACTIVATION_REQUIRED_CHECKS", DB_ACTIVATION_REQUIRED_CHECKS, ACTIVATION_REQUIRED_CHECKS],
+    ["OPS_AUDIT_ACTIONS", DB_OPS_AUDIT_ACTIONS, OPS_AUDIT_ACTIONS],
+  ])("%s", (_name, db, shared) => {
+    expect([...db]).toEqual([...shared]);
   });
 });
