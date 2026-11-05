@@ -41,6 +41,10 @@ export const AUTH_RATE_LIMIT_RULES = {
   "/sign-in/email": { window: 60, max: 5 },
   "/request-password-reset": { window: 300, max: 3 },
   "/reset-password": { window: 300, max: 10 },
+  // Leitura da sessão acontece em toda RPC do Painel e no polling da fila: com vários aparelhos
+  // atrás do mesmo IP (Wi-Fi da Loja) o limite padrão derrubava a sessão. O token é aleatório e
+  // não enumerável; os endpoints de credencial continuam limitados acima.
+  "/get-session": false,
 } as const;
 
 export type AuthDeps = {
