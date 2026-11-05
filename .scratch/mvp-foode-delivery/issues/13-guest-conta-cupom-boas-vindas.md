@@ -21,3 +21,4 @@
 ## Comments
 
 - 2026-11-04 — Revisado: Better Auth + MillionSend ([59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md)); Cupons promocionais por [62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md). Pode correr em paralelo ao 26/27.
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) CUP-01 a CUP-05, NAV-01 (rota `/cupons` sob `store.settings`) e T-06/T-08; mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §13. Extras do Anota em aberto: P-CUP-1 a P-CUP-5 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md); cupom de frete (P-CUP-2) diverge do critério "não incide sobre a taxa de Delivery" deste ticket e foi recomendado não.

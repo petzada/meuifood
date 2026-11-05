@@ -20,3 +20,5 @@
 ## Comments
 
 - 2026-11-04 — Cobre as histórias de Slug/link/QR da spec v1 (nunca implementadas) e o Pixel ([62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md)).
+
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) ONB-01 a ONB-04, LNK-01 a LNK-03, CFG-04 e NAV-05 (`/configuracoes/loja` e `/configuracoes/divulgacao`); mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §3 e §11. Em aberto: P-ONB-1 a P-ONB-5 e P-VIS-1 a P-VIS-3 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).

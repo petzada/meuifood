@@ -21,3 +21,4 @@
 ## Comments
 
 - 2026-11-04 — Porta 07, 08 e 09; impressão por [62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md). Se `batch` não bastar para contenção, avaliar Durable Object por Loja e registrar decisão.
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) PED-01 a PED-09, IMP-01/IMP-02, NAV-04/NAV-07, CFG-01 a CFG-03 e NAV-05 (subrotas de `/configuracoes`); mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §4 a §6 e §8. Em aberto: P-OPE-1/2/5, P-IMP-1/2, P-PDV-1, P-WPP-1 e P-CFG-1/2/3/5 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md). P-OPE-4 (Operador ativar a Pausa) diverge da decisão 41 e da 38 e está sinalizado ao Dono; até resposta, vale a decisão (só o Dono).

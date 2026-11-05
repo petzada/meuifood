@@ -16,3 +16,5 @@
 ## Comments
 
 - 2026-11-04 — Aberto na revisão final: fecha a execução quando o app está pronto para testes em produção.
+
+- 2026-11-05 — Referência Anota (lojista): o smoke e o runbook conferem os estados de T-04 (vazio/carregando/erro) da fila e do `/ops` em [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md); se P-IMP-1 ou P-ONB-2 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md) ficarem na opção recomendada, o runbook ganha o modo quiosque de impressão e o Pedido de teste com Pagamento na entrega cancelado.
