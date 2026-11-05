@@ -588,7 +588,11 @@ describe("transições e Pausa no Painel", () => {
       ["preparing", "ready_for_pickup", "operator"],
       ["ready_for_pickup", "completed", "operator"],
     ]);
-    const closed = await orders.list({ filter: "pickup", scope: "closed_today", closedSince: NOW });
+    const closed = await orders.list({
+      filter: "pickup",
+      scope: "closed_today",
+      closedSince: "2000-01-01T00:00:00.000Z",
+    });
     expect(closed.closedToday).toEqual({ completed: 1, cancelled: 0 });
   });
 
