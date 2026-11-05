@@ -274,6 +274,14 @@ export async function publicMenuBySlug(
     .bind(slug)
     .first<{ id: string; slug: string; name: string }>();
   if (!store) return null;
+  return publicMenuForStore(d1, store);
+}
+
+/** Cardápio público de uma Loja já conferida como `active` (checkout do Ticket 24a). */
+export async function publicMenuForStore(
+  d1: D1Database,
+  store: { id: string; slug: string; name: string },
+): Promise<PublicStoreMenu> {
   const menu = await readMenu(d1, store.id);
   return {
     slug: store.slug,

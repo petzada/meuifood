@@ -51,6 +51,37 @@ export {
   saoPauloMonth,
 } from "./ops-db";
 export {
+  type FulfillmentSettingsData,
+  type OperationEta,
+  type OperationNeighborhood,
+  type OperationPause,
+  type OperationPeriod,
+  type OperationResult,
+  type OperationSettings,
+  ORDER_TRANSITIONS,
+  type OrderAddressData,
+  type OrderDetailRow,
+  type OrderFulfillment,
+  type OrderLineData,
+  type OrderPaymentMethod,
+  type OrderQueueRow,
+  type OrderStatus,
+  type OrderTransitionData,
+  STORE_OPERATION_AUDIT,
+} from "./store-operation-db";
+export {
+  type CheckoutSnapshot,
+  type CreateOrderData,
+  type CreateOrderDelivery,
+  type CreateOrderResult,
+  type IdempotentOrder,
+  type PhoneLookupConfirmed,
+  type PhoneLookupMatch,
+  type StorefrontOperation,
+  type StorefrontStoreProfile,
+  type TrackedOrder,
+} from "./storefront-order-db";
+export {
   BILLING_CYCLES,
   CARD_MODES,
   type CardMode,

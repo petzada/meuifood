@@ -3,7 +3,7 @@
 // SDK fica desligado.
 import * as Sentry from "@sentry/cloudflare";
 
-import { createApp } from "./app";
+import { createApp, redactPath } from "./app";
 import type { Env } from "./env";
 
 export { PainelApi } from "./painel";
@@ -16,6 +16,15 @@ export default Sentry.withSentry(
     environment: env.ENVIRONMENT,
     tracesSampleRate: 0,
     sendDefaultPii: false,
+    // Token da página do Pedido na URL e corpos do checkout (telefone/endereço) nunca no Sentry.
+    beforeSend(event) {
+      if (event.request) {
+        if (event.request.url) event.request.url = redactPath(event.request.url);
+        delete event.request.data;
+        delete event.request.query_string;
+      }
+      return event;
+    },
   }),
   { fetch: app.fetch } satisfies ExportedHandler<Env>,
 );
