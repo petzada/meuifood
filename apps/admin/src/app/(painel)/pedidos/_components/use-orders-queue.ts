@@ -33,7 +33,12 @@ export type OrdersQueue = QueueState & {
   nowMs: number;
   refresh(): Promise<void>;
   /** Atualiza um Pedido na hora, depois de avançar/cancelar (sem esperar o próximo polling). */
-  patchOrder(orderId: string, status: OrderStatus, next: OrderStatus[]): void;
+  patchOrder(
+    orderId: string,
+    status: OrderStatus,
+    next: OrderStatus[],
+    refund?: OrderQueueItem["refund"],
+  ): void;
   sound: { ready: boolean; muted: boolean; unlock(): Promise<void>; toggleMute(): void };
   /** Pedidos novos (ids) desde o último polling, para o `aria-live`. */
   arrived: string[];
@@ -112,14 +117,24 @@ export function useOrdersQueue({
     return () => clearInterval(tick);
   }, []);
 
-  const patchOrder = useCallback((orderId: string, status: OrderStatus, next: OrderStatus[]) => {
-    setState((previous) => ({
-      ...previous,
-      orders: previous.orders.map((order) =>
-        order.id === orderId ? { ...order, status, next } : order,
-      ),
-    }));
-  }, []);
+  const patchOrder = useCallback(
+    (
+      orderId: string,
+      status: OrderStatus,
+      next: OrderStatus[],
+      refund?: OrderQueueItem["refund"],
+    ) => {
+      setState((previous) => ({
+        ...previous,
+        orders: previous.orders.map((order) =>
+          order.id === orderId
+            ? { ...order, status, next, ...(refund !== undefined ? { refund } : {}) }
+            : order,
+        ),
+      }));
+    },
+    [],
+  );
 
   const unlock = useCallback(async () => {
     const ready = (await soundRef.current?.unlock()) ?? false;

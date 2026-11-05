@@ -5,8 +5,11 @@
 // (faixa para liberar o áudio), "Atualizado há N s" e "Sem conexão" sem limpar a lista;
 // contador na aba do navegador; detalhe lateral; impressão 80 mm (inclusive ao aceitar, P-IMP-1);
 // tour de 3 passos na primeira visita. Server actions e carregadores entram por prop.
+// Ticket 12: cancelar (só pelo detalhe) manda o motivo opcional e mostra a consequência no toast;
+// "Concluídos e Cancelados de hoje" abre os cards fechados, com o selo do Estorno (CAN-02).
 import { Button, useToast } from "@foode/ui";
 import {
+  type CancelReason,
   isAcceptTransition,
   type OrderDetail,
   type OrderQueueItem,
@@ -18,6 +21,7 @@ import { useCallback, useEffect, useId, useState } from "react";
 
 import {
   type ActiveQueueColumn,
+  cancelToast,
   countNewUnopened,
   formatUpdatedAgo,
   groupByColumn,
@@ -27,7 +31,7 @@ import {
   tabTitle,
   transitionToast,
 } from "../../../../lib/orders-labels";
-import type { OrderActionResult } from "../actions";
+import type { CancelActionResult, OrderActionResult } from "../actions";
 import { OrderCard } from "./order-card";
 import { type LoadDetail, OrderDetailPanel } from "./order-detail";
 import { PrintReceipt } from "./print-receipt";
@@ -36,8 +40,14 @@ import type { QueueSound } from "./sound";
 import { type LoadList, useOrdersQueue } from "./use-orders-queue";
 
 export type QueueBoardProps = {
-  cancel: (input: { orderId: string; from: OrderStatus }) => Promise<OrderActionResult>;
+  cancel: (input: {
+    orderId: string;
+    from: OrderStatus;
+    reason?: CancelReason;
+  }) => Promise<CancelActionResult>;
   intervalMs?: number;
+  /** Concluídos e Cancelados do dia (`scope=closed_today`); ausente = sem a seção. */
+  loadClosed?: LoadList;
   loadDetail: LoadDetail;
   loadList: LoadList;
   role: "owner" | "operator";
@@ -56,10 +66,13 @@ export type QueueBoardProps = {
   userId: string;
 };
 
+const CLOSED_LABEL = { completed: "Concluídos", cancelled: "Cancelados" } as const;
+
 export function QueueBoard(props: QueueBoardProps) {
   const {
     cancel,
     intervalMs,
+    loadClosed,
     loadDetail,
     loadList,
     role,
@@ -87,7 +100,11 @@ export function QueueBoard(props: QueueBoardProps) {
   const [detailVersion, setDetailVersion] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [printing, setPrinting] = useState<OrderDetail | null>(null);
+  const [closedOpen, setClosedOpen] = useState(false);
+  const [closed, setClosed] = useState<OrderQueueItem[] | null>(null);
+  const [closedFailed, setClosedFailed] = useState(false);
   const filterLabelId = useId();
+  const closedId = useId();
 
   const groups = groupByColumn(queue.orders, filter);
   const newCount = countNewUnopened(queue.orders, opened);
@@ -114,6 +131,21 @@ export function QueueBoard(props: QueueBoardProps) {
 
   const close = useCallback(() => setSelectedId(null), []);
   const donePrinting = useCallback(() => setPrinting(null), []);
+
+  const refreshClosed = useCallback(async () => {
+    if (!loadClosed) return;
+    try {
+      const list = await loadClosed();
+      setClosed(list.orders);
+      setClosedFailed(false);
+    } catch {
+      setClosedFailed(true);
+    }
+  }, [loadClosed]);
+
+  useEffect(() => {
+    if (closedOpen) void refreshClosed();
+  }, [closedOpen, refreshClosed]);
 
   async function applyResult(
     order: { id: string; code: number; status: OrderStatus },
@@ -150,19 +182,43 @@ export function QueueBoard(props: QueueBoardProps) {
     }
   }
 
-  async function cancelOrder(order: OrderDetail) {
+  async function cancelOrder(order: OrderDetail, reason: CancelReason | undefined) {
     if (busyId) return;
     setBusyId(order.id);
     try {
-      await applyResult(
-        order,
-        await cancel({ orderId: order.id, from: order.status }),
-        "cancelled",
-      );
+      const result = await cancel({
+        orderId: order.id,
+        from: order.status,
+        ...(reason ? { reason } : {}),
+      });
+      if (result.ok) {
+        const { consequence } = result.data;
+        queue.patchOrder(
+          order.id,
+          result.data.status,
+          result.data.next,
+          consequence.kind === "refund" ? { state: consequence.refund.state } : null,
+        );
+        setDetailVersion((n) => n + 1);
+        pushToast("success", cancelToast(order.code, consequence));
+        // O Pedido sai das colunas e entra em Cancelados de hoje.
+        await Promise.all([queue.refresh(), closedOpen ? refreshClosed() : undefined]);
+        return;
+      }
+      pushToast("error", result.message);
+      if (result.error === "conflict" || result.error === "not_found") {
+        setDetailVersion((n) => n + 1);
+        await queue.refresh();
+      }
     } finally {
       setBusyId(null);
     }
   }
+
+  const closedGroups = {
+    completed: (closed ?? []).filter((order) => order.status === "completed"),
+    cancelled: (closed ?? []).filter((order) => order.status === "cancelled"),
+  };
 
   async function copyLink() {
     try {
@@ -210,10 +266,23 @@ export function QueueBoard(props: QueueBoardProps) {
           ))}
         </div>
 
-        <p className="text-sm text-[var(--color-muted)]">
-          Concluídos hoje ({queue.closedToday.completed}) · Cancelados hoje (
-          {queue.closedToday.cancelled})
-        </p>
+        {loadClosed ? (
+          <button
+            type="button"
+            aria-expanded={closedOpen}
+            aria-controls={closedId}
+            onClick={() => setClosedOpen((value) => !value)}
+            className="min-h-10 rounded-full px-2 text-sm text-[var(--color-muted)] underline-offset-4 hover:underline"
+          >
+            Concluídos hoje ({queue.closedToday.completed}) · Cancelados hoje (
+            {queue.closedToday.cancelled})
+          </button>
+        ) : (
+          <p className="text-sm text-[var(--color-muted)]">
+            Concluídos hoje ({queue.closedToday.completed}) · Cancelados hoje (
+            {queue.closedToday.cancelled})
+          </p>
+        )}
 
         <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
           {queue.sound.ready ? (
@@ -357,6 +426,59 @@ export function QueueBoard(props: QueueBoardProps) {
           ))}
         </div>
       )}
+
+      {closedOpen && loadClosed ? (
+        <section
+          id={closedId}
+          aria-label="Concluídos e Cancelados de hoje"
+          className="rounded-3xl border border-[var(--color-hairline)] p-3"
+        >
+          {closedFailed && closed === null ? (
+            <p role="alert" className="px-1 py-4 text-sm font-bold text-[var(--color-error)]">
+              Não foi possível carregar os Pedidos de hoje.
+            </p>
+          ) : closed === null ? (
+            <p aria-busy="true" className="px-1 py-4 text-sm text-[var(--color-muted)]">
+              Carregando...
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {(["completed", "cancelled"] as const).map((key) => (
+                <section
+                  key={key}
+                  aria-label={`${CLOSED_LABEL[key]} (${closedGroups[key].length})`}
+                >
+                  <h2 className="flex items-center justify-between px-1 text-sm font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                    {CLOSED_LABEL[key]}
+                    <span className="rounded-full border border-[var(--color-hairline)] px-2 py-0.5 text-xs text-[var(--color-ink)]">
+                      {closedGroups[key].length}
+                    </span>
+                  </h2>
+                  <ul className="mt-3 space-y-3">
+                    {closedGroups[key].map((order) => (
+                      <li key={order.id}>
+                        <OrderCard
+                          busy={false}
+                          isNew={false}
+                          nowMs={queue.nowMs}
+                          onAdvance={() => undefined}
+                          onOpen={open}
+                          order={order}
+                        />
+                      </li>
+                    ))}
+                    {closedGroups[key].length === 0 ? (
+                      <li className="px-1 py-6 text-center text-sm text-[var(--color-muted)]">
+                        Nenhum Pedido aqui.
+                      </li>
+                    ) : null}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       {selectedId ? (
         <OrderDetailPanel
