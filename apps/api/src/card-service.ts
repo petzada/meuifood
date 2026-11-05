@@ -28,11 +28,13 @@ import {
   type CardPaymentInput,
   cardRetryRequestSchema,
   type CardRetryAction,
+  expectedPayoutDate,
   type CardRetryResponse,
   type CardTokenizer,
   feeCents,
   type OrderCard,
   resolvePayerCpf,
+  saoPauloDate,
 } from "@foode/shared/payment";
 
 import type { Env } from "./env";
@@ -267,6 +269,18 @@ export type CardService = {
    * interrompe as demais.
    */
   expireStaleCardAttempts(now?: Date): Promise<ExpireStaleCardSummary>;
+  /**
+   * Varredura do Cron (Ticket 15), idempotente: Pedido de Cartão recusado sem nova tentativa nem
+   * troca para PIX há `CARD_ABANDON_AFTER_MS` vira Pedido Cancelado (`card_abandoned`), libera o
+   * Cupom e sai da faixa — o mesmo caminho do PIX vencido.
+   */
+  cancelAbandonedCards(now?: Date): Promise<CancelAbandonedCardsSummary>;
+  /**
+   * Cron diário (Ticket 15): lançamentos do Cartão ainda pelo prazo máximo são conferidos no
+   * provedor da cobrança (mesmos adapters); liberação confirmada (Efí `paid`/`settled`,
+   * AbacatePay `PAID`) move só a data de repasse PREVISTA — nunca marca repasse efetivo.
+   */
+  reconcileCardReleases(now?: Date): Promise<ReconcileReleasesSummary>;
 };
 
 export type ExpireStaleCardSummary = {
@@ -280,6 +294,34 @@ export type ExpireStaleCardSummary = {
 
 /** Máximo de tentativas por rodada da varredura. */
 export const CARD_STALE_BATCH_LIMIT = 50;
+
+export type CancelAbandonedCardsSummary = {
+  /** Pedidos cancelados nesta rodada (motivo `card_abandoned`). */
+  cancelled: number;
+  /** Itens que falharam; ficam para a próxima rodada. */
+  failed: number;
+};
+
+export type ReconcileReleasesSummary = {
+  /** Lançamentos conferidos no provedor. */
+  checked: number;
+  /** Liberação confirmada: data de repasse prevista atualizada. */
+  confirmed: number;
+  /** Itens que falharam (provedor fora/sem chaves); ficam para a próxima rodada. */
+  failed: number;
+};
+
+/**
+ * Cartão recusado e abandonado: 2 h sem nova tentativa nem troca para PIX (o Consumidor já viu a
+ * recusa com as ações "Tentar outro cartão"/"Pagar com PIX"; o PIX vence em 30 min).
+ */
+export const CARD_ABANDON_AFTER_MS = 2 * 60 * 60_000;
+/** Máximo de Pedidos abandonados cancelados por rodada. */
+export const CARD_ABANDON_BATCH_LIMIT = 50;
+/** Liberação conferida no provedor no máximo uma vez a cada 20 h (Cron diário). */
+export const CARD_RELEASE_CHECK_INTERVAL_MS = 20 * 60 * 60_000;
+/** Máximo de lançamentos conferidos por rodada. */
+export const CARD_RELEASE_BATCH_LIMIT = 100;
 
 function warn(message: string, fields: Record<string, unknown> = {}) {
   console.warn(JSON.stringify({ level: "warn", message, ...fields }));
@@ -474,8 +516,15 @@ export function createCardService(deps: CardServiceDeps): CardService {
       failureCode: string;
       event: WebhookEventInput | null;
     },
+    at: Date = clock(),
   ): Promise<Outcome> {
-    await db.cardPayments.decline({ intentId: intent.intentId, reason, ...input });
+    // Relógio da api: o prazo de abandono do Cartão (Cron) conta a partir da recusa.
+    await db.cardPayments.decline({
+      intentId: intent.intentId,
+      reason,
+      ...input,
+      now: at.toISOString(),
+    });
     return "declined";
   }
 
@@ -694,12 +743,12 @@ export function createCardService(deps: CardServiceDeps): CardService {
     if (intent.intentState !== "creating") return;
     const since = Date.parse(intent.attemptStartedAt ?? intent.createdAt);
     if (now.getTime() - since <= CARD_PROCESSING_GIVE_UP_MS) return;
-    await decline(intent, "provider_unavailable", {
-      providerChargeId: null,
-      providerStatus: null,
-      failureCode: "give_up",
-      event: null,
-    });
+    await decline(
+      intent,
+      "provider_unavailable",
+      { providerChargeId: null, providerStatus: null, failureCode: "give_up", event: null },
+      now,
+    );
   }
 
   /** Intenção Efí da notificação: pelo token, pela cobrança ou pelo custom_id (= intentId). */
@@ -758,6 +807,71 @@ export function createCardService(deps: CardServiceDeps): CardService {
         } catch (error) {
           summary.failed += 1;
           warn("card_stale_attempt_failed", { provider: intent.provider, code: errorCode(error) });
+        }
+      }
+      return summary;
+    },
+
+    async cancelAbandonedCards(now = clock()) {
+      const summary: CancelAbandonedCardsSummary = { cancelled: 0, failed: 0 };
+      const abandonedBefore = new Date(now.getTime() - CARD_ABANDON_AFTER_MS).toISOString();
+      const candidates = await db.refunds.abandonedCardOrders(
+        abandonedBefore,
+        CARD_ABANDON_BATCH_LIMIT,
+      );
+      for (const candidate of candidates) {
+        try {
+          if (await db.refunds.cancelAbandonedCard({ ...candidate, abandonedBefore })) {
+            summary.cancelled += 1;
+          }
+        } catch (error) {
+          summary.failed += 1;
+          warn("card_abandon_failed", { code: errorCode(error) });
+        }
+      }
+      return summary;
+    },
+
+    async reconcileCardReleases(now = clock()) {
+      const summary: ReconcileReleasesSummary = { checked: 0, confirmed: 0, failed: 0 };
+      const nowIso = now.toISOString();
+      const candidates = await db.reconciliation.releasesDueForCheck(
+        new Date(now.getTime() - CARD_RELEASE_CHECK_INTERVAL_MS).toISOString(),
+        CARD_RELEASE_BATCH_LIMIT,
+      );
+      for (const entry of candidates) {
+        try {
+          let status: string;
+          let released: boolean;
+          if (entry.provider === "efi") {
+            if (!efi) throw new TypeError("efi_unavailable");
+            const chargeId = Number(entry.providerChargeId);
+            if (!Number.isSafeInteger(chargeId)) throw new TypeError("invalid_charge");
+            await db.cardPayments.markChecked(entry.intentId, nowIso);
+            status = (await efi.gateway.getCharge(chargeId)).status;
+            // TODO(15): conferir no sandbox se `paid` acompanha o crédito liberado na conta Efí.
+            released = classifyEfiChargeStatus(status) === "paid";
+          } else {
+            if (!abacatePay) throw new TypeError("abacatepay_unavailable");
+            await db.cardPayments.markChecked(entry.intentId, nowIso);
+            status = (await abacatePay.gateway.getCardCharge(entry.providerChargeId)).status;
+            // `PAID` = a adquirente repassou à conta AbacatePay (liberado).
+            released = status.toUpperCase() === "PAID";
+          }
+          summary.checked += 1;
+          if (!released) continue;
+          const releaseDate = saoPauloDate(now);
+          const confirmed = await db.reconciliation.confirmRelease({
+            ledgerEntryId: entry.ledgerEntryId,
+            providerStatus: status,
+            releaseDate,
+            expectedPayoutDate: expectedPayoutDate(releaseDate),
+            confirmedAt: nowIso,
+          });
+          if (confirmed) summary.confirmed += 1;
+        } catch (error) {
+          summary.failed += 1;
+          warn("card_release_check_failed", { provider: entry.provider, code: errorCode(error) });
         }
       }
       return summary;
