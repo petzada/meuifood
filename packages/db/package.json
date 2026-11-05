@@ -15,6 +15,7 @@
     "test:workers": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
+    "better-auth": "^1.7.17",
     "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {

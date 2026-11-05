@@ -72,7 +72,7 @@ O Dono autorizou em 2026-11-04 ([decisão 59](docs/decisoes/59-pivo-cloudflare-d
 
 ## Migrations (expand/contract no D1)
 
-- Mudou `packages/db/src/schema.ts`? Gere a migration com `pnpm db:generate -- --name <nome>` e commite o SQL. O CI falha se schema e migrations divergirem.
+- Mudou `packages/db/src/schema/*.ts`? Gere a migration com `pnpm db:generate -- --name <nome>` e commite o SQL. O CI falha se schema e migrations divergirem.
 - **Expand** só adiciona: tabela, índice, coluna nullable ou com `DEFAULT`.
 - **Contract** (`DROP TABLE`/`DROP COLUMN`, `RENAME`, troca de tipo — que no SQLite vira recriação de tabela `__new_*`) vai num **PR separado**, depois que nenhum código no ar usa a estrutura antiga, e começa com a linha `-- contract: <motivo>`. Sem essa linha o lint recusa.
 - Migration que já está na `master` é **imutável**: corrige-se com outra migration.

@@ -7,4 +7,12 @@ export type Env = {
   ENVIRONMENT: string;
   SENTRY_DSN?: string;
   MILLIONSEND_API_KEY?: string;
+  // Ticket 22 (Auth). Secrets: BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY. Vars: as demais.
+  /** Segredo do Better Auth; ausente em produção = erro (nunca usar o padrão). */
+  BETTER_AUTH_SECRET?: string;
+  /** URL pública do Painel (o admin repassa `/api/auth/*`): base dos links e da origem. */
+  BETTER_AUTH_URL?: string;
+  TURNSTILE_SECRET_KEY?: string;
+  /** Remetente dos e-mails, ex.: `Foode <nao-responda@foodedelivery.com.br>`. */
+  EMAIL_FROM?: string;
 };

@@ -7,9 +7,8 @@ export const healthResponseSchema = z.object({
 
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
-export const membershipRoleSchema = z.enum(["owner", "operator"]);
-
-export type MembershipRole = z.infer<typeof membershipRoleSchema>;
+// Papel de membership: definido no contrato de Auth (`@foode/shared/auth`).
+export { membershipRoleSchema, type MembershipRole } from "./auth/schemas.js";
 
 export {
   assertSingleStoreCart,
@@ -82,4 +81,4 @@ export {
   type StoreDeliveryFeeConfig,
 } from "./delivery-fee.js";
 
-export type { ApiHealth, PainelRpc } from "./painel-rpc.js";
+export type { ApiHealth, PainelCaller, PainelRpc, StoreMemberView } from "./painel-rpc.js";
