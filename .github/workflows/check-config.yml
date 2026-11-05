@@ -1,0 +1,49 @@
+name: Verificar configuração (produção)
+# Manual (Ticket 30): confere secrets/vars/bindings dos 3 Workers, Cron Trigger, D1 sem migration
+# pendente, domínios e www, e-mail (MillionSend + DMARC), webhooks e Sentry. Só leitura e sem
+# imprimir valores; com `sentry=sim`, manda 1 evento de teste por DSN para provar que o Sentry
+# recebe. Saída: tabela ok / faltando (bloco humano) / erro no resumo; falha se houver "erro".
+# O mesmo script roda no fim do e2e-producao.yml só avisando.
+#   gh workflow run check-config.yml --ref master -f sentry=sim
+on:
+  workflow_dispatch:
+    inputs:
+      sentry:
+        description: 'Enviar evento de teste ao Sentry? ("sim" envia)'
+        required: false
+        default: "nao"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-config-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verificação de configuração
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          D1_PROD_DATABASE_ID: ${{ vars.D1_PROD_DATABASE_ID }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+          MILLIONSEND_API_KEY: ${{ secrets.MILLIONSEND_API_KEY }}
+          ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
+          SENTRY_DSN_API: ${{ secrets.SENTRY_DSN_API }}
+          SENTRY_DSN_WEB: ${{ secrets.SENTRY_DSN_WEB }}
+          SENTRY_DSN_ADMIN: ${{ secrets.SENTRY_DSN_ADMIN }}
+          SENTRY_PING: ${{ inputs.sentry }}
+        run: |
+          args=()
+          if [ "$SENTRY_PING" = "sim" ]; then args+=(--sentry-ping); fi
+          node scripts/check-config.mjs "${args[@]}"

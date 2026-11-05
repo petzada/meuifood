@@ -11,6 +11,7 @@ name: Deploy (Cloudflare Workers)
 # certificado): foodedelivery.com.br (web), admin.foodedelivery.com.br (admin) e
 # api.foodedelivery.com.br (api); www → apex por Redirect Rule da zona. Smoke nos domínios
 # (SMOKE_*_URL sobrescreve) e, depois, no workers.dev da conta (fallback, ainda ligado).
+# Deploy verde dispara o e2e-producao.yml (Playwright + axe com a Loja sintética, Ticket 30).
 on:
   push:
     branches: [master]
