@@ -4,7 +4,7 @@
 
 **Blocked by:** 12 — Cancelar Pedido e executar Estorno automático.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus para apuração/lotes; Fable para as telas, após o contrato.
 
@@ -51,3 +51,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: P-REL-1 na forma da 64 (CSV + imprimir), P-REL-2, P-REL-3 (só com conta, sem exportação), P-REL-4 (eventos do Ticket 28), P-REL-5 e P-PLN-1 entraram no checklist, com revisão de segurança dos dados pessoais.
 
 - 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
+
+- 2026-11-05 — Done no PR do Ticket 14 (squash na `master`); migration `0012_lotes_repasse` (`payout_batches`, `payout_batch_items`, `payout_adjustments`; reaproveita `ledger_entry_payouts` do 12). Entrou: contrato `@foode/shared/finance`, RPCs do Dono (`reportsGet`, `reportsExportCsv`, `payoutsGet`) e do Ops (`opsPayoutsDue`, `opsPayoutMarkPaid`, `opsPayoutAdjustmentCreate`, `opsPayoutBatches`, `opsMarginReport`), permissão `store.finance`, grupo Financeiro no menu (`/plano`, `/relatorios`, `/repasses`), CSV (BOM, `;`, sem dado pessoal, sem TOP 10), imprimir com `@media print`, TOP 10 só com conta, funil próprio, comparativo com seta + texto, `/ops/repasses` (A repassar hoje, marcar lote pago idempotente com confirmação OPS-04, ajuste auditado) e `/ops/margem`. Limitações: quebra Dom–Sáb em UTC−3 fixo; "A repassar hoje" lê o histórico até a data (ok no MVP); `/plano` sem tabela de faixas (contrato expõe só a faixa atual); progresso da faixa continua também no banner da sidebar (decisão 72).
