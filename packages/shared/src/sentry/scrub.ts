@@ -1,16 +1,25 @@
-// Sentry do Storefront sem dado pessoal nem segredo (Ticket 30, revisão de segurança).
-// - URL: sem query/hash e sem o token do Pedido (`/loja/{slug}/pedido/{token}` dá acesso a nome,
-//   endereço e itens do Pedido);
-// - request: sem corpo (checkout: telefone, endereço, CPF), cookies e headers;
+// Sentry sem dado pessoal nem segredo (Ticket 30, revisão de segurança: S4 no Storefront, K3 no
+// Painel). Compartilhado por `apps/web` e `apps/admin`, sem depender do SDK do Sentry (tipos
+// estruturais), ligado no `beforeSend`/`beforeBreadcrumb` do cliente, do servidor e do edge.
+// - URL: sem query/hash (`/definir-senha?token=…` do convite e da redefinição de senha,
+//   `?webhookSecret=`, `?callbackURL=`) e sem segredo no caminho: token do Pedido
+//   (`/loja/{slug}/pedido/{token}` dá acesso a nome, endereço e itens) e o token do link de
+//   redefinição do Better Auth (`/api/auth/reset-password/{token}`);
+// - request: sem corpo (checkout: telefone, endereço, CPF; login: e-mail e senha), cookies e headers;
+// - usuário fora do evento;
 // - breadcrumbs de navegação e de fetch/xhr passam pela mesma limpeza; `console` sem a mensagem.
-// Usado no `beforeSend`/`beforeBreadcrumb` do cliente, do servidor e do edge.
 
-/** Caminho/URL sem query, sem hash e sem o token do Pedido. */
+const SECRET_PATH_SEGMENTS = [
+  /(\/pedido\/)[^/?#]+/gu,
+  /(\/pedidos\/)[^/?#]+/gu,
+  /(\/reset-password\/)[^/?#]+/gu,
+];
+
+/** Caminho/URL sem query, sem hash e sem token no caminho. */
 export function redactUrl(value: string): string {
-  return value
-    .replace(/[?#].*$/su, "")
-    .replace(/(\/pedido\/)[^/]+/u, "$1:token")
-    .replace(/(\/pedidos\/)[^/]+/u, "$1:token");
+  let result = value.replace(/[?#].*$/su, "");
+  for (const pattern of SECRET_PATH_SEGMENTS) result = result.replace(pattern, "$1:token");
+  return result;
 }
 
 type ScrubbableEvent = {

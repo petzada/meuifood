@@ -27,8 +27,8 @@ As variáveis são **públicas** e não são segredo: vão para o navegador. Ent
 Para ligar o widget (bloco humano final do Ticket 30, depois que o Dono decidir):
 
 1. Criar o widget no agentes.chat e anotar a URL do carregador e o id público.
-2. Gravar as duas variáveis como GitHub **variables** (não secrets), uma por app se o Dono quiser ligar só um dos lados. Exemplo: `SUPPORT_WIDGET_SRC`/`SUPPORT_WIDGET_ID` (ou `_WEB`/`_ADMIN`).
-3. **Pendência de CI:** o `deploy.yml` precisa repassar essas variables como `NEXT_PUBLIC_SUPPORT_WIDGET_SRC`/`_ID` no build OpenNext de `apps/web` e `apps/admin`, no mesmo molde de `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Isso ainda não está feito (o Ticket 30B não toca em workflows).
+2. Gravar as duas variáveis como GitHub **variables** (não secrets): `SUPPORT_WIDGET_SRC` e `SUPPORT_WIDGET_ID` ligam os dois apps; `SUPPORT_WIDGET_SRC_WEB`/`SUPPORT_WIDGET_ID_WEB` e `SUPPORT_WIDGET_SRC_ADMIN`/`SUPPORT_WIDGET_ID_ADMIN` sobrescrevem por app (para ligar só um dos lados, grave só as do app). Ex.: `gh variable set SUPPORT_WIDGET_SRC --body "https://…/loader.js"`.
+3. O `deploy.yml` repassa essas variables como `NEXT_PUBLIC_SUPPORT_WIDGET_SRC`/`_ID` no build OpenNext de `apps/web` e de `apps/admin` (um passo de build por app), no mesmo molde de `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 4. Redeploy pelo CI. Para desligar, apague as variables e faça outro redeploy.
 
 Se o carregador do agentes.chat esperar outro formato de embed (outro atributo, um `init(...)` inline), ajuste só os dois componentes de montagem. O contrato das variáveis continua o mesmo.
@@ -96,6 +96,5 @@ Requisitos:
 ## 5. Riscos e pendências
 
 - **Widget desligado = Consumidor bloqueado por conflito de telefone/CPF sem canal de suporte.** Risco aceito na 66 até o widget ser ativado (bloco humano final do Ticket 30).
-- `deploy.yml` ainda não repassa `NEXT_PUBLIC_SUPPORT_WIDGET_*` aos builds (ver §2).
 - Antes de ativar: confirmar com o agentes.chat o formato do embed, o que o script coleta (URL da página, cookies, IP) e a retenção. A política de privacidade (`/privacidade`) precisa citar o agentes.chat como operador.
 - Se o agentes.chat exigir CSP ou domínio liberado, ajustar quando for ativar (hoje os apps não definem CSP).

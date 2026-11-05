@@ -92,11 +92,23 @@ jobs:
       - run: pnpm build:packages
       # Site key pública do Turnstile (GitHub variable) para o widget do Painel (login, reset,
       # definir senha, convite); o nome que o admin lê é definido na fatia UI do Ticket 22.
-      - name: Build OpenNext (web e admin)
+      # Widget de suporte (Ticket 30; docs/integracao-suporte-agentes-chat.md): GitHub variables
+      # opcionais e públicas, embutidas no build. `SUPPORT_WIDGET_SRC`/`_ID` valem para os dois
+      # apps; `_WEB`/`_ADMIN` sobrescrevem por app. Sem as duas, o widget fica desligado.
+      - name: Build OpenNext (web)
         env:
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
-        run: pnpm --filter @foode/web --filter @foode/admin build:cf
+          NEXT_PUBLIC_SUPPORT_WIDGET_SRC: ${{ vars.SUPPORT_WIDGET_SRC_WEB || vars.SUPPORT_WIDGET_SRC }}
+          NEXT_PUBLIC_SUPPORT_WIDGET_ID: ${{ vars.SUPPORT_WIDGET_ID_WEB || vars.SUPPORT_WIDGET_ID }}
+        run: pnpm --filter @foode/web build:cf
+      - name: Build OpenNext (admin)
+        env:
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_SUPPORT_WIDGET_SRC: ${{ vars.SUPPORT_WIDGET_SRC_ADMIN || vars.SUPPORT_WIDGET_SRC }}
+          NEXT_PUBLIC_SUPPORT_WIDGET_ID: ${{ vars.SUPPORT_WIDGET_ID_ADMIN || vars.SUPPORT_WIDGET_ID }}
+        run: pnpm --filter @foode/admin build:cf
       - name: Tamanho dos Workers (teto 10 MiB gzip)
         run: node scripts/worker-size.mjs apps/api apps/web apps/admin
       # Secrets do GitHub → arquivo temporário (0600) por Worker, enviado junto com a

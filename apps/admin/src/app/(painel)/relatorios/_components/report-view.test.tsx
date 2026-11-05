@@ -177,6 +177,17 @@ describe("Relatórios (Dono)", () => {
         .getAllByRole("columnheader")
         .map((th) => th.textContent),
     ).toEqual(["#", "Cliente", "Pedidos", "Total"]);
+    // P-REL-3/K1: o TOP 10 clientes não sai na impressão (botão Imprimir e Ctrl+P).
+    const customersSection = screen.getByRole("region", { name: "TOP 10 clientes" });
+    expect(customersSection).toHaveClass("foode-print-hide", "print:hidden");
+    expect(
+      within(customersSection).getByText(/não sai no CSV nem na impressão/u),
+    ).toBeInTheDocument();
+    // O restante do relatório continua imprimível.
+    for (const name of ["Top 10 itens", "Funil de conversão", "Por status"]) {
+      expect(screen.getByRole("region", { name })).not.toHaveClass("foode-print-hide");
+      expect(screen.getByRole("region", { name })).not.toHaveClass("print:hidden");
+    }
 
     const funnel = screen.getByRole("table", { name: "Funil de conversão do Storefront" });
     expect(within(funnel).getByRole("row", { name: /Fizeram Pedido/u })).toHaveTextContent("80%");

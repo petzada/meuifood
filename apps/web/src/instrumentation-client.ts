@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 
-import { scrubBreadcrumb, scrubEvent } from "./lib/sentry-scrub";
+import { scrubBreadcrumb, scrubEvent } from "@foode/shared/sentry";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 

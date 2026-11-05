@@ -1,7 +1,7 @@
 // Corpo do relatório (presentacional, server-safe): números do topo com comparativo em seta +
 // texto (P-REL-5; nunca só cor), GMV e tarifa de serviço separadas (decisão 71), quebras por
 // status/Fulfillment/meio, Top 10 itens com Dom–Sáb (P-REL-2), TOP 10 clientes só com nome,
-// quantidade e total (P-REL-3, decisão 64: sem exportação) e o funil próprio (P-REL-4).
+// quantidade e total (P-REL-3, decisão 64: sem exportação, fora do CSV e da impressão) e o funil próprio (P-REL-4).
 import { OutlineContainer } from "@foode/ui";
 import { comparisonText, type FinanceReport, type MetricComparison } from "@foode/shared/finance";
 import type { ReactNode } from "react";
@@ -292,12 +292,14 @@ export function ReportBody({ report, storeName }: { report: FinanceReport; store
       <OutlineContainer
         as="section"
         aria-labelledby="rel-clientes"
-        className="foode-print-break overflow-hidden"
+        // P-REL-3 (sem exportação): os nomes do TOP 10 nunca saem no papel nem no PDF — fora da
+        // impressão pelo botão Imprimir (`foode-print-hide`) e pelo Ctrl+P (`print:hidden`).
+        className="foode-print-hide overflow-hidden print:hidden"
       >
         <div className="p-5 pb-3">
           <SectionHeading
             id="rel-clientes"
-            description="Consumidores com conta na Foode que mais compraram na sua Loja no período. Só nome, Pedidos e total; não sai no CSV."
+            description="Consumidores com conta na Foode que mais compraram na sua Loja no período. Só nome, Pedidos e total; não sai no CSV nem na impressão."
           >
             TOP 10 clientes
           </SectionHeading>
