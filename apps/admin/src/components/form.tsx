@@ -1,6 +1,6 @@
 // Primitivos de formulário do Painel (marca Foode: borda fina, sem shadow, primary só no
 // foco e no CTA). Servem às telas de auth e aos próximos tickets.
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 
 const INPUT_CLASSES =
   "mt-2 block min-h-12 w-full rounded-xl border bg-transparent px-4 text-base font-normal text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]";
@@ -16,6 +16,7 @@ export function Field({
   hint?: string | undefined;
   id: string;
   label: string;
+  ref?: Ref<HTMLInputElement>;
 }) {
   const describedBy = [error ? `${id}-erro` : null, hint ? `${id}-dica` : null]
     .filter(Boolean)

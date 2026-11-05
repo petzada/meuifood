@@ -21,7 +21,11 @@ export const ROUTES: readonly RouteRule[] = [
   { prefix: "/cardapio", permission: "store.menu", label: "Cardápio" },
   { prefix: "/configuracoes", permission: "store.settings", label: "Configurações" },
   { prefix: "/equipe", permission: "store.members", label: "Equipe" },
-  { prefix: "/ops", permission: "ops.area", label: "Ops" },
+  // Área Ops (OPS-01): menu próprio, uma linha por área, todas sob `ops.area`.
+  { prefix: "/ops", permission: "ops.area", label: "Lojas" },
+  { prefix: "/ops/faixas", permission: "ops.area", label: "Faixas" },
+  { prefix: "/ops/taxas", permission: "ops.area", label: "Taxas Foode" },
+  { prefix: "/ops/custos", permission: "ops.area", label: "Custos dos provedores" },
   { prefix: "/selecionar-loja", permission: null },
 ];
 
@@ -52,13 +56,22 @@ export function homeFor(role: Role): string {
   return role === "foode_ops" ? "/ops" : "/";
 }
 
+function prefixMatches(prefix: string, pathname: string): boolean {
+  if (prefix === "/") return pathname === "/";
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** Entrada do menu "atual" para a URL: o prefixo mais longo que casa (como `matchRoute`). */
+export function isCurrentNav(href: string, pathname: string): boolean {
+  const matched = matchRoute(pathname);
+  if (matched) return matched.prefix === href;
+  return prefixMatches(href, pathname);
+}
+
 export function matchRoute(pathname: string): RouteRule | undefined {
   let best: RouteRule | undefined;
   for (const rule of ROUTES) {
-    const hit =
-      rule.prefix === "/"
-        ? pathname === "/"
-        : pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`);
+    const hit = prefixMatches(rule.prefix, pathname);
     if (hit && (!best || rule.prefix.length > best.prefix.length)) best = rule;
   }
   return best;

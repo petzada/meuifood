@@ -19,3 +19,9 @@
 ## Comments
 
 - 2026-11-04 — Aberto no pivô. Porta 05 e 06 e aplica a Fase A do Ticket 18 nos arquivos reescritos.
+
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) CAR-01 a CAR-07 e T-04/T-06/T-07; mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §12. Em aberto: P-CAR-1 a P-CAR-5 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md) (reuso de grupos, pizza, classificações, cadastro assistido, edição em massa).
+
+- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) G1–G10, C1–C5, I1–I8, K1–K6; mapa em [MAPA-UX-CLIENTE](../../../docs/referencias/anota-ai/MAPA-UX-CLIENTE.md). Decidir antes do commit de contrato: P-1.1 (preço na opção de Complemento) e P-1.5 (observação por item); também P-1.4 e P-5.4 em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).
+
+- 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-1.1 (preço na opção de Complemento), P-1.4 (busca), P-5.4 (compartilhar item), P-5.5 (Destaques até 4), P-CAR-1 (copiar grupos), P-CAR-5 (preço inline), P-DS-1 (primary-strong em @foode/ui); sem obs. por item (P-1.5). Vale sobre as perguntas em aberto dos comentários anteriores.

@@ -22,3 +22,6 @@
 ## Comments
 
 - 2026-11-04 — Revisado no pivô ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md)): providers Woovi/Asaas → AbacatePay/Efí; bloqueio passa do 11 para o 27.
+- 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) CAN-01 (confirmação com a consequência financeira escrita), CAN-02 (selo de Estorno separado do Pedido), T-12 e PED-07 (Cancelar no detalhe, nunca X no card). Motivo do cancelamento em aberto: P-OPE-3 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).
+
+- 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-OPE-3 (motivo opcional de cancelamento). Vale sobre as perguntas em aberto dos comentários anteriores.

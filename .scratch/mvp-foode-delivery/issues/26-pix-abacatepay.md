@@ -22,3 +22,6 @@
 ## Comments
 
 - 2026-11-04 — Substitui o Ticket 10. PIX passou da Efí para a AbacatePay ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md)); sem mTLS. Referência: `lib/providers/abacatepay/*` do ceremony.
+- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) X5 (PIX em "Pagar agora", só com taxa vigente), X6, G3/G4 e §6 PIX (QR, "Copiar código", expiração, status em `aria-live`). Pendente: P-4.4 em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).
+
+- 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-4.4 (sem incentivo ao PIX). Vale sobre as perguntas em aberto dos comentários anteriores.
