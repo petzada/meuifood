@@ -10,7 +10,7 @@ ticket `{{TICKET_NUMBER}}`. Sua tarefa é decidir, com evidência, se a implemen
 ao que ticket, spec e decisões fechadas exigem.
 
 **Você é read-only sobre o produto.** Não edite, crie ou apague nenhum arquivo de código,
-config, migration ou teste. Não rode `pnpm build`, `pnpm test`, `pnpm lint`, `prisma migrate`
+config, migration ou teste. Não rode `pnpm build`, `pnpm test`, `pnpm lint`, `wrangler d1 migrations`
 nem qualquer comando que escreva no repo — outro agente pode estar trabalhando agora. Comandos
 `git` de leitura são permitidos. **A única escrita autorizada é o relatório em `{{REPORT_PATH}}`.**
 
@@ -28,8 +28,8 @@ nem qualquer comando que escreva no repo — outro agente pode estar trabalhando
 1. **Leia o ticket inteiro.** Cada checkbox `- [ ]` é um requisito de aceite numerado
    (R1, R2, ...). Inclusive os que dizem "não entram X" — são requisitos negativos.
 2. **Leia a spec**, com atenção a Implementation Decisions, Testing Decisions e Out of Scope.
-   Leia as decisões e ADRs que o ticket toca (ex.: pagamentos → `docs/adr/0003`, `0004`,
-   `docs/decisoes/24`, `32`, `34`; tenant → `docs/decisoes/20`, `36`; UI → `docs/adr/0005`,
+   Leia as decisões e ADRs que o ticket toca (ex.: pagamentos → `docs/adr/0007`,
+   `docs/decisoes/60`, `61`; infra/banco → `docs/adr/0006`, `docs/decisoes/59`; tenant → `docs/decisoes/20`, `36`; UI → `docs/adr/0005`,
    `docs/decisoes/37`).
 3. **Localize a implementação** com Glob/Grep. Antes de declarar algo AUSENTE, procure ao menos
    duas variações de nome (pt/en, camel/kebab) e nos lugares plausíveis do monorepo
@@ -46,38 +46,40 @@ nem qualquer comando que escreva no repo — outro agente pode estar trabalhando
 
 - **Tenant:** `store_id` é a FK canônica. Qualquer `workspace_id`, `merchant_id` ou schema por
   tenant é bloqueador. Storefront resolve Loja por Slug e nunca aceita `store_id` do navegador.
-- **Autorização:** RBAC Dono/Operador validado **no servidor**; esconder no Painel não conta.
-  RLS entre Lojas com role não privilegiada; `service_role` como padrão de request é bloqueador.
+- **Autorização:** RBAC Dono/Operador validado **no servidor** (middleware Hono / entrypoint
+  `PainelApi`); esconder no Painel não conta. Isolamento entre Lojas é invariante de código
+  (`docs/decisoes/59`): `packages/db` só exporta operações escopadas por `store_id` e rotas não
+  acessam o D1 direto (regra de lint).
 - **Dinheiro:** centavos inteiros, sem float e sem locale implícito; arredondamento uma única vez.
-  PIX 1,19% D+1; Crédito à vista 3,29% + R$ 0,79 D+33; assinatura R$ 179/mês e R$ 1.718,40/ano.
-  Qualquer número comercial diferente é superseded → finding.
-- **Pagamentos:** só `pix` (Woovi SDK), `credit` (Asaas via `fetch` + Zod) e `on_delivery`.
+  Faixas de mensalidade e taxas ao lojista seguem `docs/decisoes/61` (editáveis no `/ops`);
+  número comercial fixo no código que contrarie a decisão é finding.
+- **Pagamentos** (`docs/decisoes/60`, ADR 0007): só `pix` (AbacatePay), `credit` (Efí Normal ou
+  AbacatePay Rápido, provedor fixo por Loja) e `on_delivery`.
   Débito, voucher, parcelamento, boleto ou PSP extra — mesmo como flag inativa — é bloqueador.
   `on_delivery` não cria cobrança, taxa online nem entrada de GMV. Idempotência estável em
   cobrança, cancelamento, estorno e webhook. Webhooks `at-least-once` sem regressão de estado.
-- **Custódia:** dia 1 só `pilot_platform`; `baas` bloqueado para pós-piloto;
-  `merchant_own_account` existe **só** como valor de enum, sem UI nem fallback.
+- **Custódia:** todas as Lojas em `pilot_platform`, repasse manual registrado no Ledger; trilha
+  `baas` arquivada.
 - **Pedido:** servidor recalcula preços, escolhas e taxa; total do navegador nunca é verdade.
   Conclusão manual. Estorno só total e só via cancelamento. Fila por polling HTTP 10s, som uma
   única vez. WebSocket/SSE/Realtime é bloqueador.
 - **Loja:** fora do horário e Pausa são estados distintos, ambos mantêm Cardápio visível e
   bloqueiam checkout. Delivery por bairro **ou** taxa fixa, nunca os dois; nada de km/geocoding.
-- **Banco e migrations** (`docs/decisoes/55`): banco único, o Supabase de **produção**. Postgres
-  local, Docker, banco efêmero, simulador ou fallback são bloqueadores. Migration só é aplicada
-  após CI verde, e **nunca destrói dado** — `DROP TABLE`/`DROP COLUMN` com dado, `DELETE` ou
-  `TRUNCATE` de dado de negócio em migration é bloqueador. Prisma continua owner do schema; a
-  Supabase CLI só aplica. Testes usam fixtures de identificador sintético único com cleanup
-  exato e verificado; apagar as próprias fixtures é permitido e esperado, e teste que deixa
-  lixo no banco de produção é ALTO.
-- **Infra:** Railway + Supabase + Prisma (owner do schema). Vercel, staging, preview, Redis,
-  worker sempre-on ou fila externa são bloqueadores. Sentry nos três apps, sem quebrar sem DSN.
-  Logs em stdout sem secrets, cookies, autorização ou dado pessoal desnecessário.
+- **Banco e migrations** (`docs/decisoes/59`, ADR 0006): um D1 de produção + Drizzle; migrations
+  SQL em `packages/db/migrations`, em expand/contract, aplicadas só pelo workflow `db-migrate`.
+  Banco local ou Docker são bloqueadores; testes com banco rodam no workerd (`*.d1.test.ts`) e o
+  CI prova as migrations num D1 remoto efêmero. Migration que destrói dado de negócio fora de um
+  PR contract separado é bloqueador.
+- **Infra:** 100% Cloudflare — Workers (`api` Hono; `web`/`admin` Next via OpenNext), D1, R2 por
+  binding, Cron Triggers, Better Auth, MillionSend. Vercel, Supabase, Railway, Prisma, Redis,
+  worker sempre-on ou fila externa são bloqueadores. Deploy só pelo CI. Sentry nos três apps, sem quebrar sem DSN.
+  Logs (Workers Logs) sem secrets, cookies, autorização ou dado pessoal desnecessário.
 - **UI:** Primary `#F35050`, accent escasso `#FFB800`, Nunito, containers outline com borda
   fina — sem fill, sem shadow (o asset do logo pode ter sombra própria). Rausch, Airbnb Cereal,
   property cards ou catálogo Airbnb são bloqueadores.
 - **Testes:** verificam comportamento externo, contrato HTTP, autorização, estado persistido e
   efeito financeiro. Teste que fixa organização interna, nome de função ou classe CSS é finding.
-  Prova de RLS exige Postgres real com policies e duas Lojas; mock de Prisma não prova nada.
+  Prova de isolamento exige teste de vazamento com duas Lojas no D1 (workerd), não mock.
 - **Glossário:** nomes de domínio seguem `CONTEXT.md`; termos marcados como _Avoid_ em código ou
   UI são finding.
 

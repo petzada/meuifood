@@ -34,7 +34,6 @@ export default defineConfig({
         "**/*.d1.test.ts",
         "**/fixtures.ts",
         "**/*.d.ts",
-        "**/legacy-*/**",
         "packages/db/src/testing/**",
         // Acesso ao D1: cobertos pelos *.d1.test.ts no workerd (só CI).
         "packages/db/src/foode-db.ts",

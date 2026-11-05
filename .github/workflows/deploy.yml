@@ -167,7 +167,7 @@ jobs:
         run: rm -rf "$RUNNER_TEMP/secrets"
       # Domínio novo: o certificado do custom domain pode levar alguns minutos no 1º deploy,
       # por isso mais tentativas (24 × 10 s).
-      - name: Smoke nos domínios (/health, Storefront, login do Painel, bindings)
+      - name: Smoke nos domínios (/health, Storefront, /privacidade, login do Painel, /ops, bindings)
         env:
           SMOKE_API_URL: ${{ vars.SMOKE_API_URL || 'https://api.foodedelivery.com.br' }}
           SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL || 'https://foodedelivery.com.br' }}

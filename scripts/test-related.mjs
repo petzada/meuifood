@@ -25,10 +25,9 @@ if (!from) {
   process.exit(0);
 }
 
-const LEGACY = /^(apps\/api\/legacy-fastify|packages\/db\/legacy-prisma)\//;
 const files = git("diff", "--name-only", "--diff-filter=d", from, "HEAD")
   .split("\n")
-  .filter((f) => /\.(c|m)?(t|j)sx?$/.test(f) && !LEGACY.test(f) && existsSync(f));
+  .filter((f) => /\.(c|m)?(t|j)sx?$/.test(f) && existsSync(f));
 
 if (files.length === 0) {
   console.log("test-related: nenhum arquivo de código no diff; testes pulados.");

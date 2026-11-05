@@ -37,6 +37,7 @@
 - [ ] Testes: dias úteis/feriados, Estorno antes e depois do repasse, lote idempotente, RBAC; TOP 10 sem Guest e sem outra Loja; CSV sem colunas de dado pessoal e com BOM; comparativo com período anterior; funil sem dado pessoal. Rotas com D1 via `@cloudflare/vitest-plugin` só no CI.
 - [ ] UI segue as [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) aplicáveis (REL-01 a REL-04, NAV-01/NAV-02, OPS-01/OPS-04, T-03, T-04) e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, regra separada da apresentação, matriz de papéis em module, testes que afirmam comportamento).
 - [ ] Revisão de segurança no `/code-review`: TOP 10 e CSV não expõem dado pessoal além de nome; base legal do TOP 10 (execução do contrato/legítimo interesse do Dono) citada no código ou no ticket.
+- [ ] Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md): tarifa de serviço é receita da Foode, separada do líquido e do repasse nos relatórios e lotes.
 
 ## Comments
 
@@ -48,3 +49,5 @@
 - 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): exportação CSV + impressão em PDF pelo navegador (sem PDF/XLSX no servidor); TOP 10 clientes só com conta Foode (nunca Guest); funil próprio mantido; top itens com dia da semana.
 
 - 2026-11-05 — Critérios consolidados com 63–65: P-REL-1 na forma da 64 (CSV + imprimir), P-REL-2, P-REL-3 (só com conta, sem exportação), P-REL-4 (eventos do Ticket 28), P-REL-5 e P-PLN-1 entraram no checklist, com revisão de segurança dos dados pessoais.
+
+- 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.

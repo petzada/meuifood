@@ -36,8 +36,10 @@ const SECRETS = {
 };
 // Quinta-feira, 12:00 em São Paulo.
 const OPEN_NOW = new Date("2026-11-05T15:00:00.000Z");
-const CPF_A = "52998224725";
-const CPF_B = "11144477735";
+// O D1 do Miniflare é um só por arquivo (o seed usa ids aleatórios): CPF fixo colide entre testes
+// pela unicidade de CPF. Cada teste sorteia os seus no beforeEach.
+let CPF_A: string;
+let CPF_B: string;
 
 let fx: TwoStoresFixture;
 let db: FoodeDb;
@@ -59,6 +61,30 @@ function randomIp(): string {
 
 function randomPhone(): string {
   return `119${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+}
+
+function cpfCheckDigit(digits: string): number {
+  const sum = [...digits].reduce(
+    (acc, digit, index) => acc + Number(digit) * (digits.length + 1 - index),
+    0,
+  );
+  const rest = (sum * 10) % 11;
+  return rest === 10 ? 0 : rest;
+}
+
+function randomCpf(): string {
+  const base = String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+  if (/^(\d)\1+$/u.test(base)) return randomCpf();
+  const first = cpfCheckDigit(base);
+  return `${base}${first}${cpfCheckDigit(`${base}${first}`)}`;
+}
+
+function formatCpf(cpf: string): string {
+  return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
+}
+
+function maskCpf(cpf: string): string {
+  return `***.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-**`;
 }
 
 function e164(phone: string): string {
@@ -227,6 +253,9 @@ function quoteBody(ids: { itemId: string; centroId: string }, couponCode?: strin
 }
 
 beforeEach(async () => {
+  CPF_A = randomCpf();
+  CPF_B = randomCpf();
+  while (CPF_B === CPF_A) CPF_B = randomCpf();
   fx = await seedTwoStores(env.DB);
   db = createFoodeDb(env.DB);
   sent = [];
@@ -360,11 +389,12 @@ describe("conta: cadastro, unicidade e sessão", () => {
     const phone = randomPhone();
     await requestCode(phone);
     const cookie = cookieOf(await verify(phone, lastCode()));
+    const wrongCpf = formatCpf(`${CPF_A.slice(0, 10)}${(Number(CPF_A[10]) + 1) % 10}`);
     await expect(
-      customer().signup({ name: "Maria", cpf: "529.982.247-24" }, cookie, randomIp()),
+      customer().signup({ name: "Maria", cpf: wrongCpf }, cookie, randomIp()),
     ).resolves.toMatchObject({ status: 400 });
     const created = await customer().signup(
-      { name: "Maria", cpf: "529.982.247-25" },
+      { name: "Maria", cpf: formatCpf(CPF_A) },
       cookie,
       randomIp(),
     );
@@ -374,7 +404,7 @@ describe("conta: cadastro, unicidade e sessão", () => {
       account: {
         name: "Maria",
         phone: e164(phone),
-        cpfMasked: "***.982.247-**",
+        cpfMasked: maskCpf(CPF_A),
         lastAddress: null,
       },
     });
@@ -483,7 +513,7 @@ describe("troca de telefone pelo Ops", () => {
       error: "forbidden",
     });
     const found = data(await service.opsCustomerFind(ops, { cpf: CPF_A }));
-    expect(found).toMatchObject({ phone: e164(phone), cpfMasked: "***.982.247-**" });
+    expect(found).toMatchObject({ phone: e164(phone), cpfMasked: maskCpf(CPF_A) });
     await expect(
       service.opsCustomerChangePhone(ops, { accountId: found.accountId, phone: otherPhone }),
     ).resolves.toEqual({ ok: false, error: "conflict" });

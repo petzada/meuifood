@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Smoke pós-deploy (deploy.yml) e `pnpm e2e`: /health da api, Storefront, login do
-// Painel e os dois service bindings (web → api fetch, admin → api RPC).
+// Smoke pós-deploy (deploy.yml) e `pnpm e2e`: /health da api, Storefront, /privacidade, login
+// do Painel, guarda do `/ops` (sem sessão → /entrar) e os dois service bindings (web → api fetch,
+// admin → api RPC). Só leitura: não cria nem altera dados de produção.
 // URLs: SMOKE_API_URL / SMOKE_WEB_URL / SMOKE_ADMIN_URL (GitHub variables). Sem elas, usa
 // os workers.dev da conta (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN). O deploy.yml roda
 // primeiro nos domínios próprios (Ticket 25) e depois no workers.dev (fallback).
@@ -96,6 +97,16 @@ const results = [
   await check("Painel /entrar (login)", `${urls.admin}/entrar`, (response, text) => {
     expectStatus(response, 200);
     if (!text.includes("Painel Foode")) throw new Error("página de login sem o título do Painel");
+  }),
+  await check("Storefront /privacidade", `${urls.web}/privacidade`, (response) =>
+    expectStatus(response, 200),
+  ),
+  await check("Painel /ops exige sessão", `${urls.admin}/ops`, (response) => {
+    if (response.status < 300 || response.status >= 400) {
+      throw new Error(`HTTP ${response.status}, esperado redirecionamento`);
+    }
+    const location = response.headers.get("location") ?? "";
+    if (!location.includes("/entrar")) throw new Error(`redireciona para ${location || "?"}`);
   }),
   await check("Painel → api (RPC PainelApi)", `${urls.admin}/api/health`, (response, text) => {
     expectStatus(response, 200);

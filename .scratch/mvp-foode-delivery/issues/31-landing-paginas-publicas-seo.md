@@ -19,7 +19,10 @@
 - [ ] SEO técnico: `metadataBase`, OG (inclusive Storefront), `robots`, `sitemap`, JSON-LD Organization/SoftwareApplication/FAQPage, canônicas; Storefront indexável só para Loja ativa com descrição e logo (+ opt-out).
 - [ ] Sem analytics na landing; sem páginas de cidade; sem `/sobre`; sem seção de garantias; depoimentos pós-MVP.
 - [ ] Testes de componente (calculadora, planos, formulário de lead) e verificação de acessibilidade; preços lidos de `@foode/shared`.
+- [ ] Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md): card do Anual: destaque "6× de R$ 188,20" (2,99% a.m., Tabela Price) e total R$ 1.019,88 abaixo sem destaque; tarifa de serviço do Consumidor só nos termos, nunca na landing/planos.
 
 ## Comments
 
 - 2026-11-05 — Aberto a partir da análise `docs/landing/` e da decisão 70. Número de WhatsApp de vendas fica só em secret (`SALES_WHATSAPP`), configurado pelo orquestrador.
+
+- 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
