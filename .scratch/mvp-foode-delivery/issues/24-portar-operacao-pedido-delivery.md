@@ -21,3 +21,4 @@
 ## Comments
 
 - 2026-11-04 — Porta 07, 08 e 09; impressão por [62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md). Se `batch` não bastar para contenção, avaliar Durable Object por Loja e registrar decisão.
+- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) G1–G10, C1/C6, K7, X1–X4, X6–X9 e o bloco "Pagar na entrega" de X5. Pendentes em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md): P-2.2–P-2.5, P-3.3, P-4.1, P-4.2, P-5.1, P-6.1; se aprovadas, observações, subtipo na entrega e troco entram no detalhe do Pedido e no cupom 80 mm.
