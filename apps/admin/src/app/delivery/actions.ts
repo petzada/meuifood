@@ -3,22 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClient } from "../../lib/supabase/server";
-
-function apiUrl() {
-  const value = process.env.API_URL?.trim();
-  if (!value) throw new Error("API_URL_is_required");
-  return value;
-}
-
-async function accessToken() {
-  const supabase = await createClient();
-  const { error: claimsError } = await supabase.auth.getClaims();
-  if (claimsError) redirect("/entrar");
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) redirect("/entrar");
-  return data.session.access_token;
-}
+import { accessToken, apiUrl } from "../../lib/legacy-api";
 
 function feedbackRedirect(code: string): never {
   redirect(`/?entrega=${code}#configuracoes`);
@@ -87,10 +72,7 @@ export async function createNeighborhood(formData: FormData) {
 export async function deleteNeighborhood(formData: FormData) {
   const neighborhoodId = String(formData.get("neighborhoodId") ?? "");
   const response = await fetch(
-    new URL(
-      `/delivery/neighborhoods/${encodeURIComponent(neighborhoodId)}`,
-      apiUrl(),
-    ),
+    new URL(`/delivery/neighborhoods/${encodeURIComponent(neighborhoodId)}`, apiUrl()),
     {
       headers: { authorization: `Bearer ${await accessToken()}` },
       method: "DELETE",

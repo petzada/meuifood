@@ -28,6 +28,9 @@ export async function proxyAuthRequest(request: Request, api: AuthProxyTarget): 
   for (const name of DROP_REQUEST_HEADERS) headers.delete(name);
   const ip = clientIp(request);
   if (ip) headers.set(CLIENT_IP_HEADER, ip);
+  // A api recusa `/api/auth/*` sem o IP. Fora da Cloudflare (`next dev`) não há borda:
+  // loopback só em desenvolvimento; em produção o header ausente segue ausente.
+  else if (process.env.NODE_ENV !== "production") headers.set(CLIENT_IP_HEADER, "127.0.0.1");
   else headers.delete(CLIENT_IP_HEADER);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";

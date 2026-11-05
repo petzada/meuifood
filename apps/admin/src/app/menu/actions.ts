@@ -3,22 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClient } from "../../lib/supabase/server";
-
-function apiUrl() {
-  const value = process.env.API_URL?.trim();
-  if (!value) throw new Error("API_URL_is_required");
-  return value;
-}
-
-async function accessToken() {
-  const supabase = await createClient();
-  const { error: claimsError } = await supabase.auth.getClaims();
-  if (claimsError) redirect("/entrar");
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) redirect("/entrar");
-  return data.session.access_token;
-}
+import { accessToken, apiUrl } from "../../lib/legacy-api";
 
 function feedbackRedirect(code: string): never {
   redirect(`/?cardapio=${code}#cardapio`);
@@ -144,23 +129,20 @@ export async function updateItem(formData: FormData) {
     feedbackRedirect("item-erro");
   }
 
-  const response = await fetch(
-    new URL(`/menu/items/${encodeURIComponent(itemId)}`, apiUrl()),
-    {
-      body: JSON.stringify({
-        available,
-        categoryId,
-        description,
-        name,
-        priceCents,
-      }),
-      headers: {
-        authorization: `Bearer ${await accessToken()}`,
-        "content-type": "application/json",
-      },
-      method: "PATCH",
+  const response = await fetch(new URL(`/menu/items/${encodeURIComponent(itemId)}`, apiUrl()), {
+    body: JSON.stringify({
+      available,
+      categoryId,
+      description,
+      name,
+      priceCents,
+    }),
+    headers: {
+      authorization: `Bearer ${await accessToken()}`,
+      "content-type": "application/json",
     },
-  );
+    method: "PATCH",
+  });
   if (!response.ok) feedbackRedirect("item-erro");
   revalidatePath("/");
   feedbackRedirect("item-atualizado");
@@ -169,13 +151,10 @@ export async function updateItem(formData: FormData) {
 export async function deleteItem(formData: FormData) {
   const itemId = String(formData.get("itemId") ?? "").trim();
   if (!itemId) feedbackRedirect("item-erro");
-  const response = await fetch(
-    new URL(`/menu/items/${encodeURIComponent(itemId)}`, apiUrl()),
-    {
-      headers: { authorization: `Bearer ${await accessToken()}` },
-      method: "DELETE",
-    },
-  );
+  const response = await fetch(new URL(`/menu/items/${encodeURIComponent(itemId)}`, apiUrl()), {
+    headers: { authorization: `Bearer ${await accessToken()}` },
+    method: "DELETE",
+  });
   if (!response.ok) feedbackRedirect("item-erro");
   revalidatePath("/");
   feedbackRedirect("item-removido");

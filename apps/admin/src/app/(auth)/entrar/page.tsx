@@ -27,7 +27,7 @@ export default async function LoginPage({
         Use o e-mail convidado e sua senha do Painel.
       </p>
       <OutlineContainer className="mt-8 p-6">
-        <LoginForm next={safeNext(next, "/")} notice={notice} siteKey={await turnstileSiteKey()} />
+        <LoginForm next={safeNext(next, "/")} notice={notice} siteKey={turnstileSiteKey()} />
       </OutlineContainer>
     </>
   );

@@ -139,10 +139,7 @@ jobs:
         run: pnpm exec opennextjs-cloudflare deploy --secrets-file "$SECRETS_DIR/web.json"
       - name: Deploy admin
         working-directory: apps/admin
-        env:
-          # Site key pública do Turnstile (GitHub variable) → var do Worker (Ticket 22).
-          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
-        run: pnpm exec opennextjs-cloudflare deploy --secrets-file "$SECRETS_DIR/admin.json" --var "TURNSTILE_SITE_KEY:$TURNSTILE_SITE_KEY"
+        run: pnpm exec opennextjs-cloudflare deploy --secrets-file "$SECRETS_DIR/admin.json"
       - name: Apagar arquivos de secrets
         if: always()
         run: rm -rf "$RUNNER_TEMP/secrets"

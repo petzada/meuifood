@@ -16,7 +16,7 @@ export default async function ForgotPasswordPage() {
         senha nova.
       </p>
       <OutlineContainer className="mt-8 p-6">
-        <ForgotPasswordForm siteKey={await turnstileSiteKey()} />
+        <ForgotPasswordForm siteKey={turnstileSiteKey()} />
       </OutlineContainer>
     </>
   );

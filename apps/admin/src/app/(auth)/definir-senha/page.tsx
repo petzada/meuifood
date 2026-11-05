@@ -6,15 +6,16 @@ import { SetPasswordForm } from "./set-password-form";
 
 export const dynamic = "force-dynamic";
 
-// Convite (`?convite=1`) e reset chegam aqui com `?token=` (uso único). O Better Auth
-// redireciona com `?error=INVALID_TOKEN` quando o link expirou ou já foi usado.
+// O e-mail da api (templates.ts) aponta para `/definir-senha?token=…&fluxo=convite|reset`
+// (token de uso único). O Better Auth redireciona com `?error=INVALID_TOKEN` quando o link
+// expirou ou já foi usado.
 export default async function SetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ convite?: string; error?: string; token?: string }>;
+  searchParams: Promise<{ error?: string; fluxo?: string; token?: string }>;
 }) {
-  const { convite, error, token } = await searchParams;
-  const invite = convite !== undefined;
+  const { error, fluxo, token } = await searchParams;
+  const invite = fluxo === "convite";
   const heading = invite ? "Defina sua senha do Painel." : "Crie uma senha nova.";
 
   if (!token || error) {
@@ -48,7 +49,7 @@ export default async function SetPasswordPage({
           : "Escolha uma senha que você ainda não tenha usado aqui."}
       </p>
       <OutlineContainer className="mt-8 p-6">
-        <SetPasswordForm siteKey={await turnstileSiteKey()} token={token} />
+        <SetPasswordForm siteKey={turnstileSiteKey()} token={token} />
       </OutlineContainer>
     </>
   );

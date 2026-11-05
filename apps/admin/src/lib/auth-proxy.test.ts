@@ -36,7 +36,8 @@ describe("proxy /api/auth/* → api (service binding)", () => {
     await expect(sent?.json()).resolves.toEqual({ email: "a@b.co", password: "x" });
   });
 
-  it("sem IP na borda, não deixa o header chegar à api", async () => {
+  it("sem IP na borda em produção, não deixa o header chegar à api; em dev usa loopback", async () => {
+    vi.stubEnv("NODE_ENV", "production");
     const target = api(new Response(null, { status: 204 }));
     await proxyAuthRequest(
       new Request("https://painel.example/api/auth/get-session", {
@@ -45,6 +46,12 @@ describe("proxy /api/auth/* → api (service binding)", () => {
       target,
     );
     expect(target.fetch.mock.calls[0]?.[0]?.headers.has("cf-connecting-ip")).toBe(false);
+
+    vi.stubEnv("NODE_ENV", "development");
+    const dev = api(new Response(null, { status: 204 }));
+    await proxyAuthRequest(new Request("https://localhost:3001/api/auth/get-session"), dev);
+    expect(dev.fetch.mock.calls[0]?.[0]?.headers.get("cf-connecting-ip")).toBe("127.0.0.1");
+    vi.unstubAllEnvs();
   });
 
   it("devolve status e Set-Cookie da api para o navegador", async () => {

@@ -3,22 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClient } from "../../lib/supabase/server";
-
-function apiUrl() {
-  const value = process.env.API_URL?.trim();
-  if (!value) throw new Error("API_URL_is_required");
-  return value;
-}
-
-async function accessToken() {
-  const supabase = await createClient();
-  const { error: claimsError } = await supabase.auth.getClaims();
-  if (claimsError) redirect("/entrar");
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) redirect("/entrar");
-  return data.session.access_token;
-}
+import { accessToken, apiUrl } from "../../lib/legacy-api";
 
 function feedbackRedirect(code: string): never {
   redirect(`/?cardapio=${code}#cardapio`);
@@ -109,17 +94,14 @@ export async function reorderComplementGroups(formData: FormData) {
     feedbackRedirect("customizacao-erro");
   }
 
-  const response = await fetch(
-    new URL("/menu/complement-groups/order", apiUrl()),
-    {
-      body: JSON.stringify({ itemId, orderedGroupIds }),
-      headers: {
-        authorization: `Bearer ${await accessToken()}`,
-        "content-type": "application/json",
-      },
-      method: "PUT",
+  const response = await fetch(new URL("/menu/complement-groups/order", apiUrl()), {
+    body: JSON.stringify({ itemId, orderedGroupIds }),
+    headers: {
+      authorization: `Bearer ${await accessToken()}`,
+      "content-type": "application/json",
     },
-  );
+    method: "PUT",
+  });
   if (!response.ok) feedbackRedirect("customizacao-erro");
   revalidatePath("/");
   feedbackRedirect("customizacao-ordenada");
