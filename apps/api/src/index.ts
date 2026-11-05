@@ -1,10 +1,11 @@
-// Worker `foode-api` (Hono). Default export = fetch público (app.ts); `PainelApi` =
-// entrypoint RPC do Painel, só por service binding. Sentry é opcional: sem SENTRY_DSN o
-// SDK fica desligado.
+// Worker `foode-api` (Hono). Default export = fetch público (app.ts) + `scheduled` (Cron Triggers
+// da reconciliação, Ticket 15, src/reconciliation.ts); `PainelApi` = entrypoint RPC do Painel, só
+// por service binding. Sentry é opcional: sem SENTRY_DSN o SDK fica desligado.
 import * as Sentry from "@sentry/cloudflare";
 
 import { createApp, redactPath } from "./app";
 import type { Env } from "./env";
+import { handleScheduled } from "./reconciliation";
 
 export { PainelApi } from "./painel";
 
@@ -28,5 +29,8 @@ export default Sentry.withSentry(
       return event;
     },
   }),
-  { fetch: app.fetch } satisfies ExportedHandler<Env>,
+  {
+    fetch: app.fetch,
+    scheduled: (controller, env, ctx) => handleScheduled(controller, env, ctx),
+  } satisfies ExportedHandler<Env>,
 );

@@ -725,6 +725,7 @@ describe("PIX vencido sem pagamento", () => {
       cancelled: 0,
       paid: 0,
       skipped: 0,
+      failed: 0,
     });
     now = new Date(Date.parse(intent.expiresAt!) + 1_000);
     await expect(pixService().expireUnpaidPix(now)).resolves.toMatchObject({ cancelled: 1 });

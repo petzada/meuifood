@@ -27,9 +27,9 @@ describe("cancelOrderInputSchema", () => {
     for (const reason of CANCEL_REASONS) {
       expect(cancelOrderInputSchema.safeParse({ orderId, reason }).success).toBe(true);
     }
-    expect(cancelOrderInputSchema.safeParse({ orderId, reason: "pix_expired" }).success).toBe(
-      false,
-    );
+    for (const reason of ["pix_expired", "card_abandoned"]) {
+      expect(cancelOrderInputSchema.safeParse({ orderId, reason }).success).toBe(false);
+    }
     expect(cancelOrderInputSchema.safeParse({ orderId, reason: "qualquer" }).success).toBe(false);
   });
 
@@ -47,6 +47,7 @@ describe("cancelOrderInputSchema", () => {
     ]);
     expect(cancelReasonLabel(null)).toBeNull();
     expect(cancelReasonLabel("pix_expired")).toBe("PIX não pago no prazo");
+    expect(cancelReasonLabel("card_abandoned")).toBe("Cartão não pago no prazo");
   });
 });
 

@@ -327,6 +327,7 @@ describe("idempotência e retentativa automática", () => {
       requested: 0,
       failed: 0,
       confirmed: 1,
+      checkFailed: 0,
     });
     expect(refunds.rows.get("refund-3")?.state).toBe("failed");
     expect(gateway.checkPixCharge).toHaveBeenCalledWith("pix_char_TESTE01");
@@ -357,6 +358,7 @@ describe("idempotência e retentativa automática", () => {
     });
     const summary = await svc.retryPendingRefunds(NOW);
     expect(summary.confirmed).toBe(1);
+    expect(summary.checkFailed).toBe(1);
     expect(incidents).toEqual([
       { message: "refund_check_failed", provider: "abacatepay", code: "TypeError" },
     ]);

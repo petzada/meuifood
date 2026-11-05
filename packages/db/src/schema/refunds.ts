@@ -62,6 +62,15 @@ export const ORDER_CANCEL_REASONS = [
 ] as const;
 export type OrderCancelReasonValue = (typeof ORDER_CANCEL_REASONS)[number];
 
+/**
+ * Motivos de sistema gravados em `order_cancellations.system_reason` (Ticket 15, migration 0011):
+ * a coluna `reason` tem um CHECK fechado e mudá-lo no SQLite recria a tabela (contract). Quem lê
+ * o motivo usa `COALESCE(system_reason, reason)`; o contrato público (@foode/shared/order) vê um
+ * motivo só. `card_abandoned` = Cartão recusado sem nova tentativa nem troca para PIX no prazo.
+ */
+export const ORDER_SYSTEM_CANCEL_REASONS = ["card_abandoned"] as const;
+export type OrderSystemCancelReasonValue = (typeof ORDER_SYSTEM_CANCEL_REASONS)[number];
+
 function nullableUtc(column: string) {
   return sql.raw(
     `"${column}" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', "${column}") IS "${column}"`,
@@ -84,6 +93,8 @@ export const orderCancellations = sqliteTable(
     /** null = sistema (PIX vencido). */
     actorUserId: text("actor_user_id").references(() => users.id),
     actorRole: text("actor_role", { enum: PAUSE_ROLES }),
+    /** Ticket 15 (0011): motivo de sistema fora do CHECK de `reason` (null = ver `reason`). */
+    systemReason: text("system_reason", { enum: ORDER_SYSTEM_CANCEL_REASONS }),
     cancelledAt: text("cancelled_at").notNull(),
     createdAt: text("created_at").notNull().default(utcNowDefault),
   },
@@ -107,6 +118,14 @@ export const orderCancellations = sqliteTable(
     check(
       "order_cancellations_system_reason",
       sql.raw(`"reason" IS NOT 'pix_expired' OR "actor_user_id" IS NULL`),
+    ),
+    // 0011: a coluna nasce por ADD COLUMN com este CHECK (expand); motivo de sistema = sem autor
+    // e sem motivo escolhido.
+    check(
+      "order_cancellations_system_reason_only",
+      sql.raw(
+        `"system_reason" IS NULL OR (${inList("system_reason", ORDER_SYSTEM_CANCEL_REASONS)} AND "reason" IS NULL AND "actor_user_id" IS NULL)`,
+      ),
     ),
     check("order_cancellations_cancelled_at_utc", utcCheck("cancelled_at")),
     check("order_cancellations_created_at_utc", utcCheck("created_at")),
