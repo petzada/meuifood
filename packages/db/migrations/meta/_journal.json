@@ -64,6 +64,13 @@
       "when": 1793863205468,
       "tag": "0008_leads_rate_km",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793867731601,
+      "tag": "0009_cartao_efi_abacatepay",
+      "breakpoints": true
     }
   ]
 }

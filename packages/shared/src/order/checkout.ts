@@ -11,6 +11,7 @@ import {
   couponRejectionMessagePt,
 } from "../coupon/rules.js";
 import { centsSchema, formatBRL } from "../money.js";
+import { cardPaymentInputSchema } from "../payment/card.js";
 import { cartLineSchema, MAX_CART_LINES } from "../menu/cart.js";
 import { normalizeBrazilianMobilePhone } from "../phone-br.js";
 import { etaRangeSchema, neighborhoodNameSchema } from "./settings.js";
@@ -114,7 +115,9 @@ export type CheckoutQuoteRequest = z.infer<typeof checkoutQuoteRequestSchema>;
 /**
  * Criação do Pedido. `idempotencyKey` (UUID gerado no navegador ao abrir o checkout) é a mesma em
  * todo retry: mesma chave + mesmo corpo devolve o mesmo Pedido; mesma chave + corpo diferente =
- * `idempotency_conflict`. `changeForCents` só com `on_delivery`.
+ * `idempotency_conflict`. `changeForCents` só com `on_delivery`. `card` (Ticket 27) é obrigatório
+ * com `credit` e proibido nos demais meios: token do SDK + CPF/e-mail (+ nascimento na Efí); PIX e
+ * `on_delivery` seguem sem dados do pagador (decisão 60).
  */
 export const checkoutCreateRequestSchema = z
   .object({
@@ -127,6 +130,7 @@ export const checkoutCreateRequestSchema = z
         .min(1)
         .nullish()
         .transform((value) => value ?? null),
+      card: cardPaymentInputSchema.nullish().transform((value) => value ?? null),
     }),
     note: orderNoteSchema,
   })
@@ -137,6 +141,13 @@ export const checkoutCreateRequestSchema = z
         code: "custom",
         message: "troco só no Pagamento na entrega",
         path: ["payment", "changeForCents"],
+      });
+    }
+    if ((input.payment.method === "credit") !== (input.payment.card !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        message: input.payment.method === "credit" ? "informe o cartão" : "cartão só no Crédito",
+        path: ["payment", "card"],
       });
     }
   });

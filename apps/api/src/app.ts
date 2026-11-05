@@ -10,6 +10,14 @@ import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
 import { panelUrlOf } from "./auth/auth";
+import {
+  abacatePayCardFromEnv,
+  CARD_RETRY_MAX_BODY_BYTES,
+  createCardService,
+  EFI_NOTIFICATION_MAX_BODY_BYTES,
+  EFI_SECRET_QUERY_PARAM,
+  efiCardFromEnv,
+} from "./card-service";
 import { createTurnstileVerifier } from "./auth/turnstile";
 import { type CustomerReply, createCustomerService } from "./customer-service";
 import { createMillionSendSender } from "./email/sender";
@@ -205,6 +213,12 @@ export function createApp() {
     });
   const pix = (c: Context<AppEnv>) =>
     createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env) });
+  const card = (c: Context<AppEnv>) =>
+    createCardService({
+      db: c.var.db,
+      efi: efiCardFromEnv(c.env),
+      abacatePay: abacatePayCardFromEnv(c.env),
+    });
   const service = (c: Context<AppEnv>) =>
     createStorefrontService({
       pix: pix(c),
@@ -267,6 +281,22 @@ export function createApp() {
     c.header("cache-control", "no-store");
     return c.json(reply.body, reply.status);
   });
+
+  // "Tentar outro cartão" (Ticket 27): corpo `cardRetryRequestSchema` (@foode/shared/payment; só
+  // token do SDK + pagador, nunca número/CVV/validade). Contrato: 501 até a implementação.
+  storefront.post(
+    "/lojas/:slug/pedidos/:token/cartao",
+    limit(CARD_RETRY_MAX_BODY_BYTES),
+    async (c) => {
+      const reply = await card(c).retry({
+        slug: c.req.param("slug"),
+        token: c.req.param("token"),
+        body: await jsonBody(c),
+      });
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
+  );
 
   // Busca por telefone (P-2.1), só Pedidos da mesma Loja: corpo `phoneLookupRequestSchema`
   // (Turnstile: 403 `captcha_failed`; rate limit por IP e por telefone: 429 `rate_limited`), 200 =
@@ -376,7 +406,7 @@ export function createApp() {
   // (HMAC-SHA256 do corpo CRU), ambos conferidos em tempo constante ANTES do parse. Evento com
   // identidade única: duplicata/reentrega/fora de ordem sem efeito duplo. Corpo, URL e segredo
   // nunca vão para log/Sentry (redactPath tira a query). Sem as chaves: 503 (PIX indisponível).
-  // Efí (cartão) entra no Ticket 27.
+  // Eventos de CARD (Rápido) chegam aqui também e vão para `card-service` (Ticket 27).
   app.post(
     "/webhooks/abacatepay",
     bodyLimit({
@@ -388,6 +418,26 @@ export function createApp() {
         rawBody: await c.req.text(),
         querySecret: c.req.query(ABACATEPAY_SECRET_QUERY_PARAM) ?? null,
         signature: c.req.header(ABACATEPAY_SIGNATURE_HEADER) ?? null,
+      });
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
+  );
+  // Notificação da Efí (Ticket 27, Cartão Normal): `notification_url` por cobrança com `?secret=`
+  // (conferido em tempo constante); o corpo traz só o token e o estado vem de
+  // `GET /v1/notification/:token`. URL, segredo, corpo e token nunca vão para log/Sentry.
+  // Contrato: 501 até a implementação.
+  app.post(
+    "/webhooks/efi",
+    bodyLimit({
+      maxSize: EFI_NOTIFICATION_MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: "invalid_payload" }, 413),
+    }),
+    async (c) => {
+      const reply = await card(c).handleEfiNotification({
+        rawBody: await c.req.text(),
+        contentType: c.req.header("content-type") ?? null,
+        querySecret: c.req.query(EFI_SECRET_QUERY_PARAM) ?? null,
       });
       c.header("cache-control", "no-store");
       return c.json(reply.body, reply.status);

@@ -44,6 +44,25 @@ export type Env = {
   ABACATEPAY_WEBHOOK_SECRET?: string;
   /** Chave pública de assinatura HMAC publicada pela AbacatePay (header X-Webhook-Signature). */
   ABACATEPAY_SIGNING_KEY?: string;
+  // Ticket 27 (Cartão à vista, decisão 60). Tudo OPCIONAL: sem as chaves do modo, o Crédito fica
+  // indisponível nas Lojas daquele modo. Secrets nunca em arquivo, log ou Sentry.
+  /** Var pública: chave pública do abacatepay.js (Rápido); vai ao Storefront como tokenizador. */
+  ABACATEPAY_PUBLIC_KEY?: string;
+  /** Secret: client_id da aplicação da conta Efí do Foode (API Cobranças, Normal). */
+  EFI_CLIENT_ID?: string;
+  /** Secret: client_secret da mesma aplicação. */
+  EFI_CLIENT_SECRET?: string;
+  /** Var pública: identificador de conta (payee code) usado pela `payment-token-efi`. */
+  EFI_PAYEE_CODE?: string;
+  /** Var: `production` (padrão) ou `sandbox` (homologação). */
+  EFI_ENVIRONMENT?: string;
+  /** Secret: nosso segredo da `notification_url` (`?secret=`) por cobrança. */
+  EFI_NOTIFICATION_SECRET?: string;
+  /**
+   * Var: origem pública da api para montar a `notification_url` da Efí (ex.:
+   * `https://api.foodedelivery.com.br`); o checkout chega pelo binding, sem a URL pública.
+   */
+  API_PUBLIC_URL?: string;
   // Ticket 31 (leads da landing, decisão 70). Var (não secret): o e-mail do próprio Dono da Foode.
   /** Destinatário do aviso de lead novo; vazio = lead gravado sem aviso. */
   LEADS_NOTIFY_EMAIL?: string;
