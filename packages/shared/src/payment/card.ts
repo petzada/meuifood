@@ -113,6 +113,37 @@ const cardDisplayShape = {
 };
 
 /**
+ * CPF do pagador: digitado (`cpf`) OU o da conta do Consumidor autenticado (`useAccountCpf: true`,
+ * Ticket 13/decisão 65). O CPF inteiro da conta nunca volta ao navegador (só `cpfMasked`): o
+ * formulário mostra o mascarado e o servidor usa o da sessão. Exatamente um dos dois.
+ */
+const payerCpfShape = {
+  cpf: payerCpfSchema.optional(),
+  useAccountCpf: z.literal(true).optional(),
+};
+
+function withAccountCpf<
+  T extends z.ZodType<{ cpf?: string | undefined; useAccountCpf?: true | undefined }>,
+>(schema: T) {
+  return schema.refine((payer) => (payer.cpf !== undefined) !== (payer.useAccountCpf === true), {
+    message: "informe o CPF",
+    path: ["cpf"],
+  });
+}
+
+/**
+ * CPF que vai ao provedor: o digitado ou o da conta autenticada. null = pediu o da conta sem sessão
+ * com conta (o servidor responde `invalid_input`).
+ */
+export function resolvePayerCpf(
+  payer: { cpf?: string | undefined; useAccountCpf?: true | undefined },
+  accountCpf: string | null,
+): string | null {
+  if (payer.cpf !== undefined) return payer.cpf;
+  return payer.useAccountCpf && accountCpf ? accountCpf : null;
+}
+
+/**
  * Cartão no checkout: discriminado pelo SDK que o Storefront carregou. O servidor confere que o
  * `sdk` é o do modo ATUAL da Loja (senão `payment_method_unavailable`). Efí exige data de
  * nascimento; AbacatePay não. Objetos estritos: número/CVV/validade nunca passam.
@@ -121,20 +152,24 @@ export const cardPaymentInputSchema = z.discriminatedUnion("sdk", [
   z.strictObject({
     sdk: z.literal("efi"),
     paymentToken: efiPaymentTokenSchema,
-    payer: z.strictObject({
-      cpf: payerCpfSchema,
-      email: payerEmailSchema,
-      birthDate: payerBirthDateSchema,
-    }),
+    payer: withAccountCpf(
+      z.strictObject({
+        ...payerCpfShape,
+        email: payerEmailSchema,
+        birthDate: payerBirthDateSchema,
+      }),
+    ),
     ...cardDisplayShape,
   }),
   z.strictObject({
     sdk: z.literal("abacatepay"),
     token: abacatePayCardTokenSchema,
-    payer: z.strictObject({
-      cpf: payerCpfSchema,
-      email: payerEmailSchema,
-    }),
+    payer: withAccountCpf(
+      z.strictObject({
+        ...payerCpfShape,
+        email: payerEmailSchema,
+      }),
+    ),
     ...cardDisplayShape,
   }),
 ]);
@@ -151,6 +186,57 @@ export const cardRetryRequestSchema = z.strictObject({
   card: cardPaymentInputSchema,
 });
 export type CardRetryRequest = z.infer<typeof cardRetryRequestSchema>;
+
+/**
+ * Erros de "Tentar outro cartão" e de "Pagar com PIX":
+ * - `invalid_input` (400): corpo fora do schema;
+ * - `order_not_found` (404): token de outra Loja ou inexistente;
+ * - `attempt_active` (409): já há tentativa viva (processando/em análise/aprovada);
+ * - `order_not_payable` (409): Pedido não aceita mais (pago, cancelado ou outro meio);
+ * - `payment_method_unavailable` (422): o meio não está disponível na Loja agora (modo/chaves/taxa)
+ *   ou o SDK do navegador não é o do modo atual;
+ * - `account_cpf_unavailable` (422): `useAccountCpf` sem sessão de Consumidor com CPF.
+ */
+export const CARD_PAYMENT_ACTION_ERRORS = [
+  "invalid_input",
+  "order_not_found",
+  "attempt_active",
+  "order_not_payable",
+  "payment_method_unavailable",
+  "account_cpf_unavailable",
+] as const;
+export type CardPaymentActionError = (typeof CARD_PAYMENT_ACTION_ERRORS)[number];
+
+/** Resposta de `POST /storefront/lojas/:slug/pedidos/:token/cartao` (201 nova, 200 replay). */
+export const cardRetryResponseSchema = z.union([
+  z.object({ ok: z.literal(true), trackingPath: z.string().startsWith("/") }),
+  z.object({ error: z.enum(CARD_PAYMENT_ACTION_ERRORS) }),
+]);
+export type CardRetryResponse = z.infer<typeof cardRetryResponseSchema>;
+
+/**
+ * Corpo de `POST /storefront/lojas/:slug/pedidos/:token/pix` ("Pagar com PIX" depois do Cartão
+ * recusado): vazio. Idempotente pelo próprio Pedido (uma cobrança PIX por Pedido): repetir
+ * devolve a mesma.
+ */
+export const orderPixSwitchRequestSchema = z.strictObject({});
+export type OrderPixSwitchRequest = z.infer<typeof orderPixSwitchRequestSchema>;
+
+/**
+ * Resposta de "Pagar com PIX": 201 trocou para PIX (mesmo total e mesma tarifa de serviço; a
+ * cobrança aparece no bloco `pix` da página do Pedido), 200 replay; erros de
+ * `CARD_PAYMENT_ACTION_ERRORS` (409 `attempt_active` se há Cartão vivo; `order_not_payable` se
+ * não há Cartão recusado, já pago ou cancelado; 422 `payment_method_unavailable` sem PIX na Loja).
+ */
+export const orderPixSwitchResponseSchema = z.union([
+  z.object({
+    ok: z.literal(true),
+    replayed: z.boolean(),
+    trackingPath: z.string().startsWith("/"),
+  }),
+  z.object({ error: z.enum(CARD_PAYMENT_ACTION_ERRORS) }),
+]);
+export type OrderPixSwitchResponse = z.infer<typeof orderPixSwitchResponseSchema>;
 
 // ---- Estado público do pagamento por Cartão (página do Pedido).
 

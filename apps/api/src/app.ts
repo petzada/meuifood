@@ -211,17 +211,20 @@ export function createApp() {
       ipSalt: c.env.PHONE_LOOKUP_IP_SALT,
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
     });
-  const pix = (c: Context<AppEnv>) =>
-    createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env) });
   const card = (c: Context<AppEnv>) =>
     createCardService({
       db: c.var.db,
       efi: efiCardFromEnv(c.env),
       abacatePay: abacatePayCardFromEnv(c.env),
+      accountCpfOf: async (cookie) =>
+        cookie ? ((await customer(c).currentSession(cookie))?.session?.account?.cpf ?? null) : null,
     });
+  const pix = (c: Context<AppEnv>) =>
+    createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env), card: card(c) });
   const service = (c: Context<AppEnv>) =>
     createStorefrontService({
       pix: pix(c),
+      card: card(c),
       db: c.var.db,
       turnstile: createTurnstileVerifier(c.env),
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
@@ -283,7 +286,9 @@ export function createApp() {
   });
 
   // "Tentar outro cartão" (Ticket 27): corpo `cardRetryRequestSchema` (@foode/shared/payment; só
-  // token do SDK + pagador, nunca número/CVV/validade). Contrato: 501 até a implementação.
+  // token do SDK + pagador, nunca número/CVV/validade). 201 nova tentativa, 200 replay da mesma
+  // `attemptKey`, 409 `attempt_active`/`order_not_payable`, 422 `payment_method_unavailable`,
+  // 404 `order_not_found`. O `cookie` da sessão permite `useAccountCpf` (CPF da conta).
   storefront.post(
     "/lojas/:slug/pedidos/:token/cartao",
     limit(CARD_RETRY_MAX_BODY_BYTES),
@@ -292,7 +297,25 @@ export function createApp() {
         slug: c.req.param("slug"),
         token: c.req.param("token"),
         body: await jsonBody(c),
+        cookie: cookieOf(c),
       });
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
+  );
+
+  // "Pagar com PIX" depois do Cartão recusado (Ticket 27): corpo `orderPixSwitchRequestSchema`
+  // (vazio), resposta `orderPixSwitchResponseSchema` (@foode/shared/payment). Mesmo total e tarifa
+  // de serviço; a cobrança PIX segue o fluxo do Ticket 26. Idempotente (201 trocou, 200 replay).
+  storefront.post(
+    "/lojas/:slug/pedidos/:token/pix",
+    limit(CARD_RETRY_MAX_BODY_BYTES),
+    async (c) => {
+      const reply = await service(c).payWithPix(
+        c.req.param("slug"),
+        c.req.param("token"),
+        await jsonBody(c),
+      );
       c.header("cache-control", "no-store");
       return c.json(reply.body, reply.status);
     },
@@ -425,8 +448,8 @@ export function createApp() {
   );
   // Notificação da Efí (Ticket 27, Cartão Normal): `notification_url` por cobrança com `?secret=`
   // (conferido em tempo constante); o corpo traz só o token e o estado vem de
-  // `GET /v1/notification/:token`. URL, segredo, corpo e token nunca vão para log/Sentry.
-  // Contrato: 501 até a implementação.
+  // `GET /v1/notification/:token`. URL, segredo, corpo e token nunca vão para log/Sentry. Sem as
+  // chaves da Efí: 503; segredo errado: 401; corpo sem token: 400; senão 200 (idempotente).
   app.post(
     "/webhooks/efi",
     bodyLimit({
