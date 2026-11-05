@@ -18,6 +18,7 @@
 | 8 | [27](issues/27-credito-efi-abacatepay.md) Cartão Normal (Efí) e Rápido (AbacatePay) + avaliar débito | 26 |
 | 9 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 (+ detalhe do Pedido do 24b) |
 | 10 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano/faixa, relatórios, Repasses e lotes ∥ [15](issues/15-reconciliacao-cron.md) Reconciliação | 12 |
+| 10b | [31](issues/31-landing-paginas-publicas-seo.md) Landing, páginas públicas, blog, leads e SEO (∥ 26/27) | 28, 29 |
 | 11 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção (segurança de dados, widget, bloco humano final, runbook) | 14, 15 + passo humano whatsmiau |
 
 **Fora da fila:** 24 (superseded por 24a/24b), 20 (cortado pela decisão 64; critérios no /code-review de cada ticket), 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
