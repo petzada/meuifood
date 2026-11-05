@@ -5,6 +5,8 @@
 // a taxa, "Sem número") → Pagamento (meios neutros; troco inline; bandeiras) → Observações →
 // Resumo com totais do servidor → aviso de Privacidade, selo "Ambiente seguro" e CTA fixo que
 // diz o que falta (G1/G2). Envio idempotente (X7): a mesma chave em todo retry.
+// Ticket 27: Cartão de crédito à vista inline (campos por SDK), tokenizado no navegador antes
+// do envio; o corpo leva só token + CPF/e-mail(/nascimento), nunca número, validade ou CVV.
 import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { PublicMenu } from "@foode/shared/menu";
 import { formatBRL } from "@foode/shared/money";
@@ -33,6 +35,7 @@ import {
   Textarea,
 } from "@foode/ui";
 import { ArrowLeft, ShieldCheck, SpinnerGap } from "@phosphor-icons/react";
+import type { CardPaymentInputRaw } from "@foode/shared/payment";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -43,6 +46,15 @@ import { summarizeCart } from "../storefront/cart-store";
 import { trackFunnel } from "../storefront/funnel";
 import { blockedCheckoutMessage, describeAvailability } from "../storefront/store-status";
 import { useStoreCart } from "../storefront/use-store-cart";
+import { CardFields, type CardFieldsHandle } from "./card-fields";
+import {
+  CARD_FIELDS,
+  buildCardPaymentInput,
+  firstCardError,
+  type CardField,
+  type CardFormValues,
+} from "./card-form-state";
+import { CardSdkError, type CardSdkFactory } from "./card-tokenizer";
 import { lookupCep } from "./cep";
 import { createCheckoutApi, type CheckoutApi } from "./checkout-api";
 import { CouponField } from "./coupon-field";
@@ -75,6 +87,8 @@ export type CheckoutProps = {
   /** Injetável nos testes; por padrão fala com `/loja/{slug}/finalizar/*`. */
   api?: CheckoutApi;
   cepLookup?: typeof lookupCep;
+  /** Injetável nos testes; por padrão carrega o script oficial do provedor do Cartão. */
+  cardSdkFactory?: CardSdkFactory;
   menu: PublicMenu;
   now?: number;
   /** Sessão do Consumidor lida no servidor (Ticket 13); ausente = anônimo. */
@@ -86,6 +100,10 @@ export type CheckoutProps = {
 
 export function fieldId(field: CheckoutField): string {
   return `checkout-${field}`;
+}
+
+export function cardFieldId(field: CardField): string {
+  return `checkout-card-${field}`;
 }
 
 const QUOTE_DEBOUNCE_MS = 300;
@@ -166,6 +184,7 @@ function methodDescription(method: PaymentMethod, available: boolean): string {
 export function Checkout({
   accountApi: accountApiProp,
   api: apiProp,
+  cardSdkFactory,
   cepLookup = lookupCep,
   menu,
   now,
@@ -188,6 +207,8 @@ export function Checkout({
   const [form, setForm] = useState<CheckoutForm>(() => createCheckoutForm(state));
   const [remembered, setRemembered] = useState<RememberedCustomer | null>(null);
   const [touched, setTouched] = useState<ReadonlySet<CheckoutField>>(() => new Set());
+  const [cardTouched, setCardTouched] = useState<ReadonlySet<CardField>>(() => new Set());
+  const cardFields = useRef<CardFieldsHandle>(null);
   const [showAll, setShowAll] = useState(false);
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -238,6 +259,13 @@ export function Checkout({
   }, []);
   const touch = useCallback((field: CheckoutField) => {
     setTouched((current) => (current.has(field) ? current : new Set(current).add(field)));
+  }, []);
+  const updateCard = useCallback((patch: Partial<CardFormValues>) => {
+    setForm((current) => ({ ...current, card: { ...current.card, ...patch } }));
+    setSubmitError(null);
+  }, []);
+  const touchCard = useCallback((field: CardField) => {
+    setCardTouched((current) => (current.has(field) ? current : new Set(current).add(field)));
   }, []);
 
   // Cotação no servidor (G7) a cada mudança de Fulfillment/bairro/linhas/Cupom, com debounce.
@@ -304,9 +332,14 @@ export function Checkout({
 
   const totals = quote?.ok ? quote : localTotals(state, form, summary.subtotalCents);
   const appliedCoupon = quote?.ok ? (quote.coupon ?? null) : null;
-  const paymentMethods = quote?.ok ? quote.paymentMethods : state.paymentMethods;
+  // Cartão (Ticket 27) só com o tokenizador da Loja; sem ele o meio aparece indisponível.
+  const cardTokenizer = state.cardTokenizer ?? null;
+  const paymentMethods = (quote?.ok ? quote.paymentMethods : state.paymentMethods).filter(
+    (method) => method !== "credit" || cardTokenizer !== null,
+  );
   const eta = quote?.ok ? quote.eta : fulfillment ? (state[fulfillment]?.eta ?? null) : null;
   const validation = validateCheckout(form, {
+    ...(now !== undefined ? { now: new Date(now) } : {}),
     state: { ...state, paymentMethods },
     subtotalCents: totals.subtotalCents,
     totalCents: totals.totalCents,
@@ -323,6 +356,12 @@ export function Checkout({
     const error = errorFor(field);
     return error ? { error } : {};
   };
+  const visibleCardErrors = Object.fromEntries(
+    CARD_FIELDS.filter((field) => showAll || cardTouched.has(field)).map((field) => [
+      field,
+      validation.cardErrors[field],
+    ]),
+  );
 
   const fulfillments = availableFulfillments(state);
   const { delivery } = state;
@@ -444,7 +483,8 @@ export function Checkout({
 
   // ---- Envio (X7).
   function focusField(field: CheckoutField) {
-    const element = document.getElementById(fieldId(field));
+    const first = field === "card" ? firstCardError(validation.cardErrors) : null;
+    const element = document.getElementById(first ? cardFieldId(first) : fieldId(field));
     element?.scrollIntoView({ behavior: "smooth", block: "center" });
     element?.focus();
   }
@@ -468,7 +508,30 @@ export function Checkout({
     }
     setSubmitting(true);
     setSubmitError(null);
-    const body = buildCreateRequest(form, lines, state, idempotencyKey);
+    // Cartão: tokeniza no navegador antes de enviar; o corpo leva só o token e o pagador.
+    let card: CardPaymentInputRaw | null = null;
+    if (form.payment === "credit") {
+      if (!cardTokenizer || !cardFields.current) {
+        setSubmitting(false);
+        setSubmitError("Cartão indisponível no momento. Escolha outro meio.");
+        alertRef.current?.focus();
+        return;
+      }
+      try {
+        const tokenized = await cardFields.current.tokenize({ name: form.name.trim() });
+        card = buildCardPaymentInput(cardTokenizer.sdk, tokenized, form.card);
+      } catch (error) {
+        setSubmitting(false);
+        setSubmitError(
+          error instanceof CardSdkError
+            ? error.message
+            : "Não foi possível confirmar o cartão. Tente de novo em instantes.",
+        );
+        alertRef.current?.focus();
+        return;
+      }
+    }
+    const body = buildCreateRequest(form, lines, state, idempotencyKey, card);
     const result = await api.createOrder(menu.slug, body);
     setSubmitting(false);
     if (!result) {
@@ -491,7 +554,10 @@ export function Checkout({
         return;
       }
       setSubmitError(checkoutErrorMessagePt(result.error));
-      if (result.error.code === "idempotency_conflict") setIdempotencyKey(newIdempotencyKey());
+      // Token de cartão é de uso único: a próxima tentativa tokeniza de novo com chave nova.
+      if (result.error.code === "idempotency_conflict" || form.payment === "credit") {
+        setIdempotencyKey(newIdempotencyKey());
+      }
       alertRef.current?.focus();
       return;
     }
@@ -968,6 +1034,20 @@ export function Checkout({
               </p>
             ) : null}
           </fieldset>
+          {form.payment === "credit" && cardTokenizer ? (
+            <CardFields
+              amountCents={chargedCents}
+              cpfMasked={account?.cpfMasked ?? null}
+              errors={visibleCardErrors}
+              fieldId={cardFieldId}
+              onBlur={touchCard}
+              onChange={updateCard}
+              ref={cardFields}
+              {...(cardSdkFactory ? { sdkFactory: cardSdkFactory } : {})}
+              tokenizer={cardTokenizer}
+              values={form.card}
+            />
+          ) : null}
           {form.payment === "on_delivery" ? (
             <div className="grid gap-3">
               <BrandLines brands={state.cardBrands} />

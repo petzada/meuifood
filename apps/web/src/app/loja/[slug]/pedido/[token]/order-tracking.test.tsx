@@ -175,4 +175,69 @@ describe("OrderTrackingView", () => {
       expect(screen.queryByRole("button", { name: "Copiar código" })).toBeNull();
     });
   });
+
+  describe("Cartão (Ticket 27)", () => {
+    const cardOrder: OrderTracking = {
+      ...order,
+      payment: { changeForCents: null, method: "credit" },
+      serviceFeeCents: 150,
+      card: {
+        amountCents: 6750,
+        brand: "visa",
+        declineReason: null,
+        lastFour: "4242",
+        retryActions: [],
+        state: "processing",
+        tokenizer: null,
+      },
+    };
+
+    it("processando: bloco do Cartão no lugar dos passos; aprovado volta aos passos", async () => {
+      const load = vi.fn<() => Promise<OrderTracking | null>>().mockResolvedValue({
+        ...cardOrder,
+        card: { ...cardOrder.card!, state: "approved" },
+      });
+      render(
+        <OrderTrackingView
+          initial={cardOrder}
+          load={load}
+          pixPollIntervalMs={500}
+          pollIntervalMs={60_000}
+          storeSlug="s"
+          token="t"
+        />,
+      );
+      expect(screen.getByRole("heading", { name: "Processando o pagamento" })).toHaveAttribute(
+        "aria-live",
+        "polite",
+      );
+      expect(screen.queryByText("Recebido")).not.toBeInTheDocument();
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 67,50");
+      await act(() => vi.advanceTimersByTimeAsync(500));
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("heading", { name: "Pedido recebido pela Loja" })).toBeVisible();
+      expect(screen.getByText("Pagamento confirmado.")).toBeInTheDocument();
+    });
+
+    it("recusado: mostra as ações do contrato", () => {
+      render(
+        <OrderTrackingView
+          initial={{
+            ...cardOrder,
+            card: {
+              ...cardOrder.card!,
+              declineReason: "issuer_declined",
+              retryActions: ["pix"],
+              state: "declined",
+            },
+          }}
+          storeSlug="s"
+          token="t"
+        />,
+      );
+      expect(screen.getByRole("heading", { name: "Pagamento recusado" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Pagar com PIX" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Tentar outro cartão" })).toBeNull();
+    });
+  });
 });
