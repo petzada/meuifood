@@ -16,6 +16,8 @@ import { newId, utcNow } from "./conventions";
 import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
 import { FoodeDbError } from "./errors";
 import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
+import { createOperationOps, createOrderOps } from "./store-operation-db";
+import { createStorefrontOrderOps } from "./storefront-order-db";
 import {
   auditEvents,
   MEMBERSHIP_ROLES,
@@ -258,6 +260,12 @@ export function createFoodeDb(d1: D1Database) {
       publicMenuBySlug(slug: string): Promise<PublicStoreMenu | null> {
         return publicMenuBySlug(d1, slug);
       },
+
+      /**
+       * Checkout e Pedido do Consumidor (Ticket 24a): estado da Loja, criação idempotente com as
+       * condições na mesma escrita, acompanhamento por token e busca por telefone auditada.
+       */
+      ...createStorefrontOrderOps(d1),
     },
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
@@ -357,6 +365,12 @@ export function createFoodeDb(d1: D1Database) {
 
         /** Cardápio (Ticket 23): escrita só do Dono, sempre nesta Loja, com auditoria. */
         menu: () => createMenuOps(d1, context),
+
+        /** Configuração operacional (Ticket 24a): Pausa (Dono e Operador); o resto só Dono. */
+        operation: () => createOperationOps(d1, context),
+
+        /** Pedidos no Painel (Ticket 24a/24b): fila, detalhe, avanço e cancelamento sem Estorno. */
+        orders: () => createOrderOps(d1, context),
 
         async members(): Promise<StoreMember[]> {
           return db

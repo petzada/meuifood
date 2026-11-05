@@ -3,8 +3,9 @@
 // - entrypoint RPC `PainelApi` (src/painel.ts): só por service binding (admin).
 // Deploy só pelo CI (.github/workflows/deploy.yml). Sem routes/custom domains até a zona
 // foodedelivery.com.br ficar ativa (Ticket 25): publica em workers.dev.
-// Segredos (SENTRY_DSN, MILLIONSEND_API_KEY, BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) chegam no
-// deploy (`--secrets-file`, sincronizados dos secrets do GitHub).
+// Segredos (SENTRY_DSN, MILLIONSEND_API_KEY, BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY e, do Ticket
+// 24a, ORDER_TOKEN_SECRET e PHONE_LOOKUP_IP_SALT) chegam no deploy (`--secrets-file`,
+// sincronizados dos secrets do GitHub). Nunca em arquivo nem em `vars`.
 // Vars de Auth (Ticket 22): os valores abaixo são o padrão; o deploy sobrescreve com as GitHub
 // variables BETTER_AUTH_URL e EMAIL_FROM quando existirem (`--var`).
 // - BETTER_AUTH_URL: URL pública do Painel (o admin repassa /api/auth/*): base dos links e origem
