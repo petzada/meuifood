@@ -1,12 +1,7 @@
 import { OutlineContainer } from "@foode/ui";
 
 import { SubmitButton } from "../team/submit-button";
-import {
-  createNeighborhood,
-  deleteNeighborhood,
-  setFeeMode,
-  setPickupEnabled,
-} from "./actions";
+import { createNeighborhood, deleteNeighborhood, setFeeMode, setPickupEnabled } from "./actions";
 
 export type DeliveryNeighborhood = {
   feeCents: number;
@@ -62,12 +57,9 @@ export function DeliveryPanel({
   return (
     <section className="mx-auto mt-12 max-w-5xl" id="configuracoes">
       <OutlineContainer className="p-6 md:p-8">
-        <h2 className="text-xl font-bold text-[var(--color-ink)]">
-          Delivery e Retirada
-        </h2>
+        <h2 className="text-xl font-bold text-[var(--color-ink)]">Delivery e Retirada</h2>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Escolha um único modo de taxa. Resíduos do modo anterior não afetam
-          novos Pedidos.
+          Escolha um único modo de taxa. Resíduos do modo anterior não afetam novos Pedidos.
         </p>
 
         {feedback ? (
@@ -88,7 +80,7 @@ export function DeliveryPanel({
             />
             <p className="text-sm font-bold text-[var(--color-ink)]">
               Retirada:{" "}
-              <span className="text-[var(--color-primary-active)]">
+              <span className="text-[var(--color-primary-strong)]">
                 {delivery.pickupEnabled ? "ativa" : "desativada"}
               </span>
             </p>
@@ -97,10 +89,11 @@ export function DeliveryPanel({
             </SubmitButton>
           </form>
 
-          <form action={setFeeMode} className="grid gap-3 border-t border-[var(--color-hairline-soft)] pt-6">
-            <p className="text-sm font-bold text-[var(--color-ink)]">
-              Modo de taxa de Delivery
-            </p>
+          <form
+            action={setFeeMode}
+            className="grid gap-3 border-t border-[var(--color-hairline-soft)] pt-6"
+          >
+            <p className="text-sm font-bold text-[var(--color-ink)]">Modo de taxa de Delivery</p>
             <label className="flex min-h-11 items-center gap-3 text-sm">
               <input
                 defaultChecked={delivery.mode === "fixed"}
@@ -139,14 +132,12 @@ export function DeliveryPanel({
           <div className="border-t border-[var(--color-hairline-soft)] pt-6">
             <p className="text-sm font-bold text-[var(--color-ink)]">Bairros</p>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Usados quando o modo por bairro está ativo. Duplicatas ambíguas
-              (acento/caixa/espaço) são rejeitadas.
+              Usados quando o modo por bairro está ativo. Duplicatas ambíguas (acento/caixa/espaço)
+              são rejeitadas.
             </p>
             <ul className="mt-4 grid gap-2">
               {delivery.neighborhoods.length === 0 ? (
-                <li className="text-sm text-[var(--color-muted)]">
-                  Nenhum bairro cadastrado.
-                </li>
+                <li className="text-sm text-[var(--color-muted)]">Nenhum bairro cadastrado.</li>
               ) : (
                 delivery.neighborhoods.map((neighborhood) => (
                   <li
@@ -157,15 +148,8 @@ export function DeliveryPanel({
                       {neighborhood.name} · {formatPrice(neighborhood.feeCents)}
                     </span>
                     <form action={deleteNeighborhood}>
-                      <input
-                        name="neighborhoodId"
-                        type="hidden"
-                        value={neighborhood.id}
-                      />
-                      <button
-                        className="text-sm font-bold text-[var(--color-error)]"
-                        type="submit"
-                      >
+                      <input name="neighborhoodId" type="hidden" value={neighborhood.id} />
+                      <button className="text-sm font-bold text-[var(--color-error)]" type="submit">
                         Remover
                       </button>
                     </form>

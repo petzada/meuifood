@@ -11,7 +11,7 @@ export default async function NoAccessPage() {
   if (session.stores.length > 0 || session.user.platformRole) redirect("/");
   return (
     <>
-      <p className="mt-6 text-sm font-bold text-[var(--color-primary-active)]">Painel Foode</p>
+      <p className="mt-6 text-sm font-bold text-[var(--color-primary-strong)]">Painel Foode</p>
       <h1 className="mt-2 text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--color-ink)]">
         Seu acesso ainda não está ligado a uma Loja.
       </h1>

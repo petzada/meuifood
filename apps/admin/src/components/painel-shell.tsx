@@ -75,7 +75,7 @@ export function PainelShell({
                     aria-current={current ? "page" : undefined}
                     className={
                       current
-                        ? "flex min-h-11 items-center rounded-full bg-[var(--color-primary)] px-5 text-sm font-bold text-white"
+                        ? "flex min-h-11 items-center rounded-full bg-[var(--color-primary-strong)] px-5 text-sm font-bold text-white"
                         : "flex min-h-11 items-center rounded-full px-5 text-sm font-bold text-[var(--color-body)] hover:bg-[var(--color-primary-soft)]"
                     }
                   >
