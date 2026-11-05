@@ -129,7 +129,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="foode-toast-region" aria-label="Avisos">
+      <div className="foode-toast-region" role="region" aria-label="Avisos">
         {items.map((item) => (
           <ToastView key={item.id} item={item} onClose={dismiss} />
         ))}
