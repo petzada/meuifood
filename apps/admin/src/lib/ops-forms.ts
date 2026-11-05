@@ -23,7 +23,7 @@ export type FieldErrors = Record<string, string>;
 export type ParseResult<T> = { ok: true; data: T } | { ok: false; errors: FieldErrors };
 
 type Issue = { code?: string; path: ReadonlyArray<PropertyKey>; message: string };
-type SafeParser<T> = {
+export type SafeParser<T> = {
   safeParse(
     input: unknown,
   ): { success: true; data: T } | { success: false; error: { issues: Issue[] } };
@@ -63,7 +63,16 @@ const FIELD_MESSAGES: Record<string, string> = {
   minOrders: "Informe o início da faixa.",
 };
 
-export function parseWith<T>(schema: SafeParser<T>, input: unknown): ParseResult<T> {
+/**
+ * Valida com o Zod do contrato e devolve erros por campo em PT-BR. `fieldMessages` troca as
+ * mensagens por campo (cada área tem as suas; o padrão é o da área Ops). Erros `custom`
+ * já vêm em PT-BR do contrato, salvo quando `fieldMessages` traz uma mensagem para o campo.
+ */
+export function parseWith<T>(
+  schema: SafeParser<T>,
+  input: unknown,
+  fieldMessages: Record<string, string> = FIELD_MESSAGES,
+): ParseResult<T> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
   const errors: FieldErrors = {};
@@ -73,9 +82,9 @@ export function parseWith<T>(schema: SafeParser<T>, input: unknown): ParseResult
     const leaf = String(issue.path.at(-1) ?? "");
     errors[field] =
       issue.code === "custom"
-        ? issue.message
-        : (FIELD_MESSAGES[field] ??
-          FIELD_MESSAGES[leaf] ??
+        ? (fieldMessages[`custom:${issue.message}`] ?? issue.message)
+        : (fieldMessages[field] ??
+          fieldMessages[leaf] ??
           CODE_MESSAGES[issue.code ?? ""] ??
           issue.message);
   }
