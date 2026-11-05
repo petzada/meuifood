@@ -14,6 +14,8 @@ import {
 } from "./context";
 import { newId, utcNow } from "./conventions";
 import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
+import { FoodeDbError } from "./errors";
+import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
 import {
   auditEvents,
   MEMBERSHIP_ROLES,
@@ -21,7 +23,6 @@ import {
   storeMemberships,
   stores,
   type StoreStatus,
-  STORE_STATUSES,
   users,
 } from "./schema";
 
@@ -89,16 +90,6 @@ export type MembershipInvite = {
 /** Eventos de autenticação sem Loja (trilha do usuário). */
 export type AuthAuditAction = "auth.password_set" | "auth.sessions_revoked";
 
-export class FoodeDbError extends Error {
-  constructor(
-    readonly code: "forbidden" | "slug_unavailable" | "invalid_input",
-    message?: string,
-  ) {
-    super(message ?? code);
-    this.name = "FoodeDbError";
-  }
-}
-
 const SLUG_PATTERN = /^(?=.{3,63}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
@@ -119,10 +110,7 @@ function toAuditEvent(row: typeof auditEvents.$inferSelect): AuditEvent {
   };
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  const message = error instanceof Error ? `${error.message} ${String(error.cause ?? "")}` : "";
-  return message.includes("UNIQUE constraint failed");
-}
+export { FoodeDbError };
 
 export function createFoodeDb(d1: D1Database) {
   const db = drizzle(d1);
@@ -463,47 +451,36 @@ export function createFoodeDb(d1: D1Database) {
       };
     },
 
-    /** Área Ops (`foode_ops`): cadastro e estado das Lojas, com auditoria. */
+    /**
+     * Leitura do checkout (Tickets 26/27): taxa Foode vigente da Loja `active` em `at`. Loja que
+     * não está `active` não tem meio online (lista vazia).
+     */
+    checkout: {
+      async effectivePaymentFees(storeId: string, at = utcNow()): Promise<EffectivePaymentFee[]> {
+        const row = await d1
+          .prepare(
+            `SELECT s.id AS id, p.card_mode AS cardMode FROM stores s
+             LEFT JOIN store_profiles p ON p.store_id = s.id
+             WHERE s.id = ? AND s.status = 'active'`,
+          )
+          .bind(storeId)
+          .first<{ id: string; cardMode: "normal" | "rapido" | null }>();
+        if (!row) return [];
+        return effectivePaymentFeesOf(d1, row.id, row.cardMode, at);
+      },
+    },
+
+    /** Área Ops (`foode_ops`): Lojas, Plano, faixas, taxas e custos, sempre com auditoria. */
     ops(context: OpsContext) {
       assertIssued(context);
 
       return {
-        async listStores(): Promise<StoreSummary[]> {
-          return db
-            .select({ id: stores.id, slug: stores.slug, name: stores.name, status: stores.status })
-            .from(stores)
-            .orderBy(asc(stores.name));
-        },
+        ...createOpsOperations(d1, context),
 
-        async createStore(input: { slug: string; name: string }): Promise<StoreSummary> {
-          const slug = input.slug.trim().toLowerCase();
-          const name = input.name.trim();
-          if (!SLUG_PATTERN.test(slug)) throw new FoodeDbError("invalid_input", "slug inválido");
-          if (!name) throw new FoodeDbError("invalid_input", "nome vazio");
-          const id = newId();
-          const now = utcNow();
-          try {
-            await d1.batch([
-              d1
-                .prepare(
-                  "INSERT INTO stores (id, slug, name, status, created_at, updated_at) VALUES (?, ?, ?, 'onboarding', ?, ?)",
-                )
-                .bind(id, slug, name, now, now),
-              auditInsert(context.userId, id, {
-                action: "store.created",
-                targetType: "store",
-                targetId: id,
-                metadata: { slug },
-              }),
-            ]);
-          } catch (error) {
-            if (isUniqueViolation(error)) throw new FoodeDbError("slug_unavailable");
-            throw error;
-          }
-          return { id, slug, name, status: "onboarding" };
-        },
-
-        /** Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado). */
+        /**
+         * Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado).
+         * Reenvio = chamar de novo: membership existente sem senha audita o reenvio.
+         */
         async inviteOwner(
           storeId: string,
           input: MembershipInviteInput,
@@ -515,23 +492,6 @@ export function createFoodeDb(d1: D1Database) {
             input,
             "membership.owner_invited_by_ops",
           );
-        },
-
-        async setStoreStatus(storeId: string, status: StoreStatus): Promise<boolean> {
-          if (!STORE_STATUSES.includes(status)) throw new FoodeDbError("invalid_input");
-          const [update] = await d1.batch([
-            d1
-              .prepare("UPDATE stores SET status = ?, updated_at = ? WHERE id = ?")
-              .bind(status, utcNow(), storeId),
-            d1
-              .prepare(
-                `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action, target_type, target_id, metadata)
-                 SELECT ?, ?, ?, id, 'store.status_changed', 'store', id, json_object('status', ?)
-                 FROM stores WHERE id = ?`,
-              )
-              .bind(newId(), utcNow(), context.userId, status, storeId),
-          ]);
-          return (update?.meta.changes ?? 0) > 0;
         },
       };
     },

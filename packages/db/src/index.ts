@@ -17,6 +17,7 @@ export {
   type StoreMember,
   type StoreSummary,
 } from "./foode-db";
+export { type FoodeDbErrorCode } from "./errors";
 export {
   MENU_MAX_ADDITIONALS,
   MENU_MAX_FEATURED,
@@ -32,14 +33,39 @@ export {
   type StoreMenuOption,
 } from "./menu";
 export {
+  ACTIVATION_REQUIRED_CHECKS,
+  type EffectivePaymentFee,
+  ONBOARDING_CHECKS,
+  OPS_AUDIT_ACTIONS,
+  type OpsAuditRow,
+  type OpsCreateStoreData,
+  type OpsOperations,
+  type OpsPaymentFeeData,
+  type OpsPaymentFeeRow,
+  type OpsPlanTierTable,
+  type OpsProviderCostData,
+  type OpsProviderCostRow,
+  type OpsStoreDetailRow,
+  type OpsStoreListRow,
+  type OpsUpdateStoreData,
+  saoPauloMonth,
+} from "./ops-db";
+export {
+  BILLING_CYCLES,
+  CARD_MODES,
+  type CardMode,
+  FEE_PAYMENT_METHODS,
   MEMBERSHIP_ROLES,
   MENU_DESCRIPTION_MAX,
   MENU_MAX_CENTS,
   MENU_MAX_OPTIONS,
   MENU_NAME_MAX,
   type MembershipRole,
+  PAYMENT_PROVIDERS,
+  PIX_KEY_TYPES,
   PLATFORM_ROLES,
   type PlatformRole,
+  PROVIDER_OPERATIONS,
   STORE_STATUSES,
   type StoreStatus,
 } from "./schema";

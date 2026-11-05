@@ -1,0 +1,1561 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "a6903b18-140d-4fe3-bc78-f8356e2c5720",
+  "prevId": "91372db6-b912-43f1-bdfc-86fe9c0a3057",
+  "tables": {
+    "audit_events": {
+      "name": "audit_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "audit_events_store_idx": {
+          "name": "audit_events_store_idx",
+          "columns": [
+            "store_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "audit_events_actor_user_id_users_id_fk": {
+          "name": "audit_events_actor_user_id_users_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_store_id_stores_id_fk": {
+          "name": "audit_events_store_id_stores_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "audit_events_action_not_blank": {
+          "name": "audit_events_action_not_blank",
+          "value": "length(trim(\"action\")) > 0"
+        },
+        "audit_events_metadata_json": {
+          "name": "audit_events_metadata_json",
+          "value": "json_valid(\"metadata\")"
+        },
+        "audit_events_occurred_at_utc": {
+          "name": "audit_events_occurred_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"occurred_at\") IS \"occurred_at\""
+        }
+      }
+    },
+    "store_memberships": {
+      "name": "store_memberships",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_memberships_store_user_unique": {
+          "name": "store_memberships_store_user_unique",
+          "columns": [
+            "store_id",
+            "user_id"
+          ],
+          "isUnique": true
+        },
+        "store_memberships_user_idx": {
+          "name": "store_memberships_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_memberships_store_id_stores_id_fk": {
+          "name": "store_memberships_store_id_stores_id_fk",
+          "tableFrom": "store_memberships",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_memberships_user_id_users_id_fk": {
+          "name": "store_memberships_user_id_users_id_fk",
+          "tableFrom": "store_memberships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_memberships_role": {
+          "name": "store_memberships_role",
+          "value": "\"role\" IN ('owner', 'operator')"
+        },
+        "store_memberships_created_at_utc": {
+          "name": "store_memberships_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "stores": {
+      "name": "stores",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'onboarding'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "stores_slug_unique": {
+          "name": "stores_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "stores_slug_format": {
+          "name": "stores_slug_format",
+          "value": "length(\"slug\") BETWEEN 3 AND 63 AND \"slug\" NOT GLOB '*[^a-z0-9-]*' AND \"slug\" NOT GLOB '-*' AND \"slug\" NOT GLOB '*-'"
+        },
+        "stores_name_not_blank": {
+          "name": "stores_name_not_blank",
+          "value": "length(trim(\"name\")) > 0"
+        },
+        "stores_status": {
+          "name": "stores_status",
+          "value": "\"status\" IN ('onboarding', 'active', 'suspended')"
+        },
+        "stores_created_at_utc": {
+          "name": "stores_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "stores_updated_at_utc": {
+          "name": "stores_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "platform_role": {
+          "name": "platform_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "users_email_lowercase": {
+          "name": "users_email_lowercase",
+          "value": "\"email\" = lower(\"email\") AND \"email\" LIKE '%_@_%'"
+        },
+        "users_email_verified_bool": {
+          "name": "users_email_verified_bool",
+          "value": "\"email_verified\" IN (0, 1)"
+        },
+        "users_platform_role": {
+          "name": "users_platform_role",
+          "value": "\"platform_role\" IS NULL OR \"platform_role\" IN ('foode_ops')"
+        },
+        "users_created_at_utc": {
+          "name": "users_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "users_updated_at_utc": {
+          "name": "users_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "accounts_provider_account_unique": {
+          "name": "accounts_provider_account_unique",
+          "columns": [
+            "provider_id",
+            "account_id"
+          ],
+          "isUnique": true
+        },
+        "accounts_user_idx": {
+          "name": "accounts_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_user_id_users_id_fk": {
+          "name": "accounts_user_id_users_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "accounts_access_token_expires_at_utc": {
+          "name": "accounts_access_token_expires_at_utc",
+          "value": "\"access_token_expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"access_token_expires_at\") IS \"access_token_expires_at\""
+        },
+        "accounts_refresh_token_expires_at_utc": {
+          "name": "accounts_refresh_token_expires_at_utc",
+          "value": "\"refresh_token_expires_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"refresh_token_expires_at\") IS \"refresh_token_expires_at\""
+        },
+        "accounts_created_at_utc": {
+          "name": "accounts_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "accounts_updated_at_utc": {
+          "name": "accounts_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "rate_limits": {
+      "name": "rate_limits",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_limits_key_unique": {
+          "name": "rate_limits_key_unique",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "rate_limits_count_non_negative": {
+          "name": "rate_limits_count_non_negative",
+          "value": "\"count\" >= 0"
+        }
+      }
+    },
+    "sessions": {
+      "name": "sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active_store_id": {
+          "name": "active_store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [
+            "token"
+          ],
+          "isUnique": true
+        },
+        "sessions_user_idx": {
+          "name": "sessions_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "sessions_active_store_id_stores_id_fk": {
+          "name": "sessions_active_store_id_stores_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "active_store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "sessions_expires_at_utc": {
+          "name": "sessions_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "sessions_created_at_utc": {
+          "name": "sessions_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "sessions_updated_at_utc": {
+          "name": "sessions_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "verifications": {
+      "name": "verifications",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "verifications_identifier_idx": {
+          "name": "verifications_identifier_idx",
+          "columns": [
+            "identifier"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "verifications_expires_at_utc": {
+          "name": "verifications_expires_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"expires_at\") IS \"expires_at\""
+        },
+        "verifications_created_at_utc": {
+          "name": "verifications_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "verifications_updated_at_utc": {
+          "name": "verifications_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    },
+    "payment_fees": {
+      "name": "payment_fees",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fixed_cents": {
+          "name": "fixed_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "payment_fees_lookup_idx": {
+          "name": "payment_fees_lookup_idx",
+          "columns": [
+            "store_id",
+            "method",
+            "card_mode",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payment_fees_store_id_stores_id_fk": {
+          "name": "payment_fees_store_id_stores_id_fk",
+          "tableFrom": "payment_fees",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payment_fees_created_by_user_id_users_id_fk": {
+          "name": "payment_fees_created_by_user_id_users_id_fk",
+          "tableFrom": "payment_fees",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_fees_method": {
+          "name": "payment_fees_method",
+          "value": "\"method\" IN ('pix', 'credit')"
+        },
+        "payment_fees_card_mode": {
+          "name": "payment_fees_card_mode",
+          "value": "(\"method\" = 'credit' AND \"card_mode\" IN ('normal', 'rapido')) OR (\"method\" = 'pix' AND \"card_mode\" IS NULL)"
+        },
+        "payment_fees_percent_bps": {
+          "name": "payment_fees_percent_bps",
+          "value": "\"percent_bps\" BETWEEN 0 AND 10000"
+        },
+        "payment_fees_fixed_cents": {
+          "name": "payment_fees_fixed_cents",
+          "value": "\"fixed_cents\" >= 0"
+        },
+        "payment_fees_period": {
+          "name": "payment_fees_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "payment_fees_valid_from_utc": {
+          "name": "payment_fees_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "payment_fees_valid_to_utc": {
+          "name": "payment_fees_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "payment_fees_created_at_utc": {
+          "name": "payment_fees_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "plan_price_tiers": {
+      "name": "plan_price_tiers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "min_orders": {
+          "name": "min_orders",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "max_orders": {
+          "name": "max_orders",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "plan_price_tiers_valid_from_idx": {
+          "name": "plan_price_tiers_valid_from_idx",
+          "columns": [
+            "valid_from",
+            "cycle",
+            "min_orders"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "plan_price_tiers_created_by_user_id_users_id_fk": {
+          "name": "plan_price_tiers_created_by_user_id_users_id_fk",
+          "tableFrom": "plan_price_tiers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "plan_price_tiers_cycle": {
+          "name": "plan_price_tiers_cycle",
+          "value": "\"cycle\" IN ('monthly', 'annual')"
+        },
+        "plan_price_tiers_min_orders": {
+          "name": "plan_price_tiers_min_orders",
+          "value": "\"min_orders\" >= 0"
+        },
+        "plan_price_tiers_max_orders": {
+          "name": "plan_price_tiers_max_orders",
+          "value": "\"max_orders\" IS NULL OR \"max_orders\" >= \"min_orders\""
+        },
+        "plan_price_tiers_annual_unlimited": {
+          "name": "plan_price_tiers_annual_unlimited",
+          "value": "\"cycle\" <> 'annual' OR (\"min_orders\" = 0 AND \"max_orders\" IS NULL)"
+        },
+        "plan_price_tiers_price_cents": {
+          "name": "plan_price_tiers_price_cents",
+          "value": "\"price_cents\" >= 0"
+        },
+        "plan_price_tiers_period": {
+          "name": "plan_price_tiers_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "plan_price_tiers_valid_from_utc": {
+          "name": "plan_price_tiers_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "plan_price_tiers_valid_to_utc": {
+          "name": "plan_price_tiers_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "plan_price_tiers_created_at_utc": {
+          "name": "plan_price_tiers_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "provider_costs": {
+      "name": "provider_costs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fixed_cents": {
+          "name": "fixed_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "provider_costs_lookup_idx": {
+          "name": "provider_costs_lookup_idx",
+          "columns": [
+            "provider",
+            "operation",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "provider_costs_created_by_user_id_users_id_fk": {
+          "name": "provider_costs_created_by_user_id_users_id_fk",
+          "tableFrom": "provider_costs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "provider_costs_provider": {
+          "name": "provider_costs_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "provider_costs_operation": {
+          "name": "provider_costs_operation",
+          "value": "\"operation\" IN ('pix_charge', 'card_charge', 'pix_payout')"
+        },
+        "provider_costs_efi_no_pix_charge": {
+          "name": "provider_costs_efi_no_pix_charge",
+          "value": "NOT (\"provider\" = 'efi' AND \"operation\" = 'pix_charge')"
+        },
+        "provider_costs_percent_bps": {
+          "name": "provider_costs_percent_bps",
+          "value": "\"percent_bps\" BETWEEN 0 AND 10000"
+        },
+        "provider_costs_fixed_cents": {
+          "name": "provider_costs_fixed_cents",
+          "value": "\"fixed_cents\" >= 0"
+        },
+        "provider_costs_period": {
+          "name": "provider_costs_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "provider_costs_valid_from_utc": {
+          "name": "provider_costs_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "provider_costs_valid_to_utc": {
+          "name": "provider_costs_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "provider_costs_created_at_utc": {
+          "name": "provider_costs_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "store_plans": {
+      "name": "store_plans",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "store_plans_store_idx": {
+          "name": "store_plans_store_idx",
+          "columns": [
+            "store_id",
+            "valid_from"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_plans_store_id_stores_id_fk": {
+          "name": "store_plans_store_id_stores_id_fk",
+          "tableFrom": "store_plans",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "store_plans_created_by_user_id_users_id_fk": {
+          "name": "store_plans_created_by_user_id_users_id_fk",
+          "tableFrom": "store_plans",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_plans_cycle": {
+          "name": "store_plans_cycle",
+          "value": "\"cycle\" IN ('monthly', 'annual')"
+        },
+        "store_plans_period": {
+          "name": "store_plans_period",
+          "value": "\"valid_to\" IS NULL OR \"valid_to\" > \"valid_from\""
+        },
+        "store_plans_valid_from_utc": {
+          "name": "store_plans_valid_from_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_from\") IS \"valid_from\""
+        },
+        "store_plans_valid_to_utc": {
+          "name": "store_plans_valid_to_utc",
+          "value": "\"valid_to\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"valid_to\") IS \"valid_to\""
+        },
+        "store_plans_created_at_utc": {
+          "name": "store_plans_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "store_profiles": {
+      "name": "store_profiles",
+      "columns": {
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cnpj": {
+          "name": "cnpj",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "whatsapp": {
+          "name": "whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_postal_code": {
+          "name": "address_postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_street": {
+          "name": "address_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_number": {
+          "name": "address_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_complement": {
+          "name": "address_complement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "address_district": {
+          "name": "address_district",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_city": {
+          "name": "address_city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address_state": {
+          "name": "address_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_pix_key_type": {
+          "name": "payout_pix_key_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_pix_key": {
+          "name": "payout_pix_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_holder_name": {
+          "name": "payout_holder_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payout_holder_document": {
+          "name": "payout_holder_document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_mode": {
+          "name": "card_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "store_profiles_cnpj_idx": {
+          "name": "store_profiles_cnpj_idx",
+          "columns": [
+            "cnpj"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "store_profiles_store_id_stores_id_fk": {
+          "name": "store_profiles_store_id_stores_id_fk",
+          "tableFrom": "store_profiles",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "store_profiles_cnpj_length": {
+          "name": "store_profiles_cnpj_length",
+          "value": "length(\"cnpj\") = 14"
+        },
+        "store_profiles_whatsapp_length": {
+          "name": "store_profiles_whatsapp_length",
+          "value": "length(\"whatsapp\") = 13"
+        },
+        "store_profiles_postal_code_length": {
+          "name": "store_profiles_postal_code_length",
+          "value": "length(\"address_postal_code\") = 8"
+        },
+        "store_profiles_state_length": {
+          "name": "store_profiles_state_length",
+          "value": "length(\"address_state\") = 2"
+        },
+        "store_profiles_pix_key_type": {
+          "name": "store_profiles_pix_key_type",
+          "value": "\"payout_pix_key_type\" IN ('cpf', 'cnpj', 'email', 'phone', 'random')"
+        },
+        "store_profiles_pix_key_not_blank": {
+          "name": "store_profiles_pix_key_not_blank",
+          "value": "length(trim(\"payout_pix_key\")) > 0"
+        },
+        "store_profiles_holder_name_not_blank": {
+          "name": "store_profiles_holder_name_not_blank",
+          "value": "length(trim(\"payout_holder_name\")) > 0"
+        },
+        "store_profiles_holder_document_length": {
+          "name": "store_profiles_holder_document_length",
+          "value": "length(\"payout_holder_document\") IN (11, 14)"
+        },
+        "store_profiles_card_mode": {
+          "name": "store_profiles_card_mode",
+          "value": "\"card_mode\" IS NULL OR \"card_mode\" IN ('normal', 'rapido')"
+        },
+        "store_profiles_created_at_utc": {
+          "name": "store_profiles_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        },
+        "store_profiles_updated_at_utc": {
+          "name": "store_profiles_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

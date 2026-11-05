@@ -29,6 +29,27 @@ import type {
   MenuUploadedImage,
   MenuUploadImageInput,
 } from "./menu/admin.js";
+import type {
+  OpsActivateStoreInput,
+  OpsAuditEntry,
+  OpsCreatePaymentFeesInput,
+  OpsCreateProviderCostInput,
+  OpsCreateStoreInput,
+  OpsEndPaymentFeeInput,
+  OpsEndProviderCostInput,
+  OpsListPaymentFeesInput,
+  OpsPublishPlanTiersInput,
+  OpsSetCardModeInput,
+  OpsSetStorePlanInput,
+  OpsStoreDetail,
+  OpsStoreListItem,
+  OpsStoreRefInput,
+  OpsSuspendStoreInput,
+  OpsUpdateStoreInput,
+  PaymentFeeView,
+  PlanTierTableView,
+  ProviderCostView,
+} from "./ops/index.js";
 
 export type ApiHealth = {
   status: "ok" | "degraded";
@@ -197,4 +218,86 @@ export interface PainelRpc {
     caller: PainelCaller,
     input: MenuUploadImageInput,
   ): Promise<RpcResult<MenuUploadedImage>>;
+
+  // ---- Área Ops (Ticket 29). Só `foode_ops` (OpsContext emitido por @foode/db); Dono e
+  // Operador recebem `forbidden`. Entradas validadas com os schemas de `@foode/shared/ops`
+  // (`invalid_input`). Toda mutação grava auditoria com `before`/`after` (OPS_AUDIT_ACTIONS).
+
+  /** Lojas com estado, Plano, faixa do mês e checklist de onboarding. */
+  opsListStores(caller: PainelCaller): Promise<RpcResult<OpsStoreListItem[]>>;
+
+  /** Detalhe da Loja; `not_found` se não existe. */
+  opsGetStore(caller: PainelCaller, input: OpsStoreRefInput): Promise<RpcResult<OpsStoreDetail>>;
+
+  /** Cadastra a Loja em `onboarding`. Slug já usado = `conflict`. O convite do Dono é `opsInviteOwner`. */
+  opsCreateStore(
+    caller: PainelCaller,
+    input: OpsCreateStoreInput,
+  ): Promise<RpcResult<{ storeId: string }>>;
+
+  /** Edita o cadastro (só os campos enviados). Slug já usado = `conflict`. */
+  opsUpdateStore(caller: PainelCaller, input: OpsUpdateStoreInput): Promise<RpcResult<null>>;
+
+  /**
+   * Ativa (de `onboarding`) ou reativa (de `suspended`). Exige Plano vigente; transição fora de
+   * STORE_STATUS_TRANSITIONS ou sem Plano = `conflict`.
+   */
+  opsActivateStore(caller: PainelCaller, input: OpsActivateStoreInput): Promise<RpcResult<null>>;
+
+  /** Suspende a Loja (para de aceitar Pedidos); motivo na auditoria. */
+  opsSuspendStore(caller: PainelCaller, input: OpsSuspendStoreInput): Promise<RpcResult<null>>;
+
+  /** Modo do cartão da Loja (Normal = Efí, Rápido = AbacatePay). */
+  opsSetCardMode(caller: PainelCaller, input: OpsSetCardModeInput): Promise<RpcResult<null>>;
+
+  /** Plano da Loja (mensal/anual) a partir de `validFrom`; encerra o anterior. */
+  opsSetStorePlan(
+    caller: PainelCaller,
+    input: OpsSetStorePlanInput,
+  ): Promise<RpcResult<{ planId: string }>>;
+
+  /** Tabelas de faixas (vigente, futuras e histórico), mais recente primeiro. */
+  opsListPlanTiers(caller: PainelCaller): Promise<RpcResult<PlanTierTableView[]>>;
+
+  /** Publica nova tabela de faixas a partir de `validFrom`; a vigente termina ali. */
+  opsPublishPlanTiers(
+    caller: PainelCaller,
+    input: OpsPublishPlanTiersInput,
+  ): Promise<RpcResult<null>>;
+
+  /** Taxas Foode da tabela padrão (`storeId` null) ou overrides da Loja, com histórico. */
+  opsListPaymentFees(
+    caller: PainelCaller,
+    input: OpsListPaymentFeesInput,
+  ): Promise<RpcResult<PaymentFeeView[]>>;
+
+  /** Cadastra taxas; sobreposição com o que já está gravado no mesmo meio/modo = `conflict`. */
+  opsCreatePaymentFees(
+    caller: PainelCaller,
+    input: OpsCreatePaymentFeesInput,
+  ): Promise<RpcResult<{ feeIds: string[] }>>;
+
+  /** Encerra a vigência de uma taxa (`validTo`); não apaga nem reescreve. */
+  opsEndPaymentFee(caller: PainelCaller, input: OpsEndPaymentFeeInput): Promise<RpcResult<null>>;
+
+  /** Custos dos provedores (Ops-only), com histórico. */
+  opsListProviderCosts(caller: PainelCaller): Promise<RpcResult<ProviderCostView[]>>;
+
+  /** Novo custo de provedor; sobreposição no mesmo provedor/operação = `conflict`. */
+  opsCreateProviderCost(
+    caller: PainelCaller,
+    input: OpsCreateProviderCostInput,
+  ): Promise<RpcResult<{ costId: string }>>;
+
+  /** Encerra a vigência de um custo de provedor. */
+  opsEndProviderCost(
+    caller: PainelCaller,
+    input: OpsEndProviderCostInput,
+  ): Promise<RpcResult<null>>;
+
+  /** Trilha de auditoria da Loja (mais recente primeiro). */
+  opsListStoreAudit(
+    caller: PainelCaller,
+    input: OpsStoreRefInput,
+  ): Promise<RpcResult<OpsAuditEntry[]>>;
 }

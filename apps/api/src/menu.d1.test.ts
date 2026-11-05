@@ -358,7 +358,7 @@ describe("Storefront público", () => {
     const owner = await loginAs(fx.ownerA);
     const { itemId } = await seedBurger(owner);
     const ops = await db.access.opsContext(fx.ops.id);
-    await db.ops(ops!).setStoreStatus(fx.storeA.id, "suspended");
+    await db.ops(ops!).changeStoreStatus(fx.storeA.id, "suspended", { allowedFrom: ["active"] });
 
     const menuResponse = await get(`/storefront/lojas/${fx.storeA.slug}/cardapio`);
     expect(menuResponse.status).toBe(404);

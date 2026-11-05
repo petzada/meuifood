@@ -506,7 +506,7 @@ describe("Storefront público (@foode/db)", () => {
     expect(JSON.stringify(publicMenu)).not.toContain(fx.storeA.id);
 
     const ops = await db.access.opsContext(fx.ops.id);
-    await db.ops(ops!).setStoreStatus(fx.storeA.id, "suspended");
+    await db.ops(ops!).changeStoreStatus(fx.storeA.id, "suspended", { allowedFrom: ["active"] });
     await expect(db.storefront.publicMenuBySlug(fx.storeA.slug)).resolves.toBeNull();
     await expect(db.storefront.publicMenuBySlug("nao-existe")).resolves.toBeNull();
   });

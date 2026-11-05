@@ -60,3 +60,25 @@ export async function seedTwoStores(d1: D1Database) {
 
   return { storeA, storeB, ownerA, ownerB, operatorA, multi, ops, memberships, auditB };
 }
+
+/** Cadastro válido de Loja (CNPJ/CPF com dígito verificador certo), já no formato normalizado. */
+export function storeProfileFixture() {
+  return {
+    cnpj: "11222333000181",
+    whatsapp: "5511987654321",
+    address: {
+      postalCode: "01310100",
+      street: "Avenida Paulista",
+      number: "1000",
+      complement: null,
+      district: "Bela Vista",
+      city: "São Paulo",
+      state: "SP",
+    },
+    payout: {
+      pixKey: { type: "cpf" as const, value: "52998224725" },
+      holderName: "Titular do Repasse",
+      holderDocument: "52998224725",
+    },
+  };
+}

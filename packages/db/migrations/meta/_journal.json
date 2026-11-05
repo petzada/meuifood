@@ -17,9 +17,16 @@
       "breakpoints": true
     },
     {
+      "idx": 2,
+      "version": "6",
+      "when": 1793846367236,
+      "tag": "0002_ops_lojas_planos_taxas",
+      "breakpoints": true
+    },
+    {
       "idx": 3,
       "version": "6",
-      "when": 1793848076127,
+      "when": 1793849880793,
       "tag": "0003_cardapio",
       "breakpoints": true
     }

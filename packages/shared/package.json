@@ -19,6 +19,10 @@
       "types": "./dist/menu/index.d.ts",
       "default": "./dist/menu/index.js"
     },
+    "./ops": {
+      "types": "./dist/ops/index.d.ts",
+      "default": "./dist/ops/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {
