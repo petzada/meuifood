@@ -4,7 +4,7 @@
 
 **Blocked by:** 28 (vitrine/indexação do Storefront), 29 (`/ops`). Roda em paralelo a 26/27.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Fable (UI) para landing/páginas/blog; Opus (API) para leads, `/falar` e SEO técnico do lado da api.
 
@@ -28,3 +28,5 @@
 - 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
 
 - 2026-11-05 — Fatia de API (`feat/31-leads-seed-391f`): tabela `leads` (migration 0008, expand), `POST /storefront/leads` (Turnstile + rate limit por IP + aviso pela MillionSend para `LEADS_NOTIFY_EMAIL`), `/ops/leads` no Painel, `/falar` (302 no servidor a partir do secret `SALES_WHATSAPP` do Worker do web) e `GET /storefront/taxas` (tabela padrão vigente) ligada às taxas da landing. Pendentes do ticket: Loja demo e itens de UI/SEO restantes.
+
+- 2026-11-05 — Done. UI/SEO (#35), leads + /falar + taxas + contas de teste (#36), landing v2 (#40: motion sem página em branco, parallax, capturas reais, planos/comparativo/FAQ/fundador/CTA). Pendente com o Dono: fotos reais (docs/landing/ASSETS.md), revisão dos textos (fundador, posts, segmentos, FAQ) e revisão jurídica de /termos e /privacidade.
