@@ -38,10 +38,6 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/coverage/**",
       "**/next-env.d.ts",
-      // Referência de comportamento da stack antiga, removida no Ticket 25.
-      "apps/api/legacy-fastify/**",
-      "packages/db/legacy-prisma/**",
-      "supabase/**",
       "reports/**",
       ".scratch/**",
       ".claude/**",

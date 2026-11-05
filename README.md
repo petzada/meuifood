@@ -55,8 +55,6 @@ O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [
 | Observabilidade | **Sentry** (opcional), Workers Logs |
 | Qualidade | **Vitest** (+ `@cloudflare/vitest-plugin` no CI), ESLint, Prettier, lefthook, GitHub Actions |
 
-> Migração em andamento (decisão 59): o código Fastify/Prisma/Supabase em `apps/api/legacy-fastify` e `packages/db/legacy-prisma` é só referência e sai no Ticket 25.
-
 ## Pré-requisitos e instalação
 
 **Pré-requisitos**
