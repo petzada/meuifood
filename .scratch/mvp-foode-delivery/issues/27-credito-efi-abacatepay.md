@@ -23,3 +23,5 @@
 
 - 2026-11-04 — Substitui o Ticket 11 ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md), [61](../../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md)). Referência: `lib/providers/efi/card.ts`, `lib/payments/efi-card-form.ts` e `lib/providers/abacatepay/card.ts` do ceremony, sem roteamento por plano nem kill switch.
 - 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) X5 (Cartão inline com CPF/e-mail só nesse meio), G2–G6 e §6 Cartão (aprovado/pendente/recusado com ação). Carteiras do print 26 seguem a avaliação deste ticket (P-4.5 em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md)).
+
+- 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-4.5 (sem carteiras). Vale sobre as perguntas em aberto dos comentários anteriores.
