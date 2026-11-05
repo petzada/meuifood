@@ -50,7 +50,8 @@ export type CardFieldsInput = {
   expirationMonth: string;
   expirationYear: string;
   holderName: string;
-  holderDocument: string;
+  /** Ausente com o CPF da conta (decisão 65): o servidor manda o CPF ao provedor na cobrança. */
+  holderDocument?: string;
 };
 
 export type CardPayerInput = { name: string; email: string; cpf: string };
@@ -180,7 +181,7 @@ function efiClient(tokenizer: Extract<CardTokenizer, { sdk: "efi" }>): CardSdkCl
             expirationMonth: input.expirationMonth,
             expirationYear: input.expirationYear,
             holderName: input.holderName,
-            holderDocument: input.holderDocument,
+            ...(input.holderDocument ? { holderDocument: input.holderDocument } : {}),
             reuse: false,
           })
           .getPaymentToken();

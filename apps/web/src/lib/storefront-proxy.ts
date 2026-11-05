@@ -1,7 +1,8 @@
 // Encaminhamento dos route handlers do Storefront (Ticket 24a): o navegador fala só com o
 // `web` (`/loja/{slug}/...`), que valida o corpo com o schema do contrato e repassa à api pelo
 // binding `API`. Preço nunca vem do navegador; o IP do cliente segue em `cf-connecting-ip`
-// para o rate limit e o Turnstile da busca por telefone.
+// para o rate limit e o Turnstile da busca por telefone. O `cookie` da sessão do Consumidor vai
+// na ida (checkout com a conta e `useAccountCpf` do Cartão, decisão 65); nada volta dele.
 import { storeSlugSchema } from "@foode/shared/menu";
 
 import { apiFetch } from "./api";
@@ -40,6 +41,8 @@ export async function forwardStorefrontPost<TRequest, TResponse>(
   const headers: Record<string, string> = { "content-type": "application/json" };
   const clientIp = request.headers.get("cf-connecting-ip");
   if (clientIp) headers["cf-connecting-ip"] = clientIp;
+  const cookie = request.headers.get("cookie");
+  if (cookie) headers.cookie = cookie;
 
   let upstream: Response;
   try {

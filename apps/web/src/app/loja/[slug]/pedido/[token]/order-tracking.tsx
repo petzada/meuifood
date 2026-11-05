@@ -8,6 +8,8 @@
 // pagamento online (decisão 71) em linha própria; oferta de conta para quem não entrou.
 // Ticket 27: Pedido por Cartão ainda não aprovado mostra o bloco do Cartão (processando / em
 // análise / recusado com ações) no lugar dos passos, com a mesma cadência de consulta do PIX.
+// "Pagar com PIX" depois da recusa troca o Pedido para PIX e recarrega o estado aqui mesmo: o
+// bloco do PIX entra no lugar do bloco do Cartão, sem refazer o pedido.
 import { buildWhatsAppMeUrl } from "@foode/shared";
 import { formatBRL } from "@foode/shared/money";
 import {
@@ -62,6 +64,8 @@ export type OrderTrackingViewProps = {
   /** Bloco do Cartão (Ticket 27): api da nova tentativa e SDK injetáveis nos testes. */
   cardApi?: CardRetryApi;
   cardSdkFactory?: CardSdkFactory;
+  /** CPF mascarado da conta do Consumidor logado (decisão 65), para a nova tentativa. */
+  accountCpfMasked?: string | null;
   storeSlug: string;
   token: string;
 };
@@ -114,6 +118,7 @@ function stepLabel(status: OrderStatus, fulfillment: OrderTracking["fulfillment"
 }
 
 export function OrderTrackingView({
+  accountCpfMasked = null,
   accountOffer = null,
   cardApi,
   cardSdkFactory,
@@ -193,6 +198,14 @@ export function OrderTrackingView({
     });
   }
 
+  // "Pagar com PIX" aceito: o Pedido agora é PIX; recarrega para trocar o bloco (true = trocou).
+  async function handlePixSwitched(): Promise<boolean> {
+    const next = await loader();
+    if (!next) return false;
+    setOrder(next);
+    return next.pix !== null;
+  }
+
   const timeline = timelineOf(order);
   const currentIndex = timeline.indexOf(order.status);
   const cancelled = order.status === "cancelled";
@@ -243,8 +256,9 @@ export function OrderTrackingView({
                 {...(cardSdkFactory ? { sdkFactory: cardSdkFactory } : {})}
                 {...(pixNow ? { now: pixNow } : {})}
                 card={pendingCard}
+                cpfMasked={accountCpfMasked}
                 customerName={order.customerFirstName}
-                menuHref={menuHref}
+                onPixSwitched={handlePixSwitched}
                 onRetried={handleCardRetried}
                 storeSlug={storeSlug}
                 token={token}

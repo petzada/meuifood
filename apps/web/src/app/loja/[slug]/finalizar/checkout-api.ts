@@ -15,6 +15,33 @@ import {
 
 import type { ContractSchema } from "../../../../lib/contract";
 
+/**
+ * 422 `{ error: "account_cpf_unavailable" }` do Cartão com `useAccountCpf` sem sessão com CPF
+ * (decisão 65; `CARD_PAYMENT_ACTION_ERRORS`): a api responde fora do `checkoutCreateResponseSchema`,
+ * então o route handler e o navegador aceitam as duas formas.
+ */
+export type AccountCpfUnavailable = { ok: false; error: { code: "account_cpf_unavailable" } };
+
+export type CheckoutCreateResult = CheckoutCreateResponse | AccountCpfUnavailable;
+
+function isAccountCpfUnavailable(input: unknown): boolean {
+  return (
+    !!input &&
+    typeof input === "object" &&
+    (input as { error?: unknown }).error === "account_cpf_unavailable"
+  );
+}
+
+/** `checkoutCreateResponseSchema` + a forma do `account_cpf_unavailable` (normalizada). */
+export const checkoutCreateResultSchema: ContractSchema<CheckoutCreateResult> = {
+  safeParse(input) {
+    if (isAccountCpfUnavailable(input)) {
+      return { success: true, data: { ok: false, error: { code: "account_cpf_unavailable" } } };
+    }
+    return checkoutCreateResponseSchema.safeParse(input);
+  },
+};
+
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 const defaultFetch: FetchLike = (input, init) => fetch(input, init);
@@ -51,7 +78,7 @@ export type CheckoutApi = {
   createOrder(
     storeSlug: string,
     body: CheckoutCreateRequestInput,
-  ): Promise<CheckoutCreateResponse | null>;
+  ): Promise<CheckoutCreateResult | null>;
   lookupPhone(
     storeSlug: string,
     body: { phone: string; turnstileToken: string },
@@ -80,7 +107,7 @@ export function createCheckoutApi(fetchImpl: FetchLike = defaultFetch): Checkout
         fetchImpl,
         checkoutApiPath(storeSlug, "pedido"),
         body,
-        checkoutCreateResponseSchema,
+        checkoutCreateResultSchema,
         [409, 422],
       );
       return result.kind === "ok" ? result.data : null;
