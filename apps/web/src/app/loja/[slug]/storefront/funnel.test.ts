@@ -3,7 +3,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { funnelStorageKey, sendFunnelEvent, type FunnelStorage } from "./funnel";
-import { firePixelEvent, pixelPayloads, type PixelWindow } from "./pixels";
+import {
+  firePixelEvent,
+  hasPixelScripts,
+  pixelPayloads,
+  pixelSafeOrderPath,
+  type PixelWindow,
+} from "./pixels";
 
 function memoryStorage(): FunnelStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -147,6 +153,47 @@ describe("Pixel", () => {
       "transaction_id",
       "value",
     ]);
+  });
+
+  it("página do Pedido: nem Meta nem Google recebem o token da URL (Ticket 30)", () => {
+    const token = "abcDEF123_-tokenSecretoDoPedido";
+    const win: PixelWindow = { fbq: vi.fn(), gtag: vi.fn() };
+    const beacon = vi.fn();
+    const safePageUrl = `https://foodedelivery.com.br${pixelSafeOrderPath("lanchonete-do-ze")}`;
+    firePixelEvent(
+      win,
+      pixels,
+      { name: "purchase", orderCode: 42, valueCents: 5600 },
+      { safePageUrl, beacon },
+    );
+    // Meta só pela imagem com a URL sem token; o fbq (que lê location.href) não é chamado.
+    expect(win.fbq).not.toHaveBeenCalled();
+    expect(beacon).toHaveBeenCalledTimes(1);
+    const sent = new URL(beacon.mock.calls[0]![0] as string);
+    expect(sent.origin + sent.pathname).toBe("https://www.facebook.com/tr");
+    expect(sent.searchParams.get("dl")).toBe(
+      "https://foodedelivery.com.br/loja/lanchonete-do-ze/pedido",
+    );
+    expect(sent.searchParams.get("ev")).toBe("Purchase");
+    expect(sent.searchParams.get("cd[value]")).toBe("56");
+    expect(win.gtag).toHaveBeenCalledWith("event", "purchase", {
+      currency: "BRL",
+      transaction_id: "42",
+      value: 56,
+      page_location: safePageUrl,
+    });
+    const everything = JSON.stringify([
+      beacon.mock.calls,
+      (win.gtag as ReturnType<typeof vi.fn>).mock.calls,
+    ]);
+    expect(everything).not.toContain(token);
+    expect(everything).not.toContain("/pedido/");
+  });
+
+  it("navegação completa só quando há script de Pixel carregado", () => {
+    expect(hasPixelScripts({})).toBe(false);
+    expect(hasPixelScripts({ fbq: vi.fn() })).toBe(true);
+    expect(hasPixelScripts({ gtag: vi.fn() })).toBe(true);
   });
 
   it("não dispara sem Pixel configurado nem sem o script carregado", () => {

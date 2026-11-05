@@ -2,7 +2,7 @@
 import { orderAccessTokenSchema, phoneLookupConfirmTokenSchema } from "@foode/shared/order";
 import { describe, expect, it } from "vitest";
 
-import { redactPath } from "./app";
+import { redactPath, scrubSentryBreadcrumb, scrubSentryEvent } from "./app";
 import {
   canonicalJson,
   ipHash,
@@ -88,5 +88,37 @@ describe("logs sem token", () => {
       "/storefront/lojas/loja-a/pedidos/:token",
     );
     expect(redactPath("/storefront/lojas/loja-a/pedidos")).toBe("/storefront/lojas/loja-a/pedidos");
+    expect(redactPath("/storefront/lojas/loja-a/pedidos/abc/cartao?x=1")).toBe(
+      "/storefront/lojas/loja-a/pedidos/:token/cartao",
+    );
+    expect(redactPath("https://cobrancas.api.efipay.com.br/v1/notification/tok123")).toBe(
+      "https://cobrancas.api.efipay.com.br/v1/notification/:token",
+    );
+    expect(redactPath("/webhooks/abacatepay?webhookSecret=segredo")).toBe("/webhooks/abacatepay");
+  });
+
+  it("Sentry: evento sem corpo, query, cookies, headers e usuário; fetch sem token (Ticket 30)", () => {
+    const event = scrubSentryEvent({
+      request: {
+        url: "https://api.foodedelivery.com.br/storefront/lojas/a/pedidos/tok?x=1",
+        data: '{"phone":"11999999999"}',
+        query_string: "x=1",
+        cookies: { "__Host-foode_consumidor": "s" },
+        headers: { cookie: "s", "cf-connecting-ip": "203.0.113.1" },
+      },
+      user: { ip_address: "203.0.113.1" },
+    });
+    expect(event).toEqual({
+      request: { url: "https://api.foodedelivery.com.br/storefront/lojas/a/pedidos/:token" },
+    });
+    expect(
+      scrubSentryBreadcrumb({
+        category: "fetch",
+        data: { url: "https://cobrancas.api.efipay.com.br/v1/notification/tok123", method: "GET" },
+      }),
+    ).toEqual({
+      category: "fetch",
+      data: { url: "https://cobrancas.api.efipay.com.br/v1/notification/:token", method: "GET" },
+    });
   });
 });

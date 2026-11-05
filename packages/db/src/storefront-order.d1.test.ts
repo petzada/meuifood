@@ -410,6 +410,7 @@ describe("isolamento entre duas Lojas", () => {
       now: NOW,
       windowStart: "2026-11-05T14:50:00.000Z",
       max: 5,
+      globalMax: 100,
     });
     await expect(
       db.storefront.phoneLookupMatch({
@@ -426,6 +427,7 @@ describe("isolamento entre duas Lojas", () => {
       now: NOW,
       windowStart: "2026-11-05T14:50:00.000Z",
       max: 5,
+      globalMax: 100,
     });
     await expect(
       db.storefront.phoneLookupMatch({
@@ -482,6 +484,7 @@ describe("busca por telefone: rate limit e auditoria", () => {
         now: NOW,
         windowStart: "2026-11-05T14:50:00.000Z",
         max: 2,
+        globalMax: 100,
       });
     expect((await begin())?.rateLimited).toBe(false);
     expect((await begin())?.rateLimited).toBe(false);
@@ -492,6 +495,7 @@ describe("busca por telefone: rate limit e auditoria", () => {
       now: NOW,
       windowStart: "2026-11-05T14:50:00.000Z",
       max: 2,
+      globalMax: 100,
     });
     expect(otherStore?.rateLimited).toBe(false);
 
@@ -511,8 +515,27 @@ describe("busca por telefone: rate limit e auditoria", () => {
         now: NOW,
         windowStart: NOW,
         max: 2,
+        globalMax: 100,
       }),
     ).resolves.toBeNull();
+  });
+
+  it("teto global por IP somando todas as Lojas (varredura trocando de Loja, Ticket 30)", async () => {
+    const begin = (slug: string) =>
+      db.storefront.phoneLookupBegin({
+        slug,
+        ipHash: hex("7"),
+        now: NOW,
+        windowStart: "2026-11-05T14:50:00.000Z",
+        max: 5,
+        globalMax: 3,
+      });
+    expect((await begin(fx.storeA.slug))?.rateLimited).toBe(false);
+    expect((await begin(fx.storeA.slug))?.rateLimited).toBe(false);
+    expect((await begin(fx.storeB.slug))?.rateLimited).toBe(false);
+    // Loja B ainda está abaixo do limite POR Loja, mas o IP já fez 3 consultas no total.
+    expect((await begin(fx.storeB.slug))?.rateLimited).toBe(true);
+    expect((await begin(fx.storeA.slug))?.rateLimited).toBe(true);
   });
 
   it("token do Sou eu vencido não libera os dados", async () => {
@@ -523,6 +546,7 @@ describe("busca por telefone: rate limit e auditoria", () => {
       now: NOW,
       windowStart: "2026-11-05T14:50:00.000Z",
       max: 5,
+      globalMax: 100,
     });
     await db.storefront.phoneLookupMatch({
       lookupId: begin!.lookupId,

@@ -19,6 +19,7 @@ import {
   createOpsCustomerService,
   type CustomerReply,
   type CustomerService,
+  loginCodeKeys,
 } from "./customer-service";
 import type { EmailSender } from "./email/sender";
 import { createMenuService } from "./menu-service";
@@ -361,6 +362,38 @@ describe("código no WhatsApp", () => {
     const code = lastCode();
     const replies = await Promise.all(Array.from({ length: 4 }, () => verify(phone, code)));
     expect(replies.filter((reply) => reply.status === 200)).toHaveLength(1);
+  });
+
+  it("teto de 8 códigos por telefone em 24 h contém a força bruta (Ticket 30)", async () => {
+    const phone = randomPhone();
+    const keys = await loginCodeKeys(SECRETS.codeSecret);
+    const phoneKey = await keys.phoneKey(e164(phone));
+    // 8 códigos nas últimas horas (com o reenvio de 30 s respeitado).
+    for (let i = 8; i >= 1; i -= 1) {
+      const issuedAt = new Date(OPEN_NOW.getTime() - i * 60 * 60 * 1000);
+      const codeId = crypto.randomUUID();
+      await expect(
+        db.customer.issueLoginCode({
+          codeId,
+          phoneKey,
+          codeHash: await keys.codeHash(codeId, e164(phone), "0000"),
+          now: issuedAt.toISOString(),
+          expiresAt: new Date(issuedAt.getTime() + 300_000).toISOString(),
+          resendSeconds: 30,
+          daily: { max: 8, windowSeconds: 86_400 },
+        }),
+      ).resolves.toEqual({ issued: true });
+    }
+    const before = sent.length;
+    // 9º no mesmo dia: a mesma resposta de qualquer rate limit, e nada é enviado.
+    await expect(requestCode(phone)).resolves.toEqual({
+      status: 429,
+      body: { error: "rate_limited" },
+    });
+    expect(sent.length).toBe(before);
+    // Passadas 24 h do mais antigo, volta a valer.
+    const nextDay = new Date(OPEN_NOW.getTime() + 24 * 60 * 60 * 1000);
+    await expect(requestCode(phone, nextDay)).resolves.toMatchObject({ status: 200 });
   });
 
   it("Turnstile, rate limit por telefone e falha de envio controlada", async () => {

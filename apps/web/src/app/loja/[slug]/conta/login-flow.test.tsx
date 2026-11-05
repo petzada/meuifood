@@ -215,6 +215,44 @@ describe("LoginFlow", () => {
     expect(onSignedIn).toHaveBeenCalledWith(account);
   });
 
+  describe("conflito de conta e widget de suporte (Ticket 30, decisão 66)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    async function conflictMessage(): Promise<HTMLElement> {
+      const api = fakeApi({
+        signup: vi.fn(async () => ({
+          kind: "error" as const,
+          error: { error: "account_conflict" as const },
+        })),
+      });
+      const { user } = setup({ api, startAtSignup: true });
+      await user.type(screen.getByLabelText("Nome e sobrenome"), "Ana Lima");
+      await user.type(screen.getByLabelText("CPF"), "52998224725");
+      await user.click(screen.getByRole("button", { name: "Criar minha conta" }));
+      return screen.findByRole("alert");
+    }
+
+    it("widget ligado: orienta o chat do suporte Foode, sem wa.me", async () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPPORT_WIDGET_SRC", "https://widget.agentes.chat/loader.js");
+      vi.stubEnv("NEXT_PUBLIC_SUPPORT_WIDGET_ID", "foode-suporte");
+      const alert = await conflictMessage();
+      expect(alert).toHaveTextContent(
+        "Não foi possível concluir o cadastro. Fale com o suporte Foode pelo chat.",
+      );
+      expect(alert.innerHTML).not.toContain("wa.me");
+    });
+
+    it("widget desligado (sem configuração): sem menção ao chat", async () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPPORT_WIDGET_SRC", "");
+      vi.stubEnv("NEXT_PUBLIC_SUPPORT_WIDGET_ID", "");
+      const alert = await conflictMessage();
+      expect(alert).toHaveTextContent("Não foi possível concluir o cadastro.");
+      expect(alert).not.toHaveTextContent("chat");
+    });
+  });
+
   it("sessão com telefone verificado começa direto em nome + CPF", () => {
     setup({ startAtSignup: true });
     expect(screen.getByLabelText("CPF")).toBeInTheDocument();

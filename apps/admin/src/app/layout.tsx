@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { MoneyMaskRoot } from "../components/money-mask-root";
+import { SupportWidget } from "../components/support-widget";
 
 import "@fontsource-variable/nunito";
 import "./globals.css";
@@ -18,6 +19,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <MoneyMaskRoot />
         <ToastProvider>{children}</ToastProvider>
+        {/* Widget de suporte (Ticket 30): só com NEXT_PUBLIC_SUPPORT_WIDGET_* no build. */}
+        <SupportWidget />
       </body>
     </html>
   );

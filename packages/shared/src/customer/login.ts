@@ -20,6 +20,15 @@ export const LOGIN_CODE_REQUEST_IP_LIMIT = { max: 10, windowSeconds: 300 } as co
 export const LOGIN_CODE_VERIFY_PHONE_LIMIT = { max: 10, windowSeconds: 300 } as const;
 export const LOGIN_CODE_VERIFY_IP_LIMIT = { max: 20, windowSeconds: 300 } as const;
 
+/**
+ * Teto de códigos por telefone em 24 h (Ticket 30, revisão de segurança). Os limites de 300 s
+ * acima ainda deixam ~10 palpites a cada 5 min no mesmo telefone (≈ 2 880/dia contra 10 000
+ * códigos possíveis). Com no máximo 8 códigos/dia × 5 tentativas, são ≤ 40 palpites por dia.
+ * Contado na própria `customer_login_codes` (a `rate_limits` só guarda janelas ≤ 300 s).
+ */
+export const LOGIN_CODE_DAILY_MAX_PER_PHONE = 8;
+export const LOGIN_CODE_DAILY_WINDOW_SECONDS = 24 * 60 * 60;
+
 /** Mensagem exata enviada pelo WhatsApp (decisão 65). */
 export function loginCodeMessage(code: string): string {
   return `${code} é o seu código de acesso ao Foode Delivery.`;

@@ -480,6 +480,39 @@ describe("busca por telefone (P-2.1)", () => {
   });
 });
 
+describe("busca por telefone: enumeração (Ticket 30)", () => {
+  it("vários telefones seguidos do mesmo IP, trocando de Loja, são barrados no teto global", async () => {
+    const ip = "100.64.7.1";
+    const lookup = (slug: string, phone: string) =>
+      storefront().lookup(slug, { phone, turnstileToken: CAPTCHA_OK }, ip);
+    let n = 0;
+    const nextPhone = () => `1193333${String((n += 1)).padStart(4, "0")}`;
+    for (let i = 0; i < 5; i += 1) {
+      await expect(lookup(fx.storeA.slug, nextPhone())).resolves.toMatchObject({ status: 200 });
+    }
+    // A Loja A barra o 6º; trocar para a B só rende até o teto global (8 tentativas por IP em
+    // 10 min, contando as barradas).
+    await expect(lookup(fx.storeA.slug, nextPhone())).resolves.toEqual({
+      status: 429,
+      body: { error: "rate_limited" },
+    });
+    await expect(lookup(fx.storeB.slug, nextPhone())).resolves.toMatchObject({ status: 200 });
+    await expect(lookup(fx.storeB.slug, nextPhone())).resolves.toMatchObject({ status: 200 });
+    await expect(lookup(fx.storeB.slug, nextPhone())).resolves.toEqual({
+      status: 429,
+      body: { error: "rate_limited" },
+    });
+    // Outra rede (/24 diferente) segue consultando normalmente.
+    await expect(
+      storefront().lookup(
+        fx.storeB.slug,
+        { phone: nextPhone(), turnstileToken: CAPTCHA_OK },
+        "100.64.8.1",
+      ),
+    ).resolves.toMatchObject({ status: 200 });
+  });
+});
+
 describe("RPCs do Painel com sessão real", () => {
   it("Operador avança, cancela e pausa; configuração = forbidden sem efeito; Ops = forbidden", async () => {
     await storefront().create(fx.storeA.slug, createBody());
