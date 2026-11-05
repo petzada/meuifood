@@ -7,6 +7,14 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./money": {
+      "types": "./dist/money.d.ts",
+      "default": "./dist/money.js"
+    },
+    "./menu": {
+      "types": "./dist/menu/index.d.ts",
+      "default": "./dist/menu/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {
