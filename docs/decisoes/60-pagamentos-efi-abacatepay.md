@@ -1,70 +1,57 @@
-# Decisão: PIX Efí e Crédito Efí (Normal) + AbacatePay (Rápido)
+# Decisão: PIX AbacatePay; Crédito Efí (Normal) ou AbacatePay (Rápido); custódia com repasse D+1 útil
 
-**Data:** 2026-11-04 · **Status:** decidido · **Sessão:** pivô de pagamentos (perguntas objetivas ao Dono)  
-**ADR:** [0007](../adr/0007-efi-abacatepay-provedor-fixo-por-loja.md) · **Depende de:** [59](59-pivo-cloudflare-d1-workers.md)
+**Data:** 2026-11-04 (revisada no mesmo dia) · **Status:** decidido · **Sessão:** pivô de pagamentos + benchmark Anota AI  
+**ADR:** [0007](../adr/0007-efi-abacatepay-provedor-fixo-por-loja.md) · **Depende de:** [59](59-pivo-cloudflare-d1-workers.md) · **Monetização:** [61](61-monetizacao-faixas-taxas-anota.md)
 
 **Supersede:** ADR [0003](../adr/0003-woovi-pix-asaas-cartao.md); gateways em [06](06-gateways-taxas-e-tiers.md), [24](24-arquitetura-pagamentos.md) e [34](34-meios-pagamento-checkout-mvp.md); providers de Estorno em [39](39-cancelamento-estorno-automatico.md); trilha BaaS Asaas de ADR [0004](../adr/0004-modo-piloto-custodia.md) e [46](46-grilling-homologacao-baas-mei-ltda.md)–[54](54-implicacoes-minimas-modo-baas.md) (**arquivada**); exceção em [43](43-guest-conta-vinculo-pedido.md) para dados do pagador no cartão.
 
 ## Decisão
 
-### Meios no checkout (MVP)
+### Meios no checkout
 
-| Meio | Provedor | MVP |
+| Meio | Provedor | Observação |
 | --- | --- | --- |
-| PIX online | **Efí** (API Pix, QR dinâmico com `txid`) | Sim |
-| Crédito online **à vista** | **Efí** (modo Normal) ou **AbacatePay** (modo Rápido) | Sim |
-| Pagamento na entrega | — | Sim, sem cobrança |
-| Parcelamento, Débito, Voucher | — | Pós-MVP |
+| PIX online | **AbacatePay** (QR dinâmico + copia-e-cola, checkout transparente) | Custo atual R$ 0,54 por recebimento; saldo disponível na hora |
+| Crédito à vista — **Normal** | **Efí** (API de Cobranças, `payment_token` gerado no navegador; sem mTLS) | Custo atual 3,49%; liberação em até 21 dias úteis |
+| Crédito à vista — **Rápido** | **AbacatePay** (cartão transparente, `ctok_`) | Custo atual 5,42% + R$ 0,60; liberação em até 1 dia útil |
+| Pagamento na entrega | — | Sem cobrança, sem Ledger |
+| Parcelamento, antecipação própria, boleto | — | Fora |
+| Débito online e carteiras | — | **Avaliar no Ticket 27**: entra só se Efí ou AbacatePay suportarem no checkout transparente |
 
-O enum técnico do checkout continua `pix` | `credit` | `on_delivery`.
+Os custos acima são **custos do provedor para a Foode** (informação de Ops, nunca exibida ao lojista) e ficam numa tabela de custos editável no `/ops`, para apurar margem. O enum técnico do checkout continua `pix` | `credit` | `on_delivery`.
 
-### Conta e custódia
+### Contas e custódia
 
-- Conta **Efí própria do Foode** (segunda conta no mesmo CNPJ, já aberta pelo Dono): aplicação, credenciais, certificado `.p12`, chave Pix aleatória e webhooks **separados do ceremony**.
-- Conta AbacatePay do Foode para o modo Rápido.
-- O piloto segue em **`pilot_platform`**: o dinheiro entra nas contas da Foode e o **repasse ao lojista é manual** — Ops paga por fora e marca o lançamento como pago no Ledger ([ADR 0004](../adr/0004-modo-piloto-custodia.md), parte de custódia, continua).
-- Sem split, sem envio de Pix automático e sem BaaS no MVP. O modo de escala depois do piloto é **decisão aberta**, reavaliada após o piloto.
+- **Uma conta Efí do Foode** (segunda conta no mesmo CNPJ, separada do ceremony) e **uma conta AbacatePay do Foode**. Nada de conta de provedor por Loja, split ou envio automático de Pix.
+- Todas as Lojas operam em **`pilot_platform`**: o dinheiro entra nas contas da Foode e o repasse ao lojista é **manual**, registrado no **Ledger interno**.
+- O app suporta **várias Lojas** desde já (não há trava de "um Comerciante-modelo"); quantas Lojas entram é decisão comercial.
 
-### Provedor do cartão por Loja
+### Modo do cartão por Loja
 
-- O provedor do Crédito é **fixo por Loja e definido pela operação Foode** (Ops), não pelo Dono: `efi` (Normal) ou `abacatepay` (Rápido).
-- O Consumidor vê apenas "Cartão de crédito".
-- Cada cobrança grava o provedor, a taxa comercial e o prazo usados (snapshot).
-- **Sem kill switch** no MVP: provedor indisponível deixa o Crédito indisponível naquela Loja até voltar ou até Ops trocar o provedor da Loja.
+- O lojista contrata **Normal** (taxa menor, prazo maior) ou **Rápido** (taxa maior, D+1); o Ops configura o modo na Loja conforme o contrato. O Consumidor vê só "Cartão de crédito".
+- Cada cobrança grava provedor, modo, taxa Foode, custo do provedor e prazos efetivos (snapshot). Trocar o modo da Loja não reescreve cobranças anteriores.
+- Sem kill switch: provedor indisponível deixa o meio indisponível na Loja.
+
+### Repasse (Ledger interno)
+
+- Cada pagamento online confirmado gera lançamento com: Pedido, meio, provedor, total, taxa Foode, líquido, **data de liberação no provedor** e **data prevista de repasse = 1º dia útil após a liberação** (PIX: D+1 útil; Rápido: D+1 útil após liberar; Normal: D+1 útil após a Efí liberar). Retenção do provedor, se houver, vira parcela prevista separada.
+- **Lote diário**: todo dia útil o `/ops` mostra, por Loja, o total "a repassar hoje", a chave Pix de repasse cadastrada da Loja e os lançamentos do lote. O Ops faz um Pix por Loja por fora e marca o lote como pago (data, conta de saída, identificador/comprovante, custo do envio).
+- Estorno antes do repasse abate o lançamento; estorno depois do repasse gera débito compensado nos lotes seguintes.
+- O Dono vê a tela **Repasses** (só leitura): lançamentos, lotes, previsto x pago.
 
 ### Checkout e dados do pagador
 
-- Cartão em **checkout transparente**: formulário Foode (outline, Nunito), número tokenizado no navegador (`payment-token-efi` com o identificador de conta Efí, ou `ctok_` da AbacatePay). Dados de cartão nunca passam pela `api`, logs ou Sentry.
-- **Exceção a [43](43-guest-conta-vinculo-pedido.md):** ao escolher Cartão, o Guest informa CPF e e-mail (e data de nascimento quando o provedor exigir — Efí). PIX e Pagamento na entrega seguem só com nome e telefone (+ endereço no Delivery).
+- Formulário próprio no visual Foode; dados de cartão tokenizados no navegador e nunca enviados à `api`, logs ou Sentry.
+- **Exceção a [43](43-guest-conta-vinculo-pedido.md):** ao escolher Cartão, o Guest informa CPF e e-mail (e data de nascimento se o provedor exigir). PIX e Pagamento na entrega seguem só com nome e telefone (+ endereço no Delivery). Se a AbacatePay exigir CPF no PIX, o campo aparece só no PIX.
+- Meio online sem **taxa Foode vigente** cadastrada para a Loja fica indisponível no checkout ([61](61-monetizacao-faixas-taxas-anota.md)).
 
 ### Webhooks e Estorno
 
-- **Efí Pix:** webhook por chave Pix, cadastrado sem mTLS de cliente (o Worker não valida o certificado da Efí) e com segredo na URL (`?hmac=…&ignorar=`); o corpo só aponta o que mudou e o desfecho vem da consulta autenticada por mTLS — padrão do ceremony.
-- **Efí cartão:** `notification_url` por cobrança com segredo; a notificação traz só o token e o estado vem de `GET /v1/notification/:token`.
-- **AbacatePay:** webhook com verificação de assinatura/segredo conforme a doc vigente.
-- Todos: identidade única do evento persistida, entrega `at-least-once`, sem regressão de estado.
-- Estorno automático no cancelamento ([39](39-cancelamento-estorno-automatico.md)) continua; os providers passam a ser **Efí** (devolução Pix e estorno de cartão) e **AbacatePay** (refund).
-
-### Taxas
-
-As taxas comerciais ao lojista (antes 1,19% PIX D+1 e 3,29% + R$ 0,79 crédito D+33) **serão redefinidas pelo Dono**. Até lá:
-
-- o código lê taxa, prazo e retenção de uma **tabela versionada por provedor/meio**, nunca de constantes espalhadas;
-- prazos e retenções do provedor (ex.: AbacatePay libera parte em D+1 e retém parte por um período) são modelados como **parcelas previstas** no Ledger;
-- valores-placeholder nos testes não são números comerciais.
-
-## Painel
-
-- Tela de **Repasses** somente leitura para o Dono (Ticket 14): Pedido, meio, provedor, total, taxa, líquido, previsão, status (previsto/pago) e Estorno. Marcar como pago é ação de Ops.
-- O provedor do cartão da Loja aparece só como informação.
+- **AbacatePay:** webhook com verificação de assinatura/segredo conforme a doc vigente; desfecho conferido por consulta autenticada quando o corpo não bastar.
+- **Efí cobrança:** `notification_url` por cobrança com segredo (`?secret=`); a notificação traz só o token e o estado vem de `GET /v1/notification/:token`.
+- Identidade única do evento persistida; entrega `at-least-once` e fora de ordem sem regressão. URLs com segredo e corpos nunca vão a log ou Sentry.
+- Estorno automático no cancelamento ([39](39-cancelamento-estorno-automatico.md)): PIX e Rápido pela AbacatePay; Normal pela Efí.
 
 ## Rejeitado
 
-- Woovi e Asaas como provedores do MVP.
-- Custódia com envio de Pix automático (fica para depois do piloto).
-- Split Efí para conta do lojista no MVP.
-- Dono escolhendo Rápido/Normal no MVP; kill switch de provedor.
-- Parcelamento no MVP.
-- Checkout hospedado (redirect) para cartão.
-- Pedir CPF/e-mail a todo Guest.
-- Reaproveitar a conta Efí do ceremony.
+- Woovi e Asaas; PIX pela Efí (mais caro acima de ~R$ 45 e exigiria mTLS); conta de provedor por Loja; split; envio de Pix automático; D+7 antecipado com caixa da Foode; kill switch; parcelamento; checkout hospedado; pedir CPF/e-mail a todo Guest; reaproveitar a conta Efí do ceremony.

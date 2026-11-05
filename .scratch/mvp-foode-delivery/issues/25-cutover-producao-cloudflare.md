@@ -1,20 +1,23 @@
-# 25 — Colocar a stack Cloudflare em produção e desligar Supabase e Railway
+# 25 — Domínios, e-mail e remoção do legado (Supabase, Railway, Woovi)
 
-**What to build:** Os domínios do Foode passam a apontar para os Workers, o D1 de produção recebe o seed do Comerciante-modelo e Supabase, Railway e o código legado saem do repositório e das contas.
+**What to build:** Os domínios do Foode apontam para os Workers, o e-mail sai pelo domínio próprio, o código e as dependências da stack antiga saem do repositório e o projeto Supabase é pausado — deixando produção limpa antes dos pagamentos.
 
-**Blocked by:** 24 — Portar horários, Pausa, Pedido Guest e Delivery para a stack nova.
+**Blocked by:** 24 — Portar horários, Pausa, Pedido Guest, Delivery e impressão; 28 — Onboarding do Dono; 29 — Área Ops.
 
 **Status:** ready-for-agent
 
-- [ ] Domínios do Storefront, Painel e API configurados como custom domains dos Workers; HTTPS e redirecionamentos conferidos.
-- [ ] Secrets de produção (`wrangler secret`) e variáveis por ambiente documentados em `.env.example`, sem valores.
-- [ ] Migrations aplicadas no D1 de produção pelo `db-migrate`; seed do Comerciante-modelo aplicado.
-- [ ] Smoke pós-deploy no CI: `/health`, Storefront do Comerciante-modelo, login do Painel e um Pedido Guest em `on_delivery`.
-- [ ] Código e dependências de Fastify, Prisma, `pg`, `@supabase/*`, `@aws-sdk/*` (se substituído por binding), scripts de preflight/sync Supabase e o job `migrate` antigo removidos.
+**Agente:** Opus (geral).
+
+- [ ] Zona `foodedelivery.com.br` ativa (se ainda pendente, o orquestrador pede ao humano a troca de nameservers no Registro.br e aguarda); custom domains `foodedelivery.com.br`, `admin.` e `api.` ligados aos Workers por CLI.
+- [ ] Registros da MillionSend (DKIM, MX/SPF de `nao-responda`, DMARC, CNAME `tracking` só DNS) obtidos pela API da MillionSend e criados no DNS da Cloudflare por CLI; domínio verificado; remetente `nao-responda@foodedelivery.com.br` ativo.
+- [ ] Turnstile com hostnames finais; Sentry com releases e ambientes.
+- [ ] Removidos: Fastify, Prisma, `pg`, `@supabase/*`, `@woovi/node-sdk`, `@aws-sdk/*` (se o binding R2 cobrir), scripts de preflight/sync Supabase, job `migrate` antigo, secrets Supabase do GitHub.
+- [ ] Projeto Supabase `emdbvwylytduvuzvavgy` pausado pelo MCP do Supabase (dados descartados por decisão). Não há serviço Railway do meuifood a desligar (conferido em 2026-11-04).
 - [ ] PR [petzada/meuifood#19](https://github.com/petzada/meuifood/pull/19) fechado sem merge, com comentário apontando os Tickets 26 e 27.
-- [ ] Projeto Supabase pausado/excluído e serviços Railway desligados pelo Dono (passo manual registrado aqui).
-- [ ] README e `AGENTS.md` descrevem só a stack nova.
+- [ ] README e `AGENTS.md` descrevem só a stack nova; `.env.example` lista as variáveis sem valores.
+- [ ] Skill `.claude/skills/verificar-tickets` e `verification/STATUS.md` atualizados para a stack e a fila novas.
+- [ ] Smoke em produção pelos domínios finais: Storefront, login do Painel, `/ops`, Pedido `on_delivery` numa Loja sintética de smoke (criada e removida pelo teste).
 
 ## Comments
 
-- 2026-11-04 — Aberto no pivô. Os dados do Supabase são descartados ([59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md)); não há migração de dados.
+- 2026-11-04 — Revisado: produção já é publicada a cada ticket desde o 21; este ticket fecha domínios, e-mail e limpeza.

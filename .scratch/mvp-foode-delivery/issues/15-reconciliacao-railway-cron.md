@@ -1,20 +1,22 @@
 # 15 — Reconciliar pagamentos e repasses por Cron Triggers
 
-**What to build:** Um Cron Trigger do Worker `api` consulta cobranças, Estornos e obrigações pendentes na Efí e na AbacatePay, reaplica transições idempotentes e alerta divergências.
+**What to build:** Um Cron Trigger do Worker `api` consulta cobranças, Estornos e lançamentos pendentes na AbacatePay e na Efí, reaplica transições idempotentes e alerta divergências.
 
 **Blocked by:** 12 — Cancelar Pedido e executar Estorno automático.
 
 **Status:** ready-for-agent
 
+**Agente:** Opus (geral).
+
 - [ ] O handler `scheduled` da `api` roda pelo Cron Trigger e reporta resultado observável (Workers Logs + Sentry).
 - [ ] Não cria quarto app, worker sempre-on, fila externa ou Redis.
-- [ ] Efí (Pix e cobrança) e AbacatePay são consultados pelos mesmos adapters e fatos usados pelos webhooks.
+- [ ] AbacatePay (PIX e cartão) e Efí (cartão) são consultados pelos mesmos adapters e fatos usados pelos webhooks; liberações confirmadas atualizam a data de repasse prevista.
 - [ ] Execução repetida, concorrente ou sobre evento já processado produz um único efeito lógico e nenhuma regressão.
 - [ ] Evento perdido converge cobrança e Ledger; pagamento tardio de Pedido Cancelado converge para Estorno total.
 - [ ] Estorno pendente ou falho permanece retentável no provider correto.
 - [ ] A reconciliação detecta obrigação de repasse divergente sem promover previsão a pagamento efetivo.
 - [ ] Falha parcial não esconde as demais unidades processadas e não vaza secrets.
-- [ ] Testes invocam o handler real contra D1 efêmero com adapters controlados; agendador e rede externa ficam fora da suíte.
+- [ ] Testes invocam o handler real com D1 do pool-workers no CI com adapters controlados; agendador e rede externa ficam fora da suíte.
 
 ## Comments
 

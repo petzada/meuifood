@@ -1,6 +1,6 @@
 # 10 — Pagar por PIX Woovi em `pilot_platform`
 
-> **Superseded em 2026-11-04 pelo [Ticket 26](26-pix-efi-pilot-platform.md).** Histórico.
+> **Superseded em 2026-11-04 pelo [Ticket 26](26-pix-abacatepay.md).** Histórico.
 
 **What to build:** O Consumidor paga um Pedido do Comerciante-modelo por PIX, recebe QR Code/copia-e-cola seguros e a confirmação Woovi converge por webhook para o Pedido e para uma única obrigação no Ledger de repasse.
 
@@ -20,4 +20,4 @@
 
 ## Comments
 
-- 2026-11-04 — Superseded pelo Ticket 26 (PIX Efí), decisão [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md). O PR #19 (Woovi) será fechado sem merge no Ticket 25; as partes reaproveitáveis estão listadas no 26.
+- 2026-11-04 — Superseded pelo Ticket 26 (PIX AbacatePay), decisão [60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md). O PR #19 (Woovi) será fechado sem merge no Ticket 25; as partes reaproveitáveis estão listadas no 26.

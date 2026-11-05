@@ -1,5 +1,7 @@
 # Decisão: cupom de criação de conta (MVP) e fidelidade pós-MVP
 
+> **Atualizada em 2026-11-04 por [62](62-escopo-ops-multiloja-funcionalidades.md):** cupons promocionais (código, %/R$, validade, limite, pedido mínimo) entram no MVP; fidelidade por pedidos e cashback seguem pós-MVP.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #K (K1–K3)  
 **Depende de:** [10](10-checkout-guest-e-conta.md), [11](11-planos-por-faturamento-features-completas.md), [43](43-guest-conta-vinculo-pedido.md)
 

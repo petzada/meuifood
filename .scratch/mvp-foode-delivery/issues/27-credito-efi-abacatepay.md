@@ -1,22 +1,24 @@
-# 27 — Pagar por Crédito à vista com Efí (Normal) ou AbacatePay (Rápido)
+# 27 — Pagar por Cartão à vista: Normal (Efí) ou Rápido (AbacatePay)
 
-**What to build:** O Consumidor paga por Crédito à vista num formulário da própria Loja; a cobrança vai para o Provedor do cartão definido por Ops para a Loja — Efí ou AbacatePay — e converge por webhook para o Pedido e para obrigações no mesmo Ledger do PIX.
+**What to build:** O Consumidor paga com Cartão de crédito à vista num formulário da própria Loja; a cobrança vai para o provedor do modo contratado pela Loja e converge para o Pedido e para o Ledger com taxa, liberação e repasse previsto corretos.
 
-**Blocked by:** 26 — Pagar por PIX Efí em `pilot_platform`.
+**Blocked by:** 26 — Pagar por PIX AbacatePay.
 
 **Status:** ready-for-agent
 
-- [ ] Loja tem Provedor do cartão `efi` ou `abacatepay`, protegido e alterável só por Ops; o Storefront nunca vê nem escolhe o provedor.
-- [ ] Checkout transparente no visual Foode: tokenização no navegador (`payment-token-efi` com o identificador de conta Efí, ou `ctok_` da AbacatePay); número, CVV e validade nunca passam pela `api`, logs ou Sentry.
-- [ ] Ao escolher Cartão, o Guest informa CPF e e-mail (e data de nascimento quando o provedor for Efí); PIX e `on_delivery` continuam sem esses campos. Validação no servidor.
-- [ ] Somente à vista; não existe seletor de parcelas.
-- [ ] Intenção idempotente cria no máximo uma cobrança lógica e externa; aprovado, pendente e recusado são distinguíveis e só a confirmação canônica marca pago.
-- [ ] Efí cobrança: `notification_url` por cobrança com segredo; estado obtido por `GET /v1/notification/:token`.
-- [ ] AbacatePay: webhook autenticado conforme a doc vigente; entrega `at-least-once` e fora de ordem.
-- [ ] Cada cobrança grava provedor, taxa e prazo efetivos; retenção do provedor (ex.: parte liberada depois) vira parcelas previstas no Ledger.
-- [ ] Provedor indisponível deixa o Crédito indisponível na Loja, com mensagem clara; sem troca automática.
-- [ ] Testes com adapters controlados dos dois provedores, contra D1 efêmero.
+**Agente:** Opus para providers/webhooks; Fable para o formulário de cartão, após o contrato.
+
+- [ ] Modo da Loja (Normal/Rápido, definido no `/ops`) escolhe o provedor; o Storefront não vê nem escolhe.
+- [ ] Efí Normal: API de Cobranças (one-step com `payment_token` gerado no navegador pela lib `payment-token-efi` e o identificador de conta), credenciais de aplicação da conta Efí do Foode em `wrangler secret`; `notification_url` por cobrança com `?secret=`; estado por `GET /v1/notification/:token`.
+- [ ] AbacatePay Rápido: cartão transparente com `ctok_` gerado no navegador; webhook autenticado.
+- [ ] Formulário Foode (outline, Nunito, mobile-first); número/CVV/validade nunca chegam à `api`, logs ou Sentry.
+- [ ] Ao escolher Cartão: CPF, e-mail e (Efí) data de nascimento, validados no servidor; PIX e `on_delivery` sem esses campos.
+- [ ] Só à vista; meio indisponível sem taxa Foode vigente para o modo da Loja.
+- [ ] Intenção idempotente; aprovado, pendente e recusado distinguíveis; só a confirmação canônica marca pago.
+- [ ] Ledger: taxa Foode, custo do provedor, liberação prevista (Efí: até 21 dias úteis ou data informada; AbacatePay: até 1 dia útil ou informada), retenção como parcela separada, repasse previsto = dia útil seguinte à liberação.
+- [ ] **Avaliar débito online e carteiras** nas docs vigentes da Efí e da AbacatePay; se houver suporte no checkout transparente, abrir ticket próprio e informar o orquestrador; se não, registrar a conclusão aqui.
+- [ ] Testes com adapters fakes dos dois provedores; credenciais de produção só no smoke manual (cartão real, valor baixo, seguido de cancelamento no Ticket 12).
 
 ## Comments
 
-- 2026-11-04 — Substitui o Ticket 11 ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md)). Referência: `lib/providers/efi/card.ts`, `lib/providers/abacatepay/*` e `lib/payments/efi-card-form.ts` do ceremony (sem o roteamento por plano nem o kill switch).
+- 2026-11-04 — Substitui o Ticket 11 ([60](../../../docs/decisoes/60-pagamentos-efi-abacatepay.md), [61](../../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md)). Referência: `lib/providers/efi/card.ts`, `lib/payments/efi-card-form.ts` e `lib/providers/abacatepay/card.ts` do ceremony, sem roteamento por plano nem kill switch.

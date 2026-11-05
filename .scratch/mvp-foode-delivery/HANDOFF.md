@@ -1,30 +1,30 @@
-# Estado atual — 2026-11-04 (pivô Cloudflare + Efí/AbacatePay)
+# Estado atual — 2026-11-04 (revisão final antes da orquestração)
 
-**Decisões:** [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Workers + D1 + Drizzle + Better Auth + MillionSend; D1 efêmero no CI) e [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX Efí; Crédito à vista Efí/AbacatePay fixo por Loja por Ops; custódia com repasse manual). ADRs [0006](../../docs/adr/0006-cloudflare-workers-d1-sem-rls.md) e [0007](../../docs/adr/0007-efi-abacatepay-provedor-fixo-por-loja.md).
+**Fonte da verdade:** [spec v2](spec.md) + decisões [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Cloudflare/D1/testes/CI/domínio), [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX AbacatePay, Cartão Efí Normal/AbacatePay Rápido, custódia, repasse D+1 útil), [61](../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md) (faixas por Pedidos, taxas no `/ops`) e [62](../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md) (Ops, multi-Loja, Pixel, Cupons, impressão). Glossário em `CONTEXT.md`.
 
-**Entregue (stack antiga, será portado):** Tickets 01–09 na `master`.
+**Entregue na stack antiga (referência de comportamento a portar):** Tickets 01–09.
 
-**Fila (blockers-first):**
+**Fila (blockers-first; "∥" = pode rodar em paralelo, no máximo 2 subagentes):**
 
-| Ordem | Ticket | Bloqueado por |
+| Passo | Ticket | Bloqueado por |
 | --- | --- | --- |
-| 1 | [21](issues/21-fundacao-cloudflare-d1-ci.md) Fundação Cloudflare, D1 e CI/CD | — |
-| 2 | [22](issues/22-auth-better-auth-rbac.md) Auth e RBAC com Better Auth | 21 |
-| 3 | [23](issues/23-portar-cardapio-complementos.md) Port de Cardápio e Complementos | 22 |
-| 4 | [24](issues/24-portar-operacao-pedido-delivery.md) Port de horários, Pausa, Pedido e Delivery | 23 |
-| 5 | [25](issues/25-cutover-producao-cloudflare.md) Produção na Cloudflare; desligar Supabase/Railway; fechar PR #19 | 24 |
-| 6 | [26](issues/26-pix-efi-pilot-platform.md) PIX Efí | 25 |
-| 6 | [13](issues/13-guest-conta-cupom-boas-vindas.md) Guest → conta e Cupom (paralelo a 26/27) | 24 |
-| 7 | [27](issues/27-credito-efi-abacatepay.md) Crédito Efí/AbacatePay | 26 |
+| 1 | [21](issues/21-fundacao-cloudflare-d1-ci.md) Fundação Cloudflare, D1, CI/CD e contas | — |
+| 2 | [22](issues/22-auth-better-auth-rbac.md) Auth multi-Loja, RBAC, e-mail | 21 |
+| 3 | [23](issues/23-portar-cardapio-complementos.md) Cardápio e Complementos ∥ [29](issues/29-area-ops-lojas-plano-taxas.md) Área Ops | 22 |
+| 4 | [24](issues/24-portar-operacao-pedido-delivery.md) Horários, Pausa, Pedido, Delivery, impressão ∥ [28](issues/28-onboarding-dono-slug-qr-pixel.md) Onboarding do Dono, Slug, QR, Pixel | 23 (+29 para o 28) |
+| 5 | [25](issues/25-cutover-producao-cloudflare.md) Domínios, e-mail, remoção do legado, fechar PR #19 | 24, 28, 29 |
+| 6 | [26](issues/26-pix-abacatepay.md) PIX AbacatePay ∥ [13](issues/13-guest-conta-cupom-boas-vindas.md) Conta do Consumidor e Cupons | 25, 29 / 24 |
+| 7 | [27](issues/27-credito-efi-abacatepay.md) Cartão Normal (Efí) e Rápido (AbacatePay) + avaliar débito | 26 |
 | 8 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 |
-| 9 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano, relatórios e Repasses · [15](issues/15-reconciliacao-railway-cron.md) Reconciliação por Cron Triggers | 12 |
-| 10 | [20](issues/20-aprofundar-contratos-e-modules-do-front.md) Resto do deepening do front | 14, 15 |
+| 9 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano/faixa, relatórios, Repasses e lotes ∥ [15](issues/15-reconciliacao-railway-cron.md) Reconciliação | 12 |
+| 10 | [20](issues/20-aprofundar-contratos-e-modules-do-front.md) Deepening do front | 14, 15 |
+| 11 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção | 20 |
 
 **Fora da fila:** 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
 
-**Pendências do Dono:** taxas comerciais de PIX e Crédito para Efí/AbacatePay; conta AbacatePay do Foode; certificado/aplicação/chave Pix na conta Efí do Foode; desligar Supabase e Railway no Ticket 25.
+**Integração autorizada pelo Dono nesta execução:** por ticket, PR → CI verde → squash merge na `master` → `db-migrate` se houver migration (contract exige confirmação) → deploy pelo CI → smoke. Credenciais de pagamento de produção.
 
-**Fluxo de git:** o global do Dono (`~/.claude/CLAUDE.md`) vale acima deste arquivo — commit+push na branch da feature, PR e pronto só no "finaliza", produção e migration só sob pedido.
+**Passos humanos previstos (o orquestrador pede e aguarda):** trocar nameservers no Registro.br; gerar no painel o que não tiver API (aplicação Efí com Cobranças + identificador de conta; API key e webhook secret da AbacatePay; token Cloudflare para o GitHub se o `cf` não conseguir criar); um PIX e um cartão reais de valor baixo nos smokes. `MILLIONSEND_API_KEY` já está nos secrets do GitHub.
 
 ---
 

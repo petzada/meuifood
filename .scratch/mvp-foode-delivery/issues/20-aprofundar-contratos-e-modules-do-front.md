@@ -4,7 +4,9 @@
 
 **Blocked by:** 14 — Expor Plano, relatórios e Repasses ao Dono; 15 — Reconciliar pagamentos e repasses por Cron Triggers.
 
-**Status:** todo
+**Status:** ready-for-agent
+
+**Agente:** Fable (front), com revisão de contrato por Opus se tocar `@foode/shared`.
 
 > **Fase B do Ticket 18.** Este ticket assume que os modules compartilhados já existem e que a fila de produto (Tickets 09–16) terminou — é onde a migração dos call sites legados acontece sem disputar arquivo com ninguém.
 

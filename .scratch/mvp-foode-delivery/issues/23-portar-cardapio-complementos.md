@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Agente:** Opus para API/dados; Fable para as telas do Painel e do Storefront, após o commit de contrato (schemas em `@foode/shared`).
+
 - [ ] Categorias, itens, disponibilidade, Complementos e Adicionais portados para D1 com o comportamento e os testes HTTP dos Tickets 05/06.
 - [ ] Upload de imagem: a `api` emite URL pré-assinada do R2 só para o Dono, com chave `stores/{store_id}/menu/{uuid}.{ext}`, JPEG/PNG/WebP até 5 MiB; leitura pública por base URL ([57](../../../docs/decisoes/57-cloudflare-r2-imagens-cardapio.md), sem chaves S3 se o binding resolver).
 - [ ] Storefront resolve a Loja pelo Slug e nunca aceita `store_id` do navegador.

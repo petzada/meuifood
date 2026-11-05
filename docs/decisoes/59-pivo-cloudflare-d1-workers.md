@@ -16,7 +16,7 @@ O Foode roda **inteiramente na Cloudflare**. Supabase (Postgres, Auth) e Railway
 | API (`api`) | Fastify na Railway | **Hono** em Worker próprio; `admin` e `web` chamam por **service binding** |
 | Banco | Supabase Postgres + RLS, Prisma | **D1** (SQLite) + **Drizzle**; isolamento por repositório escopado por `store_id` |
 | Auth Dono/Operador/Consumidor | Supabase Auth | **Better Auth** na `api`, tabelas no D1 |
-| E-mail transacional | Supabase Auth | **MillionSend** (SDK `resend`, base URL trocada — padrão do ceremony) |
+| E-mail transacional | Supabase Auth | **MillionSend** (SDK `resend`, base URL trocada — padrão do ceremony), remetente no domínio Foode |
 | Imagens do Cardápio | R2 via SDK S3 com chaves | R2 via **binding** do Worker |
 | Reconciliação | Railway Cron | **Cron Triggers** do Worker `api` |
 | Observabilidade | `@sentry/node` + stdout Railway | `@sentry/cloudflare` + Workers Logs |
@@ -30,22 +30,33 @@ Os três apps de [ADR 0001](../adr/0001-tres-apps-web-admin-api.md) continuam; m
 - Better Auth roda na `api`; o `admin` repassa `/api/auth/*` pelo binding para o cookie de sessão ficar no domínio do Painel (`httpOnly`, `Secure`, `SameSite=Lax`).
 - RBAC Dono/Operador ([38](38-rbac-dono-operador-mvp.md)) continua no servidor, em middleware Hono.
 - Checkout Guest e login usam **rate limit** nativo do Workers e **Turnstile**.
-- Secrets por `wrangler secret`; certificado mTLS da Efí por binding `mtls_certificates`.
+- Secrets por `wrangler secret` (sincronizados pelo CI a partir dos secrets do GitHub). Sem mTLS: o PIX é AbacatePay e o cartão Efí usa a API de Cobranças ([60](60-pagamentos-efi-abacatepay.md)).
 
 ### Banco e isolamento
 
 - Um único D1 de produção. Sem RLS, roles nem GRANT: o isolamento vira **invariante de código** — `packages/db` só exporta operações que recebem o contexto da Loja, rotas não acessam o D1 diretamente (regra de lint) e há **testes de vazamento** com duas Lojas.
 - O D1 não tem transação interativa. Escritas que dependem de leitura (Pausa/horário no Pedido, idempotência) usam `batch` atômico com `INSERT … SELECT` condicional e constraints `UNIQUE`; Durable Object por Loja só se a contenção exigir.
 - Tipos: enums viram `CHECK`; datas em ISO-8601 UTC (`TEXT`) ou epoch ms (`INTEGER`), decididos no ticket de fundação; dinheiro continua em centavos inteiros.
-- Os dados do Supabase são **descartados**; o D1 nasce limpo, com seed do Comerciante-modelo. Backup = D1 Time Travel.
+- Os dados do Supabase são **descartados**; o D1 nasce limpo e o seed de produção cria só o usuário `foode_ops` ([62](62-escopo-ops-multiloja-funcionalidades.md)). Backup = D1 Time Travel.
 
-### CI/CD (alinhado ao fluxo global do Dono)
+### Testes
 
-- PR: lint, typecheck e testes; testes com banco rodam contra um **D1 efêmero criado e apagado pela run** no CI. Nenhum banco local, emulador local como requisito, nem Docker.
-- Merge na `master`: deploy dos três Workers **pelo CI** (nunca do notebook).
-- Migration de produção: workflow manual `db-migrate` executado só no pedido "suba pra produção", com check `migration-guard` vermelho até aplicar. Migrations em **expand/contract**.
-- `lefthook` no padrão global (pre-commit formatter + lint com cache; pre-push typecheck + testes ligados ao diff) e scripts com nomes padronizados (`typecheck`, `lint`, `test`, `test:related`, `test:ci`, `e2e`, `build`).
-- Workflows com `concurrency` por PR e `timeout-minutes` em todo job.
+- Testes de rota, webhook e isolamento rodam com **`@cloudflare/vitest-pool-workers`** (workerd + D1 SQLite) **somente no runner do CI**. O pre-push local roda só testes sem banco (`test:related` filtrado).
+- O CI também prova as migrations num **D1 remoto efêmero** (criar, aplicar, apagar — inclusive em falha).
+- Depois de cada deploy, **smoke** contra produção (`/health`, Storefront, login do Painel).
+
+### CI/CD e integração (autorizado pelo Dono para a execução do pivô)
+
+- PR: lint, typecheck, build e testes (repositório **público**: CI completo sempre, sem custo).
+- **Por ticket**: PR → CI verde → **squash merge na `master`** → `db-migrate` (migration em produção) → deploy dos três Workers pelo CI → smoke. O Dono autorizou em 2026-11-04 esse ciclo automático durante a execução dos tickets do pivô; migration **contract** continua exigindo confirmação explícita.
+- Deploy só pelo CI (nunca do notebook). Migrations em **expand/contract**.
+- `lefthook` no padrão global e scripts `typecheck`, `lint`, `test`, `test:related`, `test:ci`, `e2e`, `build`; `concurrency` e `timeout-minutes` em todo job.
+
+### Domínio, DNS e contas
+
+- `foodedelivery.com.br` passa para a Cloudflare (zona criada pelo `cf` CLI; o Dono troca os nameservers no Registro.br). Layout: `foodedelivery.com.br` (Storefront), `admin.foodedelivery.com.br` (Painel), `api.foodedelivery.com.br` (webhooks e rotas públicas).
+- E-mail: conta MillionSend do ceremony com domínio remetente `nao-responda@foodedelivery.com.br`; registros DKIM/SPF/MX/DMARC/tracking obtidos pela API da MillionSend e criados no DNS da Cloudflare. A API key está no secret `MILLIONSEND_API_KEY` do GitHub.
+- Sentry, Turnstile, D1, R2 e secrets dos Workers são criados por CLI/MCP/API; passo manual só quando não houver API.
 
 ## Por quê
 

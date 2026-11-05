@@ -1,5 +1,7 @@
 # Decisão: modelo de receita (SaaS + pagamento online)
 
+> **Superseded em 2026-11-04 por [61](61-monetizacao-faixas-taxas-anota.md)** (faixas por Pedidos 15% abaixo do Anota AI, taxas por Loja no `/ops`). Histórico.
+
 **Data:** jul/2026 · **Status:** estrutura mantida · **números superseded** por [32](32-taxas-e-assinatura-fixa-unica.md) · **Sessão:** grilling #4–#6  
 
 ## Decisão (estrutura — vigente)

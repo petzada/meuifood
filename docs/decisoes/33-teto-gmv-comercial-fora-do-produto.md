@@ -1,5 +1,7 @@
 # Decisão: teto de GMV é comercial, não regra de produto
 
+> **Superseded em 2026-11-04 por [61](61-monetizacao-faixas-taxas-anota.md)** (faixas por Pedidos 15% abaixo do Anota AI, taxas por Loja no `/ops`). Histórico.
+
 **Data:** jul/2026 · **Status:** decidido · **Sessão:** grilling lacunas #N  
 **Depende de:** [32](32-taxas-e-assinatura-fixa-unica.md) · [31](31-definicao-operacional-gmv.md)
 
