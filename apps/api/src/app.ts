@@ -109,6 +109,41 @@ export function createApp() {
       return c.json(cartSubtotalCents(indexMenuItems(publicMenu), parsed.data));
     },
   );
+  // ---- Ticket 24a (CONTRATO; a fatia API troca cada 501 pela operação em @foode/db). A Loja sai
+  // SÓ do Slug da URL e precisa estar `active` (senão 404 `store_not_found`). Schemas em
+  // @foode/shared/order; corpo inválido = 400 `invalid_input`.
+
+  // Estado da Loja + "Sobre a Loja": 200 = `storefrontStoreStateSchema` (aberta até / fechada com
+  // próxima abertura / Pausa, por `storeOpenState` em America/Sao_Paulo; horários; Delivery com
+  // só bairros ativos ou Taxa fixa; Retirada com endereço; meios com taxa vigente; bandeiras).
+  storefront.get("/lojas/:slug/estado", (c) => c.json({ error: "not_implemented" }, 501));
+
+  // Cotação do checkout: corpo `checkoutQuoteRequestSchema`, 200 = `checkoutQuoteResponseSchema`
+  // (preços, Delivery, mínimo e meios recalculados no servidor; nada gravado).
+  storefront.post("/lojas/:slug/checkout/cotacao", (c) =>
+    c.json({ error: "not_implemented" }, 501),
+  );
+
+  // Criação idempotente do Pedido: corpo `checkoutCreateRequestSchema`; 201 novo, 200 replay
+  // (mesma chave e corpo), erros com `checkoutErrorHttpStatus` = `checkoutCreateResponseSchema`.
+  // Loja ativa, Pausa, horário, Retirada e bairro conferidos na mesma escrita (`batch` +
+  // INSERT … SELECT condicional + constraints).
+  storefront.post("/lojas/:slug/pedidos", (c) => c.json({ error: "not_implemented" }, 501));
+
+  // Página do Pedido: 200 = `orderTrackingSchema`; token de outra Loja ou inexistente = 404
+  // `order_not_found` (sem distinguir).
+  storefront.get("/lojas/:slug/pedidos/:token", (c) => c.json({ error: "not_implemented" }, 501));
+
+  // Busca por telefone (P-2.1), só Pedidos da mesma Loja: corpo `phoneLookupRequestSchema`
+  // (Turnstile: 403 `captcha_failed`; rate limit por IP: 429 `rate_limited`), 200 =
+  // `phoneLookupResponseSchema` mascarada; toda consulta vai para `phone_lookups` sem telefone.
+  storefront.post("/lojas/:slug/clientes/busca", (c) => c.json({ error: "not_implemented" }, 501));
+
+  // "Sou eu": corpo `phoneLookupConfirmRequestSchema` (token de uso único, curto), 200 =
+  // `phoneLookupConfirmResponseSchema` com os dados completos do último Pedido na mesma Loja.
+  storefront.post("/lojas/:slug/clientes/confirmar", (c) =>
+    c.json({ error: "not_implemented" }, 501),
+  );
   app.route("/storefront", storefront);
 
   // Imagens do Cardápio (decisão 64): leitura pública só de chaves `stores/{uuid}/menu/{uuid}.{ext}`.

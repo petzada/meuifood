@@ -50,6 +50,22 @@ import type {
   PlanTierTableView,
   ProviderCostView,
 } from "./ops/index.js";
+import type {
+  OrderCancelInput,
+  OrderDetail,
+  OrderRefInput,
+  OrdersList,
+  OrdersListInput,
+  OrderTransitionInput,
+  OrderTransitionResult,
+  PauseState,
+  StoreOperationSettings,
+  StoreSetCardBrandsInput,
+  StoreSetFulfillmentInput,
+  StoreSetHoursInput,
+  StoreSetPauseInput,
+  StoreSetPrintOnAcceptInput,
+} from "./order/index.js";
 
 export type ApiHealth = {
   status: "ok" | "degraded";
@@ -300,4 +316,58 @@ export interface PainelRpc {
     caller: PainelCaller,
     input: OpsStoreRefInput,
   ): Promise<RpcResult<OpsAuditEntry[]>>;
+
+  // ---- Pedidos e configuração operacional (contrato do Ticket 24a; RPCs implementadas no 24b).
+  // Loja sempre a ATIVA (StoreContext). Entradas validadas com `@foode/shared/order`
+  // (`invalid_input`). Permissões da política única: `orders.view`, `orders.update_status`,
+  // `orders.cancel` e `store.pause` para Dono e Operador; `store.settings` só Dono; Ops = `forbidden`.
+  // Pedido de outra Loja ou inexistente = `not_found`.
+
+  /** Fila (`active`) ou "Concluídos hoje" (`closed_today`), com chips Todos/Delivery/Retirada. */
+  ordersList(caller: PainelCaller, input?: OrdersListInput): Promise<RpcResult<OrdersList>>;
+
+  /** Detalhe do Pedido (PED-07), base da impressão 80 mm e do "Avisar no WhatsApp". */
+  ordersGet(caller: PainelCaller, input: OrderRefInput): Promise<RpcResult<OrderDetail>>;
+
+  /**
+   * Avança o Pedido só por transição válida do módulo de estados (`invalid_input` se não);
+   * estado atual ≠ `from` = `conflict` sem gravar. `print` = aceite com "Imprimir ao aceitar".
+   */
+  ordersTransition(
+    caller: PainelCaller,
+    input: OrderTransitionInput,
+  ): Promise<RpcResult<OrderTransitionResult>>;
+
+  /** Cancela (Dono ou Operador): só status + histórico; Estorno automático no Ticket 12. */
+  ordersCancel(
+    caller: PainelCaller,
+    input: OrderCancelInput,
+  ): Promise<RpcResult<OrderTransitionResult>>;
+
+  /** Configuração operacional da Loja ativa (Dono e Operador leem). */
+  storeOperationGet(caller: PainelCaller): Promise<RpcResult<StoreOperationSettings>>;
+
+  /** Liga/retoma a Pausa (Dono e Operador, P-OPE-4); auditada com quem e papel. */
+  storeSetPause(caller: PainelCaller, input: StoreSetPauseInput): Promise<RpcResult<PauseState>>;
+
+  /** Horários (só Dono): grade inteira, atômica; inválida ou sobreposta = `invalid_input`. */
+  storeSetHours(caller: PainelCaller, input: StoreSetHoursInput): Promise<RpcResult<null>>;
+
+  /** Entrega (só Dono): Retirada, modo do Delivery, bairros, pedido mínimo e tempos estimados. */
+  storeSetFulfillment(
+    caller: PainelCaller,
+    input: StoreSetFulfillmentInput,
+  ): Promise<RpcResult<null>>;
+
+  /** Bandeiras da maquininha em Débito e Crédito (só Dono). */
+  storeSetCardBrands(
+    caller: PainelCaller,
+    input: StoreSetCardBrandsInput,
+  ): Promise<RpcResult<null>>;
+
+  /** "Imprimir ao aceitar" (só Dono). */
+  storeSetPrintOnAccept(
+    caller: PainelCaller,
+    input: StoreSetPrintOnAcceptInput,
+  ): Promise<RpcResult<null>>;
 }
