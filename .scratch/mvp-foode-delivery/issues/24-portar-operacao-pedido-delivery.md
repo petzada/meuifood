@@ -1,10 +1,12 @@
 # 24 — Portar horários, Pausa, Pedido Guest, Delivery e impressão
 
+> **Superseded em 2026-11-05.** Os critérios abaixo ficam só como histórico; os vigentes estão no 24a e no 24b.
+
 **What to build:** Horários e Pausa, o Pedido Guest em Retirada e Delivery com a fila do Painel voltam a funcionar como nos Tickets 07–09, agora em D1 — com Loja ativa, Pausa e horário verificados na mesma escrita que cria o Pedido — e o Painel ganha impressão do Pedido em 80 mm.
 
 **Blocked by:** 23 — Portar Cardápio, Complementos e imagens.
 
-**Status:** ready-for-agent
+**Status:** superseded — dividido em [24a](24a-storefront-checkout-pedido.md) (Storefront: checkout, Pedido e acompanhamento) e [24b](24b-painel-operacao-pedido.md) (Painel: horários, Pausa, entrega, fila, impressão)
 
 **Agente:** Opus (geral); impressão 80 mm por um subagente Fable em paralelo, depois do contrato do Pedido.
 
@@ -28,3 +30,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-2.1 (busca por telefone com salvaguardas), P-2.2, P-2.3, P-2.4, P-2.5, P-3.1 (CEP), P-3.3, P-4.2 (troco), P-4.3 (bandeiras débito/crédito), P-5.1, P-6.1, P-6.2, P-OPE-2, P-OPE-4 (Operador pausa e retoma), P-IMP-1 (Imprimir ao aceitar), P-IMP-2, P-WPP-1, P-CFG-5. Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): 'Imprimir ao aceitar' é configuração da Loja; 'Avisar no WhatsApp' é ação por Pedido; busca por telefone e CEP mantidos com salvaguardas.
+
+- 2026-11-05 — Critérios consolidados com 63–65 e ticket dividido: Storefront (checkout com Delivery/Retirada, busca por telefone com salvaguardas, CEP, troco, pedido mínimo, tempo estimado, Sobre a Loja, Privacidade e selo, criação idempotente do Pedido e acompanhamento) foi para o [24a](24a-storefront-checkout-pedido.md), dono do contrato e da migration `0004`; Painel (horários, Pausa por Dono e Operador, Delivery por bairro com interruptor/Taxa fixa, bandeiras, fila com polling/som/chips, estados, detalhe, impressão 80 mm, "Imprimir ao aceitar", "Avisar no WhatsApp", tour de 3 passos) foi para o [24b](24b-painel-operacao-pedido.md).

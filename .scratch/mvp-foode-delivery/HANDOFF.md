@@ -1,8 +1,8 @@
-# Estado atual — 2026-11-04 (revisão final antes da orquestração)
+# Estado atual — 2026-11-05 (consolidação v3 da documentação)
 
-**Fonte da verdade:** [spec v2](spec.md) + decisões [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Cloudflare/D1/testes/CI/domínio), [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX AbacatePay, Cartão Efí Normal/AbacatePay Rápido, custódia, repasse D+1 útil), [61](../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md) (faixas por Pedidos, taxas no `/ops`) e [62](../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md) (Ops, multi-Loja, Pixel, Cupons, impressão), [63](../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (UX do benchmark Anota) e [64](../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md) (revisão de escopo). Glossário em `CONTEXT.md`.
+**Fonte da verdade:** [spec v3](spec.md) + decisões [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Cloudflare/D1/testes/CI/domínio), [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX AbacatePay, Cartão Efí Normal/AbacatePay Rápido, custódia, repasse D+1 útil), [61](../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md) (faixas por Pedidos, taxas no `/ops`), [62](../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md) (Ops, multi-Loja, Pixel, Cupons, impressão), [63](../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (UX do benchmark Anota), [64](../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md) (revisão de escopo) e [65](../../docs/decisoes/65-login-consumidor-codigo-whatsapp.md) (login do Consumidor por código no WhatsApp) e [66](../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md) (esclarecimentos da consolidação: Cupom de boas-vindas de primeira compra, widget de suporte também no Storefront, glossário). Os critérios de cada ticket aberto já incorporam 63–65 (Comment "Critérios consolidados com 63–65"). Glossário em `CONTEXT.md`. Conflitos de documentação: [orquestracao/conflitos-docs.md](orquestracao/conflitos-docs.md) (C1–C3 resolvidos na 66).
 
-**Entregue na stack antiga (referência de comportamento a portar):** Tickets 01–09.
+**Entregue na stack antiga (referência de comportamento a portar):** Tickets 01–09. **Entregue na stack nova:** 21, 22, 29 (`done`); 23 em andamento.
 
 **Fila (blockers-first; "∥" = pode rodar em paralelo, no máximo 2 subagentes):**
 
@@ -11,15 +11,16 @@
 | 1 | [21](issues/21-fundacao-cloudflare-d1-ci.md) Fundação Cloudflare, D1, CI/CD e contas | — |
 | 2 | [22](issues/22-auth-better-auth-rbac.md) Auth multi-Loja, RBAC, e-mail | 21 |
 | 3 | [23](issues/23-portar-cardapio-complementos.md) Cardápio e Complementos ∥ [29](issues/29-area-ops-lojas-plano-taxas.md) Área Ops | 22 |
-| 4 | [24](issues/24-portar-operacao-pedido-delivery.md) Horários, Pausa, Pedido, Delivery, impressão ∥ [28](issues/28-onboarding-dono-slug-qr-pixel.md) Onboarding do Dono, Slug, QR, Pixel | 23 (+29 para o 28) |
-| 5 | [25](issues/25-cutover-producao-cloudflare.md) Domínios, e-mail, remoção do legado, fechar PR #19 | 24, 28, 29 |
-| 6 | [26](issues/26-pix-abacatepay.md) PIX AbacatePay ∥ [13](issues/13-guest-conta-cupom-boas-vindas.md) Conta do Consumidor e Cupons | 25, 29 / 24 |
-| 7 | [27](issues/27-credito-efi-abacatepay.md) Cartão Normal (Efí) e Rápido (AbacatePay) + avaliar débito | 26 |
-| 8 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 |
-| 9 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano/faixa, relatórios, Repasses e lotes ∥ [15](issues/15-reconciliacao-railway-cron.md) Reconciliação | 12 |
-| 10 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção | 14, 15 |
+| 4 | [24a](issues/24a-storefront-checkout-pedido.md) Storefront: checkout, Pedido e acompanhamento ∥ [28](issues/28-onboarding-dono-slug-qr-pixel.md) Onboarding do Dono, vitrine, Slug, QR, Pixel, funil | 23 / 23 + 29 (telas de checkout do 28 depois da UI do 24a) |
+| 5 | [24b](issues/24b-painel-operacao-pedido.md) Painel: horários, Pausa, entrega, fila, impressão ∥ [25](issues/25-cutover-producao-cloudflare.md)-infra (domínios, DNS, MillionSend, Turnstile, Sentry) | contrato do 24a / 24a + 28 + 29 |
+| 6 | [25](issues/25-cutover-producao-cloudflare.md)-legado + smoke (remoção do legado, fechar PR #19) | 24b |
+| 7 | [26](issues/26-pix-abacatepay.md) PIX AbacatePay ∥ [13](issues/13-guest-conta-cupom-boas-vindas.md) Conta do Consumidor (código WhatsApp) e Cupons | 25, 29 / 24a |
+| 8 | [27](issues/27-credito-efi-abacatepay.md) Cartão Normal (Efí) e Rápido (AbacatePay) + avaliar débito | 26 |
+| 9 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 (+ detalhe do Pedido do 24b) |
+| 10 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano/faixa, relatórios, Repasses e lotes ∥ [15](issues/15-reconciliacao-cron.md) Reconciliação | 12 |
+| 11 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção (segurança de dados, widget, bloco humano final, runbook) | 14, 15 + passo humano whatsmiau |
 
-**Fora da fila:** 20 (cortado pela decisão 64; critérios no /code-review de cada ticket), 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
+**Fora da fila:** 24 (superseded por 24a/24b), 20 (cortado pela decisão 64; critérios no /code-review de cada ticket), 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
 
 **Integração autorizada pelo Dono nesta execução:** por ticket, PR → CI verde → squash merge na `master` → `db-migrate` se houver migration (contract exige confirmação) → deploy pelo CI → smoke. Credenciais de pagamento de produção.
 
