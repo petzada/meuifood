@@ -33,6 +33,18 @@ export {
   type StoreMenuOption,
 } from "./menu";
 export {
+  type FunnelCounter,
+  ONBOARDING_AUDIT_ACTIONS,
+  type OnboardingAuditAction,
+  type OnboardingChecklistFacts,
+  type OwnerProfileData,
+  type OwnerProfileRow,
+  type PublicShowcaseRow,
+  type StoreContactData,
+  type StoreSettingsRow,
+  type StoreShowcaseData,
+} from "./onboarding-db";
+export {
   ACTIVATION_REQUIRED_CHECKS,
   type EffectivePaymentFee,
   ONBOARDING_CHECKS,
@@ -89,6 +101,8 @@ export {
   type DeliveryMode,
   ETA_MAX_MINUTES,
   FEE_PAYMENT_METHODS,
+  FUNNEL_EVENTS,
+  type FunnelEventName,
   MEMBERSHIP_ROLES,
   MENU_DESCRIPTION_MAX,
   MENU_MAX_CENTS,
@@ -112,7 +126,11 @@ export {
   PIX_KEY_TYPES,
   PLATFORM_ROLES,
   type PlatformRole,
+  PROFILE_OTHER_MAX,
   PROVIDER_OPERATIONS,
+  STORE_CUISINES,
+  STORE_DESCRIPTION_MAX,
+  STORE_GOALS,
   STORE_STATUSES,
   type StoreStatus,
 } from "./schema";

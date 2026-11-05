@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 import { centsSchema } from "../money.js";
+import { storefrontShowcaseSchema } from "../onboarding/showcase.js";
 import { phoneE164Schema, customerPhoneSchema } from "./checkout.js";
 import { civilTimeSchema, storeOpenStateSchema, weekdaySchema } from "./hours.js";
 import { cardBrandsSchema, etaRangeSchema } from "./settings.js";
@@ -70,6 +71,12 @@ export const storefrontStoreStateSchema = z.object({
   cardBrands: cardBrandsSchema,
   /** WhatsApp da Loja para `wa.me` "Falar com a Loja". */
   whatsapp: phoneE164Schema.nullable(),
+  /**
+   * Vitrine do Ticket 28: logo, capa, descrição (cabeçalho, "Sobre a Loja", meta description),
+   * Instagram e IDs de Pixel só desta Loja. A api sempre envia; opcional só para respostas e
+   * fixtures anteriores ao 28 continuarem válidas (ausente = `EMPTY_STOREFRONT_SHOWCASE`).
+   */
+  showcase: storefrontShowcaseSchema.optional(),
 });
 export type StorefrontStoreState = z.infer<typeof storefrontStoreStateSchema>;
 

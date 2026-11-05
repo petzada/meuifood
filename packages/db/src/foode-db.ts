@@ -15,6 +15,13 @@ import {
 import { newId, utcNow } from "./conventions";
 import { createMenuOps, publicMenuBySlug, type PublicStoreMenu } from "./menu";
 import { FoodeDbError } from "./errors";
+import {
+  createOnboardingOps,
+  currentSlugForHistorical,
+  publicShowcaseOf,
+  type PublicShowcaseRow,
+  recordFunnelEvent,
+} from "./onboarding-db";
 import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
@@ -22,6 +29,7 @@ import {
   auditEvents,
   MEMBERSHIP_ROLES,
   type MembershipRole,
+  type FunnelEventName,
   storeMemberships,
   stores,
   type StoreStatus,
@@ -266,6 +274,27 @@ export function createFoodeDb(d1: D1Database) {
        * condições na mesma escrita, acompanhamento por token e busca por telefone auditada.
        */
       ...createStorefrontOrderOps(d1),
+
+      /**
+       * Vitrine pública do Ticket 28 (logo, capa, descrição, Instagram, Pixel). `storeId` só de
+       * uma Loja já resolvida pelo Slug como `active` (`operationBySlug`); null = sem vitrine.
+       */
+      showcaseOf(storeId: string): Promise<PublicShowcaseRow | null> {
+        return publicShowcaseOf(d1, storeId);
+      },
+
+      /**
+       * Link personalizado antigo (decisão 69): o link atual da Loja dona, para o 308 do
+       * Storefront (um salto, qualquer estado da Loja); null = não é link antigo.
+       */
+      currentSlugForHistorical(slug: string): Promise<string | null> {
+        return currentSlugForHistorical(d1, slug);
+      },
+
+      /** Funil próprio (Ticket 28): +1 no contador do dia para a Loja `active` do Slug. */
+      recordFunnelEvent(slug: string, event: FunnelEventName, day: string): Promise<boolean> {
+        return recordFunnelEvent(d1, slug, event, day);
+      },
     },
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
@@ -371,6 +400,9 @@ export function createFoodeDb(d1: D1Database) {
 
         /** Pedidos no Painel (Ticket 24a/24b): fila, detalhe, avanço e cancelamento sem Estorno. */
         orders: () => createOrderOps(d1, context),
+
+        /** Onboarding, dados, vitrine, Slug, Pixel e funil (Ticket 28): escrita só do Dono. */
+        onboarding: () => createOnboardingOps(d1, context),
 
         async members(): Promise<StoreMember[]> {
           return db

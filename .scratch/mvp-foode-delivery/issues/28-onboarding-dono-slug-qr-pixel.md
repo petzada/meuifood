@@ -4,7 +4,7 @@
 
 **Blocked by:** 23 — Portar Cardápio e Complementos; 29 — Área Ops. Os disparos em telas do checkout e da confirmação (Pixel `purchase`, eventos `checkout` e `pedido` do funil) entram depois que a UI do [24a](24a-storefront-checkout-pedido.md) estiver integrada.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Fable (UI/UX); a rota de Slug/Pixel/perfil/vitrine/eventos na API pode ser feita pelo mesmo agente ou por um Opus antes.
 
@@ -40,6 +40,8 @@
 - [ ] Mobile-first e visual Foode.
 - [ ] Testes: Slug inválido/duplicado, Operador negado, eventos de Pixel e do funil sem dados pessoais, descrição > 160 rejeitada, imagem inválida rejeitada, respostas de perfil visíveis só ao Ops e ao Dono da Loja, vazamento entre Lojas. Rotas com D1 via `@cloudflare/vitest-plugin` só no CI.
 - [ ] UI segue as [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) (ONB-01, ONB-02, ONB-04, LNK-01 a LNK-03, CFG-04, NAV-05) e [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) (C1, §6 Pixel) aplicáveis e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, matriz de papéis em module, testes que afirmam comportamento).
+- [ ] "Link personalizado" no lugar de "Slug" em toda a UI e copy ([69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md)).
+- [ ] Histórico de links por Loja: link antigo responde 308 para o atual (mesmo subcaminho e query, um salto só), fica reservado à Loja e a Loja pode voltar a ele; testes D1 de redirecionamento, reserva e isolamento ([69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md)).
 
 ## Comments
 
@@ -56,3 +58,11 @@
 - 2026-11-05 — Critérios consolidados com 63–65: P-ONB-3, P-ONB-4 (com leitura no `/ops`, pendente do Ticket 29), P-VIS-1, P-VIS-2, P-VIS-3, P-5.4 (Loja), P-CFG-4 (lado do Dono) e eventos do funil (P-REL-4) entraram no checklist. O tour de 3 passos (P-ONB-1) foi para o [24b](24b-painel-operacao-pedido.md), porque a fila nasce lá e o 28 roda antes dele.
 
 - 2026-11-05 — Decisão [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md) confirma a ida do tour de 3 passos (P-ONB-1) para o 24b.
+
+- 2026-11-05 — Fatia contrato + API (branch `feat/28-onboarding-391f`): migration 0005 (`store_showcases`, `store_onboarding`, `store_funnel_daily`), `@foode/shared/onboarding`, RPCs do Dono no `PainelRpc` (`onboardingGet`, `onboardingAnswerProfile`, `onboardingAcknowledgeReady`, `storeSettingsGet`, `storeCheckSlug`, `storeSetSlug`, `storeSetContact`, `storeSetPixels`, `storeSetShowcase`, `storeUploadBrandImage`, `funnelReport`), `ownerProfile` no `opsGetStore`, `showcase` no `GET /storefront/lojas/:slug/estado`, `POST /storefront/lojas/:slug/eventos` (funil; `order` contado pela api na criação do Pedido) e `GET /media/stores/:id/brand/:file`. QR Code gerado no cliente a partir de `storeUrl` (LNK-01), sem lib na api. Pendente: UI (admin `/configuracoes/loja` e `/configuracoes/divulgacao`, perguntas de perfil, checklist; web: logo/capa/descrição/meta description, Pixel, compartilhar, envio dos eventos). CEP do endereço do Dono segue obrigatório (`store_profiles.address_postal_code NOT NULL`): P-CFG-4 "CEP opcional" exige contract.
+
+- 2026-11-05 — Decisão [69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md): links antigos funcionam sempre (308 + reserva); "Link personalizado" na UI. Substitui "Slug sem histórico".
+
+- 2026-11-05 — Decisão [69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md) na API/DB (branch `feat/28-onboarding-391f`): tabela `store_slug_history` na migration 0005 (link antigo único globalmente, FK para `stores`, `utcCheck`). `storeSetSlug` (e a troca pelo Ops) grava o anterior no histórico na mesma escrita; voltar a um link antigo da própria Loja o tira do histórico; link antigo de OUTRA Loja = `conflict` (Dono, `opsCreateStore` e `opsUpdateStore`); `storeCheckSlug` devolve `taken` para link antigo de outra Loja. **Contrato de redirecionamento:** toda rota `/storefront/lojas/{antigo}/...` da api que daria 404 responde **308** com `Location: /storefront/lojas/{atual}/...` (mesmo subcaminho e query, um salto, inclusive Loja suspensa), header `x-foode-current-slug` e corpo `{ error: "slug_moved", currentSlug }` (`storefrontSlugMovedSchema`, `STOREFRONT_CURRENT_SLUG_HEADER` e `movedStorePath` em `@foode/shared/onboarding`). O web chama a api com `redirect: "manual"` e, ao receber 308, responde 308 para `/loja/{atual}{subcaminho}?{query}` (`movedStorePath(pathname + search, currentSlug)`). Pendente no admin: o `checkSlug` do Ops (lado cliente) só conhece os slugs atuais; o servidor já recusa link reservado com `conflict`. Copy: "Seus links e QR antigos continuam funcionando."
+
+- 2026-11-05 — Done (PR do 28). API `1bfe7c9`/`ec385c3` (decisão 69), UI `700af23`; migration `0005_onboarding_vitrine_funil` (vitrine, perfil, funil agregado, histórico de links). QR gerado no cliente sem dependência. Pendente: teste D1 de que criar Pedido soma `order` no funil.

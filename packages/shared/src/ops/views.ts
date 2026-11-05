@@ -1,6 +1,7 @@
 // Tipos de leitura da área Ops (listas e detalhe). A api monta a partir do D1; o admin só lê.
 // Datas em ISO-8601 UTC; dinheiro em centavos; percentuais em basis points.
 import type { StoreStatus } from "../auth/schemas.js";
+import type { OwnerProfileView } from "../onboarding/profile.js";
 import type { PixKeyType, StoreAddress } from "./documents.js";
 import type { FeePaymentMethod, PaymentProvider, ProviderOperation } from "./fees.js";
 import type { BillingCycle, PlanTier } from "./plans.js";
@@ -85,6 +86,8 @@ export type OpsStoreDetail = OpsStoreListItem & {
   payout: PayoutAccountView | null;
   owners: StoreOwnerView[];
   planHistory: StorePlanView[];
+  /** Respostas de perfil do Dono (Ticket 28, P-ONB-4; uso interno da Foode). null = não respondidas. */
+  ownerProfile: OwnerProfileView | null;
   updatedAt: string;
 };
 

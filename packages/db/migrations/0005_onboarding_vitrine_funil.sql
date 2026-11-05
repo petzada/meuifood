@@ -1,0 +1,71 @@
+CREATE TABLE `store_funnel_daily` (
+	`store_id` text NOT NULL,
+	`day` text NOT NULL,
+	`event` text NOT NULL,
+	`count` integer DEFAULT 0 NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	PRIMARY KEY(`store_id`, `day`, `event`),
+	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "store_funnel_daily_day" CHECK(date("day") IS "day"),
+	CONSTRAINT "store_funnel_daily_event" CHECK("event" IN ('visit', 'item_view', 'add_to_cart', 'checkout_start', 'order')),
+	CONSTRAINT "store_funnel_daily_count" CHECK("count" >= 0),
+	CONSTRAINT "store_funnel_daily_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
+);
+--> statement-breakpoint
+CREATE TABLE `store_onboarding` (
+	`store_id` text PRIMARY KEY NOT NULL,
+	`profile_cuisine` text,
+	`profile_cuisine_other` text,
+	`profile_goal` text,
+	`profile_goal_other` text,
+	`profile_answered_at` text,
+	`profile_answered_by_user_id` text,
+	`slug_confirmed_at` text,
+	`ready_acknowledged_at` text,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`profile_answered_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "store_onboarding_cuisine" CHECK("profile_cuisine" IS NULL OR "profile_cuisine" IN ('lanches', 'pizza', 'japonesa', 'brasileira', 'marmitas', 'doces', 'acai', 'saudavel', 'bebidas', 'other')),
+	CONSTRAINT "store_onboarding_goal" CHECK("profile_goal" IS NULL OR "profile_goal" IN ('start_delivery', 'leave_marketplaces', 'organize_whatsapp', 'sell_more', 'other')),
+	CONSTRAINT "store_onboarding_profile_complete" CHECK(("profile_cuisine" IS NULL AND "profile_goal" IS NULL AND "profile_answered_at" IS NULL AND "profile_answered_by_user_id" IS NULL) OR ("profile_cuisine" IS NOT NULL AND "profile_goal" IS NOT NULL AND "profile_answered_at" IS NOT NULL AND "profile_answered_by_user_id" IS NOT NULL)),
+	CONSTRAINT "store_onboarding_cuisine_other" CHECK(("profile_cuisine" IS 'other') = ("profile_cuisine_other" IS NOT NULL) AND ("profile_cuisine_other" IS NULL OR length("profile_cuisine_other") BETWEEN 1 AND 80)),
+	CONSTRAINT "store_onboarding_goal_other" CHECK(("profile_goal" IS 'other') = ("profile_goal_other" IS NOT NULL) AND ("profile_goal_other" IS NULL OR length("profile_goal_other") BETWEEN 1 AND 80)),
+	CONSTRAINT "store_onboarding_answered_at_utc" CHECK("profile_answered_at" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', "profile_answered_at") IS "profile_answered_at"),
+	CONSTRAINT "store_onboarding_slug_confirmed_at_utc" CHECK("slug_confirmed_at" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', "slug_confirmed_at") IS "slug_confirmed_at"),
+	CONSTRAINT "store_onboarding_ready_at_utc" CHECK("ready_acknowledged_at" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', "ready_acknowledged_at") IS "ready_acknowledged_at"),
+	CONSTRAINT "store_onboarding_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at"),
+	CONSTRAINT "store_onboarding_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
+);
+--> statement-breakpoint
+CREATE TABLE `store_showcases` (
+	`store_id` text PRIMARY KEY NOT NULL,
+	`description` text,
+	`logo_object_key` text,
+	`cover_object_key` text,
+	`instagram` text,
+	`meta_pixel_id` text,
+	`google_tag_id` text,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "store_showcases_description" CHECK("description" IS NULL OR length("description") BETWEEN 1 AND 160),
+	CONSTRAINT "store_showcases_logo_key" CHECK("logo_object_key" IS NULL OR length("logo_object_key") BETWEEN 1 AND 200),
+	CONSTRAINT "store_showcases_cover_key" CHECK("cover_object_key" IS NULL OR length("cover_object_key") BETWEEN 1 AND 200),
+	CONSTRAINT "store_showcases_instagram" CHECK("instagram" IS NULL OR (length("instagram") BETWEEN 1 AND 30 AND "instagram" NOT GLOB '*[^a-z0-9._]*')),
+	CONSTRAINT "store_showcases_meta_pixel" CHECK("meta_pixel_id" IS NULL OR (length("meta_pixel_id") BETWEEN 15 AND 16 AND "meta_pixel_id" NOT GLOB '*[^0-9]*')),
+	CONSTRAINT "store_showcases_google_tag" CHECK("google_tag_id" IS NULL OR (length("google_tag_id") BETWEEN 6 AND 23 AND "google_tag_id" NOT GLOB '*[^A-Z0-9-]*')),
+	CONSTRAINT "store_showcases_created_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "created_at") IS "created_at"),
+	CONSTRAINT "store_showcases_updated_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "updated_at") IS "updated_at")
+);
+--> statement-breakpoint
+CREATE TABLE `store_slug_history` (
+	`slug` text PRIMARY KEY NOT NULL,
+	`store_id` text NOT NULL,
+	`replaced_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "store_slug_history_slug_format" CHECK(length("slug") BETWEEN 3 AND 63 AND "slug" NOT GLOB '*[^a-z0-9-]*' AND "slug" NOT GLOB '-*' AND "slug" NOT GLOB '*-'),
+	CONSTRAINT "store_slug_history_replaced_at_utc" CHECK(strftime('%Y-%m-%dT%H:%M:%fZ', "replaced_at") IS "replaced_at")
+);
+--> statement-breakpoint
+CREATE INDEX `store_slug_history_store_idx` ON `store_slug_history` (`store_id`);
