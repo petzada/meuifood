@@ -122,7 +122,9 @@ export {
   TOAST_MAX,
   ToastProvider,
   useToast,
+  type ToastAction,
   type ToastApi,
+  type ToastOptions,
   type ToastItem,
   type ToastTone,
 } from "./toast.js";

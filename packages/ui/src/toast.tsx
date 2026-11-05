@@ -8,6 +8,8 @@
 // - Some sozinho em 4 s ou no X (`aria-label="Fechar aviso"`); no máximo 3 empilhados (o mais
 //   antigo sai). `role="status"`; erro `role="alert"`. Posição fixa: não desloca nada.
 // - Animação só de entrada, desligada com `prefers-reduced-motion` (styles.css).
+// - Ação opcional de um toque (decisão 74, Storefront): "Ver carrinho", "Desfazer". Com ação, a
+//   duração pode ser maior (ex.: 5 s no "Desfazer", K2).
 import {
   createContext,
   type ReactNode,
@@ -21,11 +23,21 @@ import {
 
 export type ToastTone = "success" | "error" | "info";
 
-export type ToastItem = { id: number; message: string; tone: ToastTone };
+export type ToastAction = { label: string; onClick: () => void };
+
+export type ToastOptions = { action?: ToastAction; durationMs?: number; tone?: ToastTone };
+
+export type ToastItem = {
+  action?: ToastAction;
+  durationMs: number;
+  id: number;
+  message: string;
+  tone: ToastTone;
+};
 
 export type ToastApi = {
   /** Mostra um aviso; devolve o id (para fechar antes, se preciso). */
-  show(message: string, options?: { tone?: ToastTone }): number;
+  show(message: string, options?: ToastOptions): number;
   success(message: string): number;
   error(message: string): number;
   dismiss(id: number): void;
@@ -50,12 +62,24 @@ export function useToast(): ToastApi {
 
 function ToastView({ item, onClose }: { item: ToastItem; onClose: (id: number) => void }) {
   useEffect(() => {
-    const timer = setTimeout(() => onClose(item.id), TOAST_DURATION_MS);
+    const timer = setTimeout(() => onClose(item.id), item.durationMs);
     return () => clearTimeout(timer);
-  }, [item.id, onClose]);
+  }, [item.durationMs, item.id, onClose]);
   return (
     <div className="foode-toast" role={item.tone === "error" ? "alert" : "status"}>
       <p className="foode-toast__message">{item.message}</p>
+      {item.action ? (
+        <button
+          type="button"
+          className="foode-toast__action"
+          onClick={() => {
+            item.action?.onClick();
+            onClose(item.id);
+          }}
+        >
+          {item.action.label}
+        </button>
+      ) : null}
       <button
         type="button"
         className="foode-toast__close"
@@ -78,11 +102,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((list) => list.filter((item) => item.id !== id));
   }, []);
 
-  const show = useCallback((message: string, options?: { tone?: ToastTone }) => {
+  const show = useCallback((message: string, options?: ToastOptions) => {
     seq.current += 1;
     const id = seq.current;
-    const tone = options?.tone ?? "info";
-    setItems((list) => [...list, { id, message, tone }].slice(-TOAST_MAX));
+    const item: ToastItem = {
+      durationMs: options?.durationMs ?? TOAST_DURATION_MS,
+      id,
+      message,
+      tone: options?.tone ?? "info",
+      ...(options?.action ? { action: options.action } : {}),
+    };
+    setItems((list) => [...list, item].slice(-TOAST_MAX));
     return id;
   }, []);
 

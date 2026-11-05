@@ -1,7 +1,9 @@
 // Componente: fluxo do carrinho no Storefront (K1–K6). Abre o item pela URL (`?item=`),
 // adiciona, edita pelo carrinho, muda quantidade, remove e desfaz. `next/navigation` é um
 // roteador em memória; o recálculo no servidor (fetch) é mocado.
-import { act, render, screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,7 +84,9 @@ describe("Storefront: carrinho", () => {
     await addSoda(user);
 
     expect(screen.queryByRole("dialog", { name: "Refrigerante lata" })).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Refrigerante lata adicionado");
+    expect(screen.getAllByRole("status").at(-1)).toHaveTextContent(
+      "Refrigerante lata adicionado ao carrinho",
+    );
     const bar = screen.getByRole("button", { name: /Ver carrinho\s*1 item · R\$\s6,00/u });
     expect(bar).toBeVisible();
     expect(
@@ -119,7 +123,7 @@ describe("Storefront: carrinho", () => {
     );
 
     expect(within(cartDialog()).getByText("Seu carrinho está vazio.")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Refrigerante lata removido");
+    expect(screen.getAllByRole("status").at(-1)).toHaveTextContent("Refrigerante lata removido");
 
     await user.click(screen.getByRole("button", { name: "Desfazer" }));
 
@@ -146,7 +150,7 @@ describe("Storefront: carrinho", () => {
     await user.click(within(sheet).getByRole("radio", { name: /Ao ponto/u }));
     await user.click(within(sheet).getByRole("button", { name: /^Salvar · R\$\s25,00$/u }));
 
-    expect(screen.getByRole("status")).toHaveTextContent("X-Burger atualizado");
+    expect(screen.getAllByRole("status").at(-1)).toHaveTextContent("X-Burger atualizado");
     const cart = cartDialog();
     expect(within(cart).getByText("Ponto da carne: Ao ponto")).toBeInTheDocument();
     expect(within(cart).queryByText("Ponto da carne: Mal passado")).not.toBeInTheDocument();

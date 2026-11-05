@@ -17,7 +17,7 @@ import {
 } from "@foode/shared/menu";
 import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { StorefrontStoreState } from "@foode/shared/order";
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -37,7 +37,6 @@ import { firePixelEvent, type PixelWindow } from "./pixels";
 import { itemShareUrl, shareLink, shareOutcomeMessagePt, storeShareUrl } from "./share";
 import { StoreHeader, type StoreBranding } from "./store-header";
 import { describeAvailability } from "./store-status";
-import { Toast, useToast } from "./toast";
 import { useStoreCart } from "./use-store-cart";
 
 export type StorefrontProps = {
@@ -73,7 +72,8 @@ export function Storefront({
   const itemsById = useMemo(() => indexMenuItems(menu), [menu]);
   const featured = useMemo(() => featuredItems(menu), [menu]);
   const { cart, dispatch } = useStoreCart(menu.slug);
-  const { dismiss, show, toast } = useToast();
+  const toast = useToast();
+  const show = toast.show;
 
   const [query, setQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
@@ -171,9 +171,9 @@ export function Storefront({
       });
     }
     closeItemSheet();
-    show(`${item?.name ?? "Item"} adicionado`, {
-      label: "Ver carrinho",
-      onClick: () => setCartOpen(true),
+    show(`${item?.name ?? "Item"} adicionado ao carrinho`, {
+      action: { label: "Ver carrinho", onClick: () => setCartOpen(true) },
+      tone: "success",
     });
   }
 
@@ -181,14 +181,13 @@ export function Storefront({
     const view = summary.lines[lineIndex];
     if (!view) return;
     dispatch({ lineIndex, type: "remove" });
-    show(
-      `${view.item?.name ?? "Item"} removido`,
-      {
+    show(`${view.item?.name ?? "Item"} removido`, {
+      action: {
         label: "Desfazer",
         onClick: () => dispatch({ line: view.line, lineIndex, type: "restore" }),
       },
-      5000,
-    );
+      durationMs: 5000,
+    });
   }
 
   function handleEdit(lineIndex: number) {
@@ -339,8 +338,6 @@ export function Storefront({
         onOpen={() => setCartOpen(true)}
         subtotalCents={summary.subtotalCents}
       />
-
-      <Toast onDismiss={dismiss} toast={toast} />
     </main>
   );
 }

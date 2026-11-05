@@ -4,12 +4,13 @@
 // expande Input + "Aplicar"; maiúsculas e sem espaços enquanto digita; spinner no próprio
 // botão; aplicado = chip com o desconto + "Remover"; recusa = mensagem específica inline
 // (motivo do servidor). O Cupom de boas-vindas entra sozinho quando elegível, com explicação.
+// Cupom digitado e aceito também é confirmado no Toast padrão (decisão 74); erro fica inline (G4).
 // Sem vitrine de Cupons (P-7.1): só por código.
 import { COUPON_CODE_MAX, type AppliedCoupon } from "@foode/shared/coupon";
 import { formatBRL } from "@foode/shared/money";
-import { Badge, Button, Field, Input } from "@foode/ui";
+import { Badge, Button, Field, Input, useToast } from "@foode/ui";
 import { SpinnerGap, Tag } from "@phosphor-icons/react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type CouponFieldProps = {
   /** Cupom aceito pela cotação (promocional digitado ou boas-vindas automático). */
@@ -47,6 +48,17 @@ export function CouponField({
   const [code, setCode] = useState(pendingCode);
   const inputId = useId();
   const focusInput = () => document.getElementById(inputId)?.focus();
+  const toast = useToast();
+  const announced = useRef<string | null>(null);
+
+  // Cupom digitado que o servidor aceitou: confirma uma vez no Toast.
+  const appliedKey =
+    applied?.source === "promo" ? `${applied.code}:${applied.discountCents}` : null;
+  useEffect(() => {
+    if (!appliedKey || announced.current === appliedKey || !applied) return;
+    announced.current = appliedKey;
+    toast.success(`Cupom ${applied.code ?? ""} aplicado: −${formatBRL(applied.discountCents)}`);
+  }, [applied, appliedKey, toast]);
 
   // Recusa do servidor reabre o campo com o código para corrigir.
   useEffect(() => {

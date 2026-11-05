@@ -1,10 +1,11 @@
 // Componente: bloco do PIX na página do Pedido (§6 PIX). QR, copia-e-cola com "Código copiado"
-// em `role="status"`, valor, contagem regressiva e os estados (gerando, pago, expirado, falhou).
+// no Toast padrão (`role="status"`, decisão 74), valor, contagem regressiva e os estados (gerando, pago, expirado, falhou).
 import type { OrderPix } from "@foode/shared/payment";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { render } from "../../../../../test/render";
 import { PixPayment } from "./pix-payment";
 
 const NOW = Date.parse("2026-11-05T15:00:00.000Z");
@@ -36,7 +37,7 @@ describe("PixPayment", () => {
     );
     expect(screen.getByLabelText("PIX copia e cola")).toHaveValue(pending.copyPaste);
     expect(screen.getByText("30:00")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Copiar código" }));
     expect(copy).toHaveBeenCalledWith(pending.copyPaste);
     expect(screen.getByRole("status")).toHaveTextContent("Código copiado");
@@ -53,7 +54,7 @@ describe("PixPayment", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Copiar código" }));
-    expect(screen.getByRole("status")).toHaveTextContent(/copie manualmente/u);
+    expect(screen.getByRole("alert")).toHaveTextContent(/copie manualmente/u);
   });
 
   it("contagem regressiva anda a cada segundo e, no fim, avisa que está conferindo", () => {
