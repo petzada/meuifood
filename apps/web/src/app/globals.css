@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@foode/shared/brand.css";
 @import "@foode/ui/styles.css";
+@import "./marketing.css";
 
 @theme inline {
   --font-sans: "Nunito Variable", sans-serif;
@@ -25,10 +26,6 @@ body {
 
 a {
   text-underline-offset: 0.2em;
-}
-
-.hero-photo {
-  border: 1px solid var(--color-hairline);
 }
 
 /* ---- Storefront (Ticket 23): outline, sem sombra, alvos >= 44 px ---- */

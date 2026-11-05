@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { searchString } from "../../../lib/slug-moved";
 import { getPublicMenu, getStoreState } from "../../../lib/storefront";
+import { storefrontMetadata } from "../../../lib/storefront-seo";
 import { PixelScripts } from "./storefront/pixel-scripts";
 import { Storefront } from "./storefront/storefront";
 
@@ -19,12 +20,17 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const [result, state] = await Promise.all([getPublicMenu(slug), getStoreState(slug)]);
-  if (result.kind !== "ok") return { title: "Cardápio indisponível | Foode Delivery" };
-  // Meta description = descrição curta da Loja (P-VIS-3); sem ela, a frase padrão.
-  const description =
-    (state.kind === "ok" ? state.data.showcase?.description : null) ??
-    `Veja o Cardápio de ${result.menu.name} e faça seu pedido pelo celular.`;
-  return { description, title: `${result.menu.name} | Cardápio` };
+  if (result.kind !== "ok") {
+    return {
+      title: { absolute: "Cardápio indisponível | Foode Delivery" },
+      robots: { index: false },
+    };
+  }
+  return storefrontMetadata(
+    slug,
+    result.menu.name,
+    state.kind === "ok" ? state.data.showcase : undefined,
+  );
 }
 
 export default async function StorefrontPage({

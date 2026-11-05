@@ -180,7 +180,9 @@ describe("storefront /loja/[slug]", () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ slug: "lanchonete-do-ze" }),
     });
-    expect(metadata.title).toBe("Lanchonete do Zé | Cardápio");
+    // Título absoluto (sem o template do site) e noindex sem descrição+logo (Ticket 31).
+    expect(metadata.title).toEqual({ absolute: "Lanchonete do Zé | Cardápio" });
+    expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(ids.burger).toMatch(/^[0-9a-f-]{36}$/u);
   });
 });

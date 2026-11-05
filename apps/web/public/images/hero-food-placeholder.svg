@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="">
+  <!--
+    PLACEHOLDER (Ticket 31): fundo "foto de comida desfocada" do hero, desenhado em vetor
+    para não usar imagem de terceiro sem licença. TROCAR por uma foto livre de direitos
+    (licença registrada em docs/landing/ASSETS.md) exportada em AVIF/WebP <= 120 KB, já
+    desfocada. Enquanto isso, as manchas quentes abaixo simulam o desfoque.
+  -->
+  <defs>
+    <filter id="b" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="70" />
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="#fff6f0" />
+  <g filter="url(#b)">
+    <ellipse cx="320" cy="260" rx="300" ry="220" fill="#f35050" />
+    <ellipse cx="1250" cy="220" rx="340" ry="240" fill="#ffb800" />
+    <ellipse cx="820" cy="620" rx="420" ry="260" fill="#e8893c" />
+    <ellipse cx="1400" cy="720" rx="260" ry="200" fill="#8bb24a" />
+    <ellipse cx="180" cy="760" rx="240" ry="180" fill="#c84b2f" />
+    <ellipse cx="760" cy="180" rx="200" ry="150" fill="#ffd27a" />
+  </g>
+</svg>
