@@ -2,9 +2,12 @@
 
 // Revisão do carrinho (K1–K6): linhas com escolhas agrupadas, −/+ com lixeira em 1,
 // "Editar" em texto, linha inválida destacada com a mensagem PT-BR, subtotal local na hora
-// e recálculo no servidor como fonte de verdade (G7). O checkout é do Ticket 24.
+// e recálculo no servidor como fonte de verdade (G7). O CTA leva ao checkout do Ticket 24a;
+// com pedido mínimo do Delivery, a faixa "Faltam R$ X" (K7) avisa antes; Loja fechada ou em
+// Pausa bloqueia o CTA com o motivo (decisão 41).
 import { cartLineErrorMessagePt, type Cart, type MenuItem } from "@foode/shared/menu";
 import { formatBRL } from "@foode/shared/money";
+import { minimumOrderGap } from "@foode/shared/order";
 import { Button, Price } from "@foode/ui";
 import { Minus, Plus, Trash } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
@@ -12,11 +15,20 @@ import { useEffect, useMemo, useState } from "react";
 import { quoteCart, type CartQuote } from "./cart-quote";
 import { describeLineChoices, summarizeCart, type CartLineView } from "./cart-store";
 import { Sheet } from "./sheet";
+import { blockedCheckoutMessage, type StoreAvailabilityView } from "./store-status";
+
+export function checkoutPath(storeSlug: string): string {
+  return `/loja/${encodeURIComponent(storeSlug)}/finalizar`;
+}
 
 export const CART_SHEET_TITLE_ID = "carrinho-sheet-title";
 
 export type CartSheetProps = {
+  /** Sem estado (api indisponível): o CTA segue liberado e a api decide no envio. */
+  availability?: StoreAvailabilityView | null;
   cart: Cart;
+  /** Pedido mínimo do Delivery (P-2.5); null sem mínimo ou sem Delivery. */
+  deliveryMinimumCents?: number | null;
   itemsById: ReadonlyMap<string, MenuItem>;
   onClose: () => void;
   onEdit: (lineIndex: number) => void;
@@ -150,7 +162,9 @@ function CartLineRow({
 }
 
 export function CartSheet({
+  availability = null,
   cart,
+  deliveryMinimumCents = null,
   itemsById,
   onClose,
   onEdit,
@@ -182,6 +196,9 @@ export function CartSheet({
     serverQuote && !serverQuote.ok ? cartLineErrorMessagePt[serverQuote.error.code] : null;
   const subtotalCents = serverQuote?.ok ? serverQuote.subtotalCents : summary.subtotalCents;
   const blocked = summary.hasInvalidLines || serverErrorIndex !== null;
+  const closedMessage = availability ? blockedCheckoutMessage(availability) : null;
+  const gap = minimumOrderGap(subtotalCents, deliveryMinimumCents);
+  const belowMinimum = gap !== null && gap.missingCents > 0;
 
   const footer =
     cart.lines.length === 0 ? null : (
@@ -194,10 +211,27 @@ export function CartSheet({
           <p className="text-sm font-bold text-[var(--color-error)]" role="alert">
             Revise os itens destacados para continuar.
           </p>
-        ) : (
-          <p className="text-sm text-[var(--color-muted)]">
-            Taxa de entrega e pagamento entram na próxima etapa.
+        ) : closedMessage ? (
+          <p className="text-sm font-bold text-[var(--color-ink)]" role="status">
+            {closedMessage}
           </p>
+        ) : belowMinimum ? (
+          <p className="text-sm text-[var(--color-ink)]" role="status">
+            Faltam <strong>{formatBRL(gap.missingCents)}</strong> para o pedido mínimo de{" "}
+            {formatBRL(gap.minimumCents)} no Delivery.
+          </p>
+        ) : null}
+        {blocked || closedMessage ? (
+          <Button aria-disabled="true" className="foode-button--pending" onClick={onClose}>
+            {closedMessage ? "Pedidos indisponíveis agora" : "Revise o carrinho"}
+          </Button>
+        ) : (
+          <Button href={checkoutPath(storeSlug)}>
+            <span className="flex w-full items-center justify-between gap-3">
+              <span>Finalizar pedido</span>
+              <span className="tabular-nums">{formatBRL(subtotalCents)}</span>
+            </span>
+          </Button>
         )}
         <Button onClick={onClose} variant="secondary">
           Adicionar mais itens
