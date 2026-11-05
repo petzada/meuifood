@@ -40,6 +40,8 @@
 - [ ] Mobile-first e visual Foode.
 - [ ] Testes: Slug inválido/duplicado, Operador negado, eventos de Pixel e do funil sem dados pessoais, descrição > 160 rejeitada, imagem inválida rejeitada, respostas de perfil visíveis só ao Ops e ao Dono da Loja, vazamento entre Lojas. Rotas com D1 via `@cloudflare/vitest-plugin` só no CI.
 - [ ] UI segue as [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) (ONB-01, ONB-02, ONB-04, LNK-01 a LNK-03, CFG-04, NAV-05) e [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) (C1, §6 Pixel) aplicáveis e passa no `/code-review` incluindo os critérios do antigo [Ticket 20](20-aprofundar-contratos-e-modules-do-front.md) (contrato único em `@foode/shared`, matriz de papéis em module, testes que afirmam comportamento).
+- [ ] "Link personalizado" no lugar de "Slug" em toda a UI e copy ([69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md)).
+- [ ] Histórico de links por Loja: link antigo responde 308 para o atual (mesmo subcaminho e query, um salto só), fica reservado à Loja e a Loja pode voltar a ele; testes D1 de redirecionamento, reserva e isolamento ([69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md)).
 
 ## Comments
 
@@ -58,3 +60,5 @@
 - 2026-11-05 — Decisão [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md) confirma a ida do tour de 3 passos (P-ONB-1) para o 24b.
 
 - 2026-11-05 — Fatia contrato + API (branch `feat/28-onboarding-391f`): migration 0005 (`store_showcases`, `store_onboarding`, `store_funnel_daily`), `@foode/shared/onboarding`, RPCs do Dono no `PainelRpc` (`onboardingGet`, `onboardingAnswerProfile`, `onboardingAcknowledgeReady`, `storeSettingsGet`, `storeCheckSlug`, `storeSetSlug`, `storeSetContact`, `storeSetPixels`, `storeSetShowcase`, `storeUploadBrandImage`, `funnelReport`), `ownerProfile` no `opsGetStore`, `showcase` no `GET /storefront/lojas/:slug/estado`, `POST /storefront/lojas/:slug/eventos` (funil; `order` contado pela api na criação do Pedido) e `GET /media/stores/:id/brand/:file`. QR Code gerado no cliente a partir de `storeUrl` (LNK-01), sem lib na api. Pendente: UI (admin `/configuracoes/loja` e `/configuracoes/divulgacao`, perguntas de perfil, checklist; web: logo/capa/descrição/meta description, Pixel, compartilhar, envio dos eventos). CEP do endereço do Dono segue obrigatório (`store_profiles.address_postal_code NOT NULL`): P-CFG-4 "CEP opcional" exige contract.
+
+- 2026-11-05 — Decisão [69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md): links antigos funcionam sempre (308 + reserva); "Link personalizado" na UI. Substitui "Slug sem histórico".

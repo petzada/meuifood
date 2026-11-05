@@ -241,3 +241,5 @@ _Avoid_: Void genérico, delete
 **Pausa (loja)**:
 Interruptor do Dono **ou do Operador** que bloqueia o checkout imediatamente, independente do horário de funcionamento; toda ativação/retomada é auditada e o Dono é avisado quando foi o Operador (decisão 63, P-OPE-4).
 _Avoid_: Fechado (é horário), offline genérico
+
+**Link personalizado**: nome, para o usuário, do identificador da Loja na URL (`/loja/{link}`); no código continua `slug`. Links antigos redirecionam para o atual e ficam reservados à Loja ([69](docs/decisoes/69-link-personalizado-redirecionamento.md)).
