@@ -1,0 +1,391 @@
+"use client";
+
+// Fila de Pedidos (Ticket 24b, PED-01 a PED-08, NAV-07): colunas outline por estado no
+// desktop/tablet e abas no celular; chips Todos/Delivery/Retirada; polling de 10 s com som
+// (faixa para liberar o áudio), "Atualizado há N s" e "Sem conexão" sem limpar a lista;
+// contador na aba do navegador; detalhe lateral; impressão 80 mm (inclusive ao aceitar, P-IMP-1);
+// tour de 3 passos na primeira visita. Server actions e carregadores entram por prop.
+import { Button } from "@foode/ui";
+import {
+  isAcceptTransition,
+  type OrderDetail,
+  type OrderQueueItem,
+  type OrderStatus,
+  QUEUE_FILTERS,
+  type QueueFilter,
+} from "@foode/shared/order";
+import { useCallback, useEffect, useId, useState } from "react";
+
+import {
+  type ActiveQueueColumn,
+  countNewUnopened,
+  formatUpdatedAgo,
+  groupByColumn,
+  QUEUE_COLUMN_LABEL,
+  QUEUE_COLUMNS,
+  QUEUE_FILTER_LABEL,
+  tabTitle,
+  transitionToast,
+} from "../../../../lib/orders-labels";
+import type { OrderActionResult } from "../actions";
+import { OrderCard } from "./order-card";
+import { type LoadDetail, OrderDetailPanel } from "./order-detail";
+import { PrintReceipt } from "./print-receipt";
+import { QueueTour, useQueueTour } from "./queue-tour";
+import type { QueueSound } from "./sound";
+import { type LoadList, useOrdersQueue } from "./use-orders-queue";
+
+type Toast = { id: number; tone: "success" | "error"; text: string };
+
+export type QueueBoardProps = {
+  cancel: (input: { orderId: string; from: OrderStatus }) => Promise<OrderActionResult>;
+  intervalMs?: number;
+  loadDetail: LoadDetail;
+  loadList: LoadList;
+  role: "owner" | "operator";
+  sound?: () => QueueSound;
+  storage?: Storage | null;
+  storefrontOrigin: string;
+  storeName: string;
+  storeSlug: string;
+  transition: (input: {
+    orderId: string;
+    from: OrderStatus;
+    to: OrderStatus;
+  }) => Promise<OrderActionResult>;
+  userId: string;
+};
+
+let toastSeq = 0;
+
+export function QueueBoard(props: QueueBoardProps) {
+  const {
+    cancel,
+    intervalMs,
+    loadDetail,
+    loadList,
+    role,
+    sound,
+    storage = typeof window === "undefined" ? null : window.localStorage,
+    storefrontOrigin,
+    storeName,
+    storeSlug,
+    transition,
+    userId,
+  } = props;
+
+  const queue = useOrdersQueue({
+    loadList,
+    ...(intervalMs !== undefined ? { intervalMs } : {}),
+    ...(sound ? { sound } : {}),
+  });
+  const tour = useQueueTour(userId, storage);
+
+  const [filter, setFilter] = useState<QueueFilter>("all");
+  const [column, setColumn] = useState<ActiveQueueColumn>("received");
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailVersion, setDetailVersion] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [printing, setPrinting] = useState<OrderDetail | null>(null);
+  const [copied, setCopied] = useState(false);
+  const filterLabelId = useId();
+
+  const groups = groupByColumn(queue.orders, filter);
+  const newCount = countNewUnopened(queue.orders, opened);
+  const total = queue.orders.length;
+
+  useEffect(() => {
+    document.title = tabTitle(newCount);
+  }, [newCount]);
+
+  const pushToast = useCallback((tone: Toast["tone"], text: string) => {
+    const id = ++toastSeq;
+    setToasts((list) => [...list, { id, tone, text }]);
+    if (tone === "success") {
+      setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), 4000);
+    }
+  }, []);
+
+  const open = useCallback((order: { id: string }) => {
+    setOpened((set) => (set.has(order.id) ? set : new Set([...set, order.id])));
+    setSelectedId(order.id);
+  }, []);
+
+  const close = useCallback(() => setSelectedId(null), []);
+  const donePrinting = useCallback(() => setPrinting(null), []);
+
+  async function applyResult(
+    order: { id: string; code: number; status: OrderStatus },
+    result: OrderActionResult,
+    to: OrderStatus,
+  ) {
+    if (result.ok) {
+      queue.patchOrder(order.id, result.data.status, result.data.next);
+      setDetailVersion((n) => n + 1);
+      pushToast("success", transitionToast(order.code, result.data.status));
+      if (result.data.print && isAcceptTransition(order.status, to)) {
+        try {
+          setPrinting(await loadDetail(order.id));
+        } catch {
+          pushToast("error", `Não foi possível abrir a impressão do Pedido #${order.code}.`);
+        }
+      }
+      return;
+    }
+    pushToast("error", result.message);
+    if (result.error === "conflict" || result.error === "not_found") await queue.refresh();
+  }
+
+  async function advance(
+    order: { id: string; code: number; status: OrderStatus },
+    to: OrderStatus,
+  ) {
+    if (busyId) return;
+    setBusyId(order.id);
+    try {
+      await applyResult(order, await transition({ orderId: order.id, from: order.status, to }), to);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function cancelOrder(order: OrderDetail) {
+    if (busyId) return;
+    setBusyId(order.id);
+    try {
+      await applyResult(
+        order,
+        await cancel({ orderId: order.id, from: order.status }),
+        "cancelled",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${storefrontOrigin}/loja/${storeSlug}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      pushToast("error", "Não foi possível copiar o link.");
+    }
+  }
+
+  return (
+    <section aria-label="Fila de Pedidos" className="space-y-5">
+      {!queue.sound.ready ? (
+        <button
+          type="button"
+          onClick={() => void queue.sound.unlock()}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3 text-left text-sm font-bold text-[var(--color-primary-strong)]"
+        >
+          <span>
+            <span aria-hidden="true">♪ </span>Clique para ativar o som de novos Pedidos
+          </span>
+          <span className="underline underline-offset-4">Ativar</span>
+        </button>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div role="group" aria-labelledby={filterLabelId} className="flex gap-1">
+          <span id={filterLabelId} className="sr-only">
+            Filtrar por tipo
+          </span>
+          {QUEUE_FILTERS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={filter === option}
+              onClick={() => setFilter(option)}
+              className={
+                filter === option
+                  ? "min-h-10 rounded-full bg-[var(--color-primary-strong)] px-4 text-sm font-bold text-white"
+                  : "min-h-10 rounded-full border border-[var(--color-hairline)] px-4 text-sm font-bold text-[var(--color-body)] hover:bg-[var(--color-primary-soft)]"
+              }
+            >
+              {QUEUE_FILTER_LABEL[option]}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-sm text-[var(--color-muted)]">
+          Concluídos hoje ({queue.closedToday.completed}) · Cancelados hoje (
+          {queue.closedToday.cancelled})
+        </p>
+
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
+          {queue.sound.ready ? (
+            <button
+              type="button"
+              onClick={queue.sound.toggleMute}
+              aria-pressed={queue.sound.muted}
+              className="rounded-full border border-[var(--color-hairline)] px-3 py-1 font-bold text-[var(--color-body)]"
+            >
+              {queue.sound.muted ? "Som silenciado" : "Som ligado"}
+            </button>
+          ) : null}
+          {queue.offline ? (
+            <p role="alert" className="font-bold text-[var(--color-error)]">
+              Sem conexão — tentando de novo
+            </p>
+          ) : queue.updatedAtMs !== null ? (
+            <p className="text-[var(--color-muted)]">
+              {formatUpdatedAgo(queue.updatedAtMs, Date.now())}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <p aria-live="polite" className="sr-only">
+        {queue.arrived.length > 0
+          ? queue.arrived.length === 1
+            ? "1 Pedido novo na fila."
+            : `${queue.arrived.length} Pedidos novos na fila.`
+          : ""}
+      </p>
+
+      <div role="tablist" aria-label="Colunas da fila" className="flex gap-1 md:hidden">
+        {QUEUE_COLUMNS.map((key) => (
+          <button
+            key={key}
+            role="tab"
+            type="button"
+            aria-selected={column === key}
+            onClick={() => setColumn(key)}
+            className={
+              column === key
+                ? "min-h-11 flex-1 rounded-full bg-[var(--color-primary-strong)] px-3 text-sm font-bold text-white"
+                : "min-h-11 flex-1 rounded-full border border-[var(--color-hairline)] px-3 text-sm font-bold text-[var(--color-body)]"
+            }
+          >
+            {QUEUE_COLUMN_LABEL[key]} ({groups[key].length})
+          </button>
+        ))}
+      </div>
+
+      {queue.loading ? (
+        <div aria-busy="true" className="grid gap-4 md:grid-cols-3">
+          {QUEUE_COLUMNS.map((key) => (
+            <div
+              key={key}
+              className="h-40 rounded-3xl border border-dashed border-[var(--color-hairline)]"
+            />
+          ))}
+        </div>
+      ) : total === 0 ? (
+        <div className="rounded-3xl border border-dashed border-[var(--color-hairline)] px-6 py-10 text-center">
+          <p className="font-bold text-[var(--color-ink)]">Nenhum Pedido agora.</p>
+          {role === "owner" ? (
+            <>
+              <p className="mt-1 text-sm text-[var(--color-body)]">Divulgue o link da sua Loja.</p>
+              <Button
+                variant="secondary"
+                type="button"
+                className="mt-4"
+                onClick={() => void copyLink()}
+              >
+                Copiar link
+              </Button>
+              <p aria-live="polite" className="mt-2 text-sm text-[var(--color-primary-strong)]">
+                {copied ? "Link copiado." : ""}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-[var(--color-body)]">
+              Novos Pedidos aparecem aqui com aviso sonoro.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {QUEUE_COLUMNS.map((key) => (
+            <section
+              key={key}
+              aria-label={`${QUEUE_COLUMN_LABEL[key]} (${groups[key].length})`}
+              className={`${column === key ? "block" : "hidden"} rounded-3xl border border-[var(--color-hairline)] p-3 md:block`}
+            >
+              <h2 className="flex items-center justify-between px-1 text-sm font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                {QUEUE_COLUMN_LABEL[key]}
+                <span className="rounded-full border border-[var(--color-hairline)] px-2 py-0.5 text-xs text-[var(--color-ink)]">
+                  {groups[key].length}
+                </span>
+              </h2>
+              <ul className="mt-3 space-y-3">
+                {groups[key].map((order: OrderQueueItem) => (
+                  <li key={order.id}>
+                    <OrderCard
+                      busy={busyId === order.id}
+                      isNew={order.status === "received" && !opened.has(order.id)}
+                      nowMs={queue.nowMs}
+                      onAdvance={(item, to) => void advance(item, to)}
+                      onOpen={open}
+                      order={order}
+                    />
+                  </li>
+                ))}
+                {groups[key].length === 0 ? (
+                  <li className="px-1 py-6 text-center text-sm text-[var(--color-muted)]">
+                    Nenhum Pedido aqui.
+                  </li>
+                ) : null}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <div
+        aria-live="polite"
+        className="fixed bottom-4 left-4 right-4 z-30 flex flex-col items-center gap-2 md:left-auto md:right-6 md:items-end"
+      >
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            role={toast.tone === "error" ? "alert" : "status"}
+            className={`flex items-center gap-3 rounded-2xl border bg-[var(--color-canvas)] px-4 py-3 text-sm font-bold ${
+              toast.tone === "error"
+                ? "border-[var(--color-error)] text-[var(--color-error)]"
+                : "border-[var(--color-primary)] text-[var(--color-primary-strong)]"
+            }`}
+          >
+            {toast.text}
+            {toast.tone === "error" ? (
+              <button
+                type="button"
+                onClick={() => setToasts((list) => list.filter((item) => item.id !== toast.id))}
+                className="rounded-full border border-current px-2 py-0.5 text-xs"
+              >
+                Fechar
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      {selectedId ? (
+        <OrderDetailPanel
+          busy={busyId === selectedId}
+          loadDetail={loadDetail}
+          onAdvance={(order, to) => advance(order, to)}
+          onCancel={cancelOrder}
+          onClose={close}
+          onPrint={setPrinting}
+          orderId={selectedId}
+          storeName={storeName}
+          storefrontOrigin={storefrontOrigin}
+          version={detailVersion}
+        />
+      ) : null}
+
+      {printing ? (
+        <PrintReceipt onDone={donePrinting} order={printing} storeName={storeName} />
+      ) : null}
+
+      {tour.open ? <QueueTour onFinish={tour.finish} /> : null}
+    </section>
+  );
+}

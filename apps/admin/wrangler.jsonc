@@ -16,6 +16,8 @@
   },
   "vars": {
     "SENTRY_ENVIRONMENT": "production",
+    // Origem do Storefront nos links do "Avisar no WhatsApp"; vira o domínio próprio no Ticket 25.
+    "STOREFRONT_ORIGIN": "https://foode-web.marciopetigrosso.workers.dev",
   },
   // Turnstile: a site key pública entra no build do Next como NEXT_PUBLIC_TURNSTILE_SITE_KEY
   // (deploy.yml, GitHub variable TURNSTILE_SITE_KEY); não é var do Worker.

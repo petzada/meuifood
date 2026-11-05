@@ -4,7 +4,7 @@
 
 **Blocked by:** 24a — só o commit de contrato (migration `0004`, Zod do Pedido e da configuração operacional, module de estados). A fila pode ser construída com Pedidos criados pelas operações de `packages/db` nos testes; não espera a UI do checkout.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus para as RPCs; Fable para as telas e a impressão 80 mm, após as RPCs.
 
@@ -49,3 +49,5 @@
 
 - 2026-11-05 — Criado a partir do [Ticket 24](24-portar-operacao-pedido-delivery.md) (dividido em 24a/24b). Consolida os critérios do Painel com as decisões [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (P-OPE-1, P-OPE-2, P-OPE-4, P-OPE-5, P-IMP-1, P-IMP-2, P-PDV-1, P-WPP-1, P-CFG-1, P-CFG-2, P-CFG-5, P-4.3 na configuração, P-ONB-1, P-ONB-2) e [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md) ("Imprimir ao aceitar" como configuração da Loja; "Avisar no WhatsApp" por Pedido). Migration própria só se necessária (`0006` reservada). O tour de 3 passos (P-ONB-1) veio do Ticket 28 porque depende da fila.
 - 2026-11-05 — Critérios consolidados com 63–65.
+
+- 2026-11-05 — Done (PR do 24b). UI `a7d3cca`; sem migration (usa a 0004). Pendentes: motivo do cancelamento entra com o Estorno no Ticket 12 (contrato sem campo); `STOREFRONT_ORIGIN` aponta para o workers.dev do web até o 25; impressão térmica real e som por navegador verificados só no smoke manual.

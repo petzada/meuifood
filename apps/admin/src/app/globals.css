@@ -21,3 +21,96 @@ body {
   font-family: "Nunito Variable", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Cupom 80 mm (IMP-01/IMP-02): prévia na tela e, na impressão, só ele. */
+.foode-receipt {
+  width: 72mm;
+  font-family: "Nunito Variable", sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #000;
+}
+.foode-receipt p {
+  margin: 2px 0;
+}
+.foode-receipt hr {
+  border: 0;
+  border-top: 1px dashed #000;
+  margin: 6px 0;
+}
+.foode-receipt__band {
+  background: #000;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 6px 0;
+  text-align: center;
+}
+.foode-receipt__code {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 6px !important;
+}
+.foode-receipt__store {
+  font-weight: 700;
+}
+.foode-receipt__items,
+.foode-receipt__totals {
+  width: 100%;
+  border-collapse: collapse;
+}
+.foode-receipt__items td {
+  vertical-align: top;
+  padding: 2px 0;
+}
+.foode-receipt__qty {
+  width: 24px;
+  font-weight: 800;
+}
+.foode-receipt__choice {
+  display: block;
+  padding-left: 8px;
+}
+.foode-receipt__amount {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 8px;
+}
+.foode-receipt__total td {
+  font-size: 15px;
+  font-weight: 800;
+  padding-top: 4px;
+}
+.foode-receipt__payment {
+  font-weight: 800;
+  text-align: center;
+}
+.foode-receipt__footer {
+  text-align: center;
+  font-size: 11px;
+}
+
+#cupom-80mm {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+  body.foode-printing > *:not(#cupom-80mm) {
+    display: none !important;
+  }
+  body.foode-printing #cupom-80mm {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
