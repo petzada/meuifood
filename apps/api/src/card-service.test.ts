@@ -680,3 +680,85 @@ describe("utilitários", () => {
     expect(nationalPhone("11912345678")).toBe("11912345678");
   });
 });
+
+describe("Ticket 12: Estorno no Cartão", () => {
+  function withRefunds(current: CardIntentView, efi = efiGateway()) {
+    const fake = fakeDb(current);
+    const refunds = {
+      afterPayment: vi.fn(async () => undefined),
+      orphanCardCharge: vi.fn(async () => undefined),
+      confirmFromWebhook: vi.fn(async () => "applied" as const),
+    };
+    const svc = createCardService({
+      db: fake.db,
+      efi: {
+        gateway: efi,
+        payeeCode: "0123456789abcdef0123456789abcdef",
+        environment: "sandbox",
+        notificationSecret: SECRET,
+        notificationUrl: "https://api.exemplo.test/webhooks/efi",
+      },
+      abacatePay: { gateway: abacateGateway(), publicKey: "pk_dev_publica" },
+      refunds,
+      now: () => NOW,
+    });
+    return { ...fake, svc, refunds };
+  }
+
+  const post = {
+    rawBody: `notification=${EFI_TOKEN}`,
+    contentType: "application/x-www-form-urlencoded",
+    querySecret: SECRET,
+  };
+
+  it("notificação Efí `refunded` conclui o Estorno pela cobrança (idempotente pelo evento)", async () => {
+    const refundedHistory = parseEfiNotificationEvents([
+      {
+        id: 4,
+        type: "charge",
+        custom_id: "intent_teste_003",
+        status: { current: "refunded", previous: "paid" },
+        identifiers: { charge_id: 900001 },
+        created_at: "2026-11-05 13:00:00",
+      },
+    ]);
+    const efi = efiGateway({ getNotification: vi.fn(async () => refundedHistory) });
+    const { svc, refunds, cardPayments } = withRefunds(
+      intent({
+        intentState: "paid",
+        state: "approved",
+        providerChargeId: "900001",
+        efiLastEventId: 3,
+      }),
+      efi,
+    );
+    await expect(svc.handleEfiNotification(post)).resolves.toEqual({
+      status: 200,
+      body: { ok: true, outcome: "applied" },
+    });
+    expect(refunds.confirmFromWebhook).toHaveBeenCalledWith({
+      providerChargeId: "900001",
+      event: {
+        provider: "efi",
+        eventId: "efi:900001:4",
+        eventType: "charge:refunded",
+        devMode: true,
+      },
+    });
+    expect(cardPayments.confirm).not.toHaveBeenCalled();
+  });
+
+  it("aprovado confirma e dispara o Estorno tardio; confirmação recusada vira Estorno órfão", async () => {
+    const approved = withRefunds(intent());
+    await approved.svc.chargeForOrder("order-a", efiCard, CPF);
+    expect(approved.refunds.afterPayment).toHaveBeenCalledWith("intent_teste_003");
+
+    const rejected = withRefunds(intent());
+    rejected.cardPayments.confirm.mockResolvedValue("rejected" as never);
+    await rejected.svc.chargeForOrder("order-a", efiCard, CPF);
+    expect(rejected.refunds.orphanCardCharge).toHaveBeenCalledWith({
+      intentId: "intent_teste_003",
+      providerChargeId: "900001",
+    });
+  });
+});

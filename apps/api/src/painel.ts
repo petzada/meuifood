@@ -88,6 +88,7 @@ import type {
   ProviderCostView,
 } from "@foode/shared/ops";
 import type {
+  CancelOrderResult,
   OrderCancelInput,
   OrderDetail,
   OrderRefInput,
@@ -120,6 +121,7 @@ import { createOnboardingService, type OnboardingService } from "./onboarding-se
 import { createOpsService, type OpsService } from "./ops-service";
 import { createOrderService, type OrderService } from "./order-service";
 import { createPainelService, type PainelService } from "./painel-service";
+import { createRefundService, refundGatewaysFromEnv } from "./refund-service";
 
 export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
   private deps() {
@@ -159,11 +161,15 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
 
   /** Pedidos e configuração operacional (Ticket 24a; telas no 24b): order-service.ts. */
   private orders(): OrderService {
-    const { auth } = this.deps();
+    const { auth, waitUntil } = this.deps();
+    const db = createFoodeDb(this.env.DB);
     return createOrderService({
-      db: createFoodeDb(this.env.DB),
+      db,
       auth,
       orderTokenSecret: this.env.ORDER_TOKEN_SECRET,
+      // Ticket 12: o Estorno do cancelamento roda no provedor depois da resposta.
+      refunds: createRefundService({ db, gateways: refundGatewaysFromEnv(this.env) }),
+      defer: waitUntil,
     });
   }
 
@@ -521,7 +527,7 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
   async ordersCancel(
     caller: PainelCaller,
     input: OrderCancelInput,
-  ): Promise<RpcResult<OrderTransitionResult>> {
+  ): Promise<RpcResult<CancelOrderResult>> {
     return this.run("ordersCancel", () => this.orders().ordersCancel(caller, input));
   }
 

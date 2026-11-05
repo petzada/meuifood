@@ -302,8 +302,10 @@ export function createStorefrontOrderOps(d1: D1Database) {
         guards.push(
           `EXISTS (SELECT 1 FROM store_welcome_coupons w WHERE w.store_id = s.id AND w.active = 1
              AND w.updated_at = ?)`,
+          // PIX nunca pago e cancelado (Ticket 12) não é compra: libera o boas-vindas.
           `NOT EXISTS (SELECT 1 FROM orders o2 WHERE o2.store_id = s.id
-             AND (o2.customer_account_id = ? OR o2.customer_phone_e164 = ?))`,
+             AND (o2.customer_account_id = ? OR o2.customer_phone_e164 = ?)
+             AND NOT (o2.status = 'cancelled' AND o2.payment_status IN ('awaiting', 'expired', 'failed')))`,
           `NOT EXISTS (SELECT 1 FROM coupon_redemptions r WHERE r.store_id = s.id
              AND r.source = 'welcome' AND r.customer_account_id = ?)`,
         );

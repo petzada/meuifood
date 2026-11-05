@@ -15,6 +15,10 @@
 //   regridem (UPDATEs condicionais + identidade única do evento).
 // - Nada de token, CPF, e-mail, nascimento, telefone, corpo ou URL com segredo em log/Sentry: os
 //   logs levam só códigos curtos.
+// - Ticket 12: aprovação de Pedido já cancelado converge para Estorno total (obrigação gravada no
+//   batch da confirmação; `refunds.afterPayment` executa); aprovação de tentativa recusada depois
+//   que o Pedido trocou de meio/já foi pago vira Estorno da cobrança órfã; notificação Efí
+//   `refunded` conclui o Estorno (idempotente pelo evento).
 import type { CardIntentView, FoodeDb, WebhookEventInput } from "@foode/db";
 import type { CardMode } from "@foode/shared/ops";
 import { orderAccessTokenSchema, orderTrackingPath } from "@foode/shared/order";
@@ -32,6 +36,7 @@ import {
 } from "@foode/shared/payment";
 
 import type { Env } from "./env";
+import type { RefundService } from "./refund-service";
 import {
   type AbacatePayCardCharge,
   type CreateCardChargeInput,
@@ -190,6 +195,11 @@ export type CardServiceDeps = {
   abacatePay: AbacatePayCardProvider | null;
   /** CPF da conta do Consumidor pela sessão (`useAccountCpf`, Ticket 13); ausente = sem conta. */
   accountCpfOf?: (cookie: string | null) => Promise<string | null>;
+  /**
+   * Estorno (Ticket 12): Estorno tardio/órfão e conclusão pela notificação. Ausente = a obrigação
+   * tardia fica gravada (o Cron executa) e o `refunded` da Efí é registrado `deferred`.
+   */
+  refunds?: Pick<RefundService, "afterPayment" | "orphanCardCharge" | "confirmFromWebhook"> | null;
   now?: () => Date;
 };
 
@@ -312,6 +322,7 @@ export function toOrderCard(intent: CardIntentView, options: CardViewOptions): O
 type Outcome =
   | "applied"
   | "already_applied"
+  | "duplicate"
   | "pending"
   | "declined"
   | "deferred"
@@ -399,9 +410,39 @@ export function createCardService(deps: CardServiceDeps): CardService {
       if (input.event) {
         await recordEvent(input.event, input.providerChargeId, intent.intentId, "unmatched");
       }
+      // Dinheiro entrou numa tentativa recusada sem Pedido a pagar (trocou para PIX, outra
+      // tentativa paga ou cancelado): Estorno total da cobrança (Ticket 12).
+      await afterRefundable(() =>
+        deps.refunds?.orphanCardCharge({
+          intentId: intent.intentId,
+          providerChargeId: input.providerChargeId,
+        }),
+      );
       return "unmatched";
     }
+    if (result === "applied") {
+      // Aprovado depois do cancelamento: a obrigação já está gravada; executa (Ticket 12).
+      await afterRefundable(() => deps.refunds?.afterPayment(intent.intentId));
+    }
     return result;
+  }
+
+  /** Estorno disparado por uma confirmação: nunca derruba o webhook (falha = retentável). */
+  async function afterRefundable(run: () => Promise<void> | undefined) {
+    try {
+      await run();
+    } catch (error) {
+      warn("card_refund_dispatch_failed", { code: errorCode(error) });
+    }
+  }
+
+  /** Efí `refunded` numa notificação: conclui o Estorno do cancelamento (idempotente). */
+  async function confirmEfiRefund(chargeId: string, event: WebhookEventInput): Promise<Outcome> {
+    if (!deps.refunds) {
+      await recordEvent(event, chargeId, null, "deferred");
+      return "deferred";
+    }
+    return deps.refunds.confirmFromWebhook({ providerChargeId: chargeId, event });
   }
 
   async function decline(
@@ -463,7 +504,8 @@ export function createCardService(deps: CardServiceDeps): CardService {
       if (event) await recordEvent(event, chargeId, intent.intentId, "deferred");
       return "pending";
     }
-    // Estorno/contestação depois de pago: Ticket 12 (sem efeito no dinheiro aqui).
+    // Estorno concluído (Ticket 12); contestação depois de pago fica registrada.
+    if (outcome === "refunded" && event) return confirmEfiRefund(chargeId, event);
     if (event) await recordEvent(event, chargeId, intent.intentId, "deferred");
     return "deferred";
   }
@@ -808,7 +850,10 @@ export function createCardService(deps: CardServiceDeps): CardService {
         });
       }
       for (const event of unseen) {
-        if (event !== decisive) {
+        if (event === decisive) continue;
+        if (chargeId && classifyEfiChargeStatus(event.currentStatus) === "refunded") {
+          await confirmEfiRefund(chargeId, eventOf(event));
+        } else {
           await recordEvent(eventOf(event), chargeId, intent.intentId, "deferred");
         }
       }
@@ -839,7 +884,8 @@ export function createCardService(deps: CardServiceDeps): CardService {
         return { status: 200, body: { ok: true, outcome: "unmatched" } };
       }
       if (event.type !== "transparent.completed") {
-        // Estorno/disputa/perda (Ticket 12): registrado, sem efeito no dinheiro aqui.
+        // Disputa/perda (o `transparent.refunded` é concluído antes, no handler do PIX, quando o
+        // Estorno está ligado): registrado, sem efeito no dinheiro aqui.
         await recordEvent(webhookEvent, data.id, intent.intentId, "deferred");
         return { status: 200, body: { ok: true, outcome: "deferred" } };
       }

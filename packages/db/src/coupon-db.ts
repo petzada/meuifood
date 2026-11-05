@@ -414,7 +414,8 @@ export function createCouponCheckoutOps(d1: D1Database) {
 
     /**
      * Fatos do boas-vindas: programa da Loja, se a conta (ou o telefone verificado dela) já tem
-     * Pedido NESTA Loja e se já usou o boas-vindas aqui.
+     * Pedido NESTA Loja (PIX nunca pago e cancelado não conta, Ticket 12) e se já usou o
+     * boas-vindas aqui.
      */
     async welcomeFacts(input: {
       storeId: string;
@@ -428,7 +429,9 @@ export function createCouponCheckoutOps(d1: D1Database) {
         d1
           .prepare(
             `SELECT 1 AS found FROM orders WHERE store_id = ?
-               AND (customer_account_id = ? OR customer_phone_e164 = ?) LIMIT 1`,
+               AND (customer_account_id = ? OR customer_phone_e164 = ?)
+               AND NOT (status = 'cancelled' AND payment_status IN ('awaiting', 'expired', 'failed'))
+             LIMIT 1`,
           )
           .bind(input.storeId, input.accountId, input.phoneE164),
         d1
