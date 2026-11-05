@@ -4,7 +4,7 @@
 
 **Blocked by:** 23 — Portar Cardápio e Complementos; 29 — Área Ops. Os disparos em telas do checkout e da confirmação (Pixel `purchase`, eventos `checkout` e `pedido` do funil) entram depois que a UI do [24a](24a-storefront-checkout-pedido.md) estiver integrada.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Fable (UI/UX); a rota de Slug/Pixel/perfil/vitrine/eventos na API pode ser feita pelo mesmo agente ou por um Opus antes.
 
@@ -64,3 +64,5 @@
 - 2026-11-05 — Decisão [69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md): links antigos funcionam sempre (308 + reserva); "Link personalizado" na UI. Substitui "Slug sem histórico".
 
 - 2026-11-05 — Decisão [69](../../../docs/decisoes/69-link-personalizado-redirecionamento.md) na API/DB (branch `feat/28-onboarding-391f`): tabela `store_slug_history` na migration 0005 (link antigo único globalmente, FK para `stores`, `utcCheck`). `storeSetSlug` (e a troca pelo Ops) grava o anterior no histórico na mesma escrita; voltar a um link antigo da própria Loja o tira do histórico; link antigo de OUTRA Loja = `conflict` (Dono, `opsCreateStore` e `opsUpdateStore`); `storeCheckSlug` devolve `taken` para link antigo de outra Loja. **Contrato de redirecionamento:** toda rota `/storefront/lojas/{antigo}/...` da api que daria 404 responde **308** com `Location: /storefront/lojas/{atual}/...` (mesmo subcaminho e query, um salto, inclusive Loja suspensa), header `x-foode-current-slug` e corpo `{ error: "slug_moved", currentSlug }` (`storefrontSlugMovedSchema`, `STOREFRONT_CURRENT_SLUG_HEADER` e `movedStorePath` em `@foode/shared/onboarding`). O web chama a api com `redirect: "manual"` e, ao receber 308, responde 308 para `/loja/{atual}{subcaminho}?{query}` (`movedStorePath(pathname + search, currentSlug)`). Pendente no admin: o `checkSlug` do Ops (lado cliente) só conhece os slugs atuais; o servidor já recusa link reservado com `conflict`. Copy: "Seus links e QR antigos continuam funcionando."
+
+- 2026-11-05 — Done (PR do 28). API `1bfe7c9`/`ec385c3` (decisão 69), UI `700af23`; migration `0005_onboarding_vitrine_funil` (vitrine, perfil, funil agregado, histórico de links). QR gerado no cliente sem dependência. Pendente: teste D1 de que criar Pedido soma `order` no funil.
