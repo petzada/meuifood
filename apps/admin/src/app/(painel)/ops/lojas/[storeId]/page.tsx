@@ -1,4 +1,5 @@
 import { OutlineContainer } from "@foode/ui";
+import { STORE_CUISINE_LABELS, STORE_GOAL_LABELS } from "@foode/shared/onboarding";
 import type { PaymentFeeView } from "@foode/shared/ops";
 
 import { Notice } from "../../../../../components/form";
@@ -214,8 +215,9 @@ export default async function OpsStorePage({
               storeId={store.id}
             />
             <p className="mt-5 border-t border-[var(--color-hairline-soft)] pt-4 text-sm text-[var(--color-muted)]">
-              Perfil do Dono (culinária e objetivo): respondido no primeiro acesso ao Painel;
-              aparece aqui quando existir.
+              {store.ownerProfile
+                ? `Perfil do Dono: ${STORE_CUISINE_LABELS[store.ownerProfile.cuisine]}${store.ownerProfile.cuisineOther ? ` (${store.ownerProfile.cuisineOther})` : ""} · ${STORE_GOAL_LABELS[store.ownerProfile.goal]}${store.ownerProfile.goalOther ? ` (${store.ownerProfile.goalOther})` : ""}. Uso interno da Foode.`
+                : "Perfil do Dono (culinária e objetivo): respondido no primeiro acesso ao Painel; aparece aqui quando existir."}
             </p>
           </OutlineContainer>
           <OutlineContainer className="p-6">

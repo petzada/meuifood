@@ -37,6 +37,20 @@ import type {
   MenuUploadImageInput,
 } from "@foode/shared/menu";
 import type {
+  FunnelReport,
+  FunnelReportInput,
+  OwnerOnboardingState,
+  OwnerProfileInput,
+  OwnerStoreSettings,
+  SlugAvailability,
+  StoreContactInput,
+  StorePixelsInput,
+  StoreShowcaseInput,
+  StoreSlugInput,
+  StoreUploadBrandImageInput,
+  StoreUploadedBrandImage,
+} from "@foode/shared/onboarding";
+import type {
   OpsActivateStoreInput,
   OpsAuditEntry,
   OpsCreatePaymentFeesInput,
@@ -83,6 +97,7 @@ import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
 import { mediaBaseUrl } from "./media";
 import { createMenuService, type MenuService } from "./menu-service";
+import { createOnboardingService, type OnboardingService } from "./onboarding-service";
 import { createOpsService, type OpsService } from "./ops-service";
 import { createOrderService, type OrderService } from "./order-service";
 import { createPainelService, type PainelService } from "./painel-service";
@@ -130,6 +145,17 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
       db: createFoodeDb(this.env.DB),
       auth,
       orderTokenSecret: this.env.ORDER_TOKEN_SECRET,
+    });
+  }
+
+  /** Onboarding, dados, vitrine, Slug, Pixel e funil (Ticket 28): onboarding-service.ts. */
+  private onboarding(): OnboardingService {
+    const { auth } = this.deps();
+    return createOnboardingService({
+      db: createFoodeDb(this.env.DB),
+      auth,
+      media: this.env.MEDIA,
+      mediaBaseUrl: mediaBaseUrl(this.env.MEDIA_PUBLIC_BASE_URL),
     });
   }
 
@@ -497,5 +523,73 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     return this.run("storeSetPrintOnAccept", () =>
       this.orders().storeSetPrintOnAccept(caller, input),
     );
+  }
+
+  async onboardingGet(caller: PainelCaller): Promise<RpcResult<OwnerOnboardingState>> {
+    return this.run("onboardingGet", () => this.onboarding().onboardingGet(caller));
+  }
+
+  async onboardingAnswerProfile(
+    caller: PainelCaller,
+    input: OwnerProfileInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("onboardingAnswerProfile", () =>
+      this.onboarding().onboardingAnswerProfile(caller, input),
+    );
+  }
+
+  async onboardingAcknowledgeReady(caller: PainelCaller): Promise<RpcResult<null>> {
+    return this.run("onboardingAcknowledgeReady", () =>
+      this.onboarding().onboardingAcknowledgeReady(caller),
+    );
+  }
+
+  async storeSettingsGet(caller: PainelCaller): Promise<RpcResult<OwnerStoreSettings>> {
+    return this.run("storeSettingsGet", () => this.onboarding().storeSettingsGet(caller));
+  }
+
+  async storeCheckSlug(
+    caller: PainelCaller,
+    input: StoreSlugInput,
+  ): Promise<RpcResult<SlugAvailability>> {
+    return this.run("storeCheckSlug", () => this.onboarding().storeCheckSlug(caller, input));
+  }
+
+  async storeSetSlug(
+    caller: PainelCaller,
+    input: StoreSlugInput,
+  ): Promise<RpcResult<{ slug: string; storeUrl: string }>> {
+    return this.run("storeSetSlug", () => this.onboarding().storeSetSlug(caller, input));
+  }
+
+  async storeSetContact(caller: PainelCaller, input: StoreContactInput): Promise<RpcResult<null>> {
+    return this.run("storeSetContact", () => this.onboarding().storeSetContact(caller, input));
+  }
+
+  async storeSetPixels(caller: PainelCaller, input: StorePixelsInput): Promise<RpcResult<null>> {
+    return this.run("storeSetPixels", () => this.onboarding().storeSetPixels(caller, input));
+  }
+
+  async storeSetShowcase(
+    caller: PainelCaller,
+    input: StoreShowcaseInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("storeSetShowcase", () => this.onboarding().storeSetShowcase(caller, input));
+  }
+
+  async storeUploadBrandImage(
+    caller: PainelCaller,
+    input: StoreUploadBrandImageInput,
+  ): Promise<RpcResult<StoreUploadedBrandImage>> {
+    return this.run("storeUploadBrandImage", () =>
+      this.onboarding().storeUploadBrandImage(caller, input),
+    );
+  }
+
+  async funnelReport(
+    caller: PainelCaller,
+    input: FunnelReportInput,
+  ): Promise<RpcResult<FunnelReport>> {
+    return this.run("funnelReport", () => this.onboarding().funnelReport(caller, input));
   }
 }

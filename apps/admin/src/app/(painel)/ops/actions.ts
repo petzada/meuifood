@@ -60,7 +60,7 @@ export const createStore: Action = async (_prev, formData) => {
   const result = await opsRpc((api, caller) => api.opsCreateStore(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {
-      conflict: { field: "slug", message: "Este Slug já está em uso por outra Loja." },
+      conflict: { field: "slug", message: "Este link já pertence a outra Loja." },
     });
   }
   revalidatePath("/ops");
@@ -74,7 +74,7 @@ export const updateStore: Action = async (_prev, formData) => {
   const result = await opsRpc((api, caller) => api.opsUpdateStore(caller, parsed.data));
   if (!result.ok) {
     return rpcFailure(result.error, {
-      conflict: { field: "slug", message: "Este Slug já está em uso por outra Loja." },
+      conflict: { field: "slug", message: "Este link já pertence a outra Loja." },
       not_found: { message: "Esta Loja não existe mais." },
     });
   }

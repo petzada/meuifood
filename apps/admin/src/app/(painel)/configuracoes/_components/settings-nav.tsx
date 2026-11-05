@@ -3,6 +3,16 @@ import Link from "next/link";
 
 export const SETTINGS_SECTIONS = [
   {
+    href: "/configuracoes/loja",
+    label: "Dados da Loja",
+    description: "Link personalizado, contato, endereço, logo, capa e descrição.",
+  },
+  {
+    href: "/configuracoes/divulgacao",
+    label: "Divulgação",
+    description: "Link da Loja, QR Code para imprimir e Pixel Meta e Google.",
+  },
+  {
     href: "/configuracoes/horarios",
     label: "Horários e Pausa",
     description: "Grade Seg–Dom no horário de Brasília e a Pausa dos Pedidos.",

@@ -11,7 +11,7 @@ import { bodyLimit } from "hono/body-limit";
 
 import { createTurnstileVerifier } from "./auth/turnstile";
 import type { Env } from "./env";
-import { mediaBaseUrl, serveMenuImage } from "./media";
+import { mediaBaseUrl, serveMenuImage, serveStoreImage } from "./media";
 import { toPublicMenu } from "./public-menu";
 import { createStorefrontService } from "./storefront-service";
 
@@ -34,6 +34,44 @@ export const CART_QUOTE_MAX_BODY_BYTES = 64 * 1024;
 /** Teto do corpo da busca por telefone e do "Sou eu" (token do Turnstile ≤ 2 KiB). */
 export const PHONE_LOOKUP_MAX_BODY_BYTES = 8 * 1024;
 
+/** Teto do corpo do evento do funil (`{"event":"checkout_start"}`). */
+export const FUNNEL_EVENT_MAX_BODY_BYTES = 1024;
+
+const STOREFRONT_SLUG_PATH = /^\/storefront\/lojas\/([^/]+)(\/.*)?$/u;
+
+/**
+ * 308 do link antigo para o atual (decisão 69) ou null se o caminho não é de Loja / o slug não
+ * está no histórico. `Location` relativo: mesmo caminho e query, com o slug atual.
+ */
+export async function storefrontSlugRedirect(
+  requestUrl: string,
+  currentSlugOf: (slug: string) => Promise<string | null>,
+): Promise<Response | null> {
+  const url = new URL(requestUrl);
+  const match = STOREFRONT_SLUG_PATH.exec(url.pathname);
+  if (!match) return null;
+  let slug: string;
+  try {
+    slug = decodeURIComponent(match[1]!);
+  } catch {
+    return null;
+  }
+  const current = await currentSlugOf(slug);
+  if (!current || current === slug) return null;
+  return Response.json(
+    { error: "slug_moved", currentSlug: current },
+    {
+      status: 308,
+      headers: {
+        location: `/storefront/lojas/${current}${match[2] ?? ""}${url.search}`,
+        "x-foode-current-slug": current,
+        // A Loja pode voltar ao link antigo: o redirecionamento não fica em cache.
+        "cache-control": "no-store",
+      },
+    },
+  );
+}
+
 /** Caminho sem o token da página do Pedido (dá acesso a dados pessoais): nunca em log. */
 export function redactPath(path: string): string {
   return path.replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
@@ -53,6 +91,33 @@ export function createApp() {
   });
 
   const storefront = new Hono<AppEnv>();
+
+  // Link personalizado antigo (decisão 69): toda rota `/storefront/lojas/:slug/*` que daria 404
+  // com um slug do histórico responde 308 para o MESMO caminho com o link atual (um salto, query
+  // preservada, qualquer estado da Loja). Corpo `{ error: "slug_moved", currentSlug }` e header
+  // `x-foode-current-slug`, para o web (fetch com `redirect: "manual"`) responder 308 para
+  // `/loja/{atual}{subcaminho}?{query}`. Só consulta o histórico quando a rota deu 404: custo zero
+  // no caminho feliz e sem efeito colateral (slug do histórico nunca é o atual de uma Loja).
+  storefront.use("*", async (c, next) => {
+    await next();
+    if (c.res.status !== 404) return;
+    try {
+      const redirect = await storefrontSlugRedirect(c.req.url, (slug) =>
+        c.var.db.storefront.currentSlugForHistorical(slug),
+      );
+      if (redirect) c.res = redirect;
+    } catch (error) {
+      // Falha na consulta do histórico não troca o 404 original por 500.
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          message: "slug_history_lookup_failed",
+          cause: error instanceof Error ? error.message : "desconhecido",
+        }),
+      );
+    }
+  });
+
   storefront.get("/lojas/:slug", async (c) => {
     const store = await c.var.db.storefront.publicStoreBySlug(c.req.param("slug"));
     if (!store) return c.json({ error: "store_not_found" }, 404);
@@ -99,6 +164,7 @@ export function createApp() {
       turnstile: createTurnstileVerifier(c.env),
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
       phoneLookupIpSalt: c.env.PHONE_LOOKUP_IP_SALT,
+      mediaBaseUrl: mediaBaseUrl(c.env.MEDIA_PUBLIC_BASE_URL, c.req.url),
     });
   const jsonBody = (c: Context<AppEnv>): Promise<unknown> =>
     c.req.json<unknown>().catch(() => undefined);
@@ -107,7 +173,8 @@ export function createApp() {
 
   // Estado da Loja + "Sobre a Loja": 200 = `storefrontStoreStateSchema` (aberta até / fechada com
   // próxima abertura / Pausa, por `storeOpenState` em America/Sao_Paulo; horários; Delivery com
-  // só bairros ativos ou Taxa fixa; Retirada com endereço; meios com taxa vigente; bandeiras).
+  // só bairros ativos ou Taxa fixa; Retirada com endereço; meios com taxa vigente; bandeiras) e,
+  // do Ticket 28, `showcase` (logo, capa, descrição, Instagram e IDs de Pixel só desta Loja).
   storefront.get("/lojas/:slug/estado", async (c) => {
     const reply = await service(c).state(c.req.param("slug"));
     return c.json(reply.body, reply.status);
@@ -162,11 +229,29 @@ export function createApp() {
       return c.json(reply.body, reply.status);
     },
   );
+  // Funil próprio (Ticket 28, P-REL-4): corpo `funnelEventRequestSchema` (só `{ event }`, sem
+  // nenhum dado pessoal; `order` é contado pela api na criação do Pedido), 204 = contado por Loja
+  // e dia civil de São Paulo; 429 `rate_limited` por hash do IP truncado; 404 Loja inexistente ou
+  // fora de `active`. Sem Turnstile (só incrementa contador agregado).
+  storefront.post("/lojas/:slug/eventos", limit(FUNNEL_EVENT_MAX_BODY_BYTES), async (c) => {
+    const reply = await service(c).funnel(
+      c.req.param("slug"),
+      await jsonBody(c),
+      c.req.header("cf-connecting-ip") ?? null,
+    );
+    c.header("cache-control", "no-store");
+    if (reply.status === 204) return c.body(null, 204);
+    return c.json(reply.body, reply.status as 400 | 404 | 429);
+  });
   app.route("/storefront", storefront);
 
   // Imagens do Cardápio (decisão 64): leitura pública só de chaves `stores/{uuid}/menu/{uuid}.{ext}`.
   app.get("/media/stores/:storeId/menu/:file", (c) =>
     serveMenuImage(c.env.MEDIA, c.req.param("storeId"), c.req.param("file"), c.req.raw),
+  );
+  // Logo e capa da Loja (Ticket 28): só chaves `stores/{uuid}/brand/{uuid}.{ext}`.
+  app.get("/media/stores/:storeId/brand/:file", (c) =>
+    serveStoreImage(c.env.MEDIA, c.req.param("storeId"), "brand", c.req.param("file"), c.req.raw),
   );
 
   // `/webhooks/*`: rotas dos provedores (AbacatePay, Efí) entram nos Tickets 26 e 27.

@@ -20,10 +20,19 @@ import { Badge, Button, OutlineContainer } from "@foode/ui";
 import { CheckCircle, Circle, WhatsappLogo } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
+import {
+  firePixelEvent,
+  purchaseSentKey,
+  type PixelIds,
+  type PixelWindow,
+} from "../../storefront/pixels";
+
 export type OrderTrackingViewProps = {
   initial: OrderTracking;
   /** Injetável nos testes; por padrão `fetch` em `/loja/{slug}/pedido/{token}/acompanhar`. */
   load?: () => Promise<OrderTracking | null>;
+  /** Pixel da Loja: `purchase` uma vez por Pedido neste aparelho (valor e moeda). */
+  pixels?: PixelIds | null;
   pollIntervalMs?: number;
   storeSlug: string;
   token: string;
@@ -69,12 +78,29 @@ function stepLabel(status: OrderStatus, fulfillment: OrderTracking["fulfillment"
 export function OrderTrackingView({
   initial,
   load,
+  pixels = null,
   pollIntervalMs = ORDER_TRACKING_POLL_INTERVAL_MS,
   storeSlug,
   token,
 }: OrderTrackingViewProps) {
   const [order, setOrder] = useState(initial);
   const final = isFinalStatus(order.status);
+
+  useEffect(() => {
+    if (!pixels || initial.status === "cancelled") return;
+    const key = purchaseSentKey(storeSlug, initial.code);
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {
+      // sem storage: dispara mesmo assim
+    }
+    firePixelEvent(window as PixelWindow, pixels, {
+      name: "purchase",
+      orderCode: initial.code,
+      valueCents: initial.totalCents,
+    });
+  }, [initial.code, initial.status, initial.totalCents, pixels, storeSlug]);
 
   useEffect(() => {
     if (final) return;

@@ -8,6 +8,7 @@ import {
 } from "@foode/shared/menu";
 
 import { apiFetch } from "../../../../lib/api";
+import { movedResponse, slugMovedTo } from "../../../../lib/slug-moved";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       body: JSON.stringify(parsedBody.data),
       headers: { "content-type": "application/json" },
       method: "POST",
+      redirect: "manual",
     });
   } catch {
     return Response.json({ error: "quote_unavailable" }, { status: 502 });
   }
+
+  const currentSlug = await slugMovedTo(upstream);
+  if (currentSlug) return movedResponse(request.url, currentSlug);
 
   if (upstream.status === 400 || upstream.status === 404) {
     const payload: unknown = await upstream.json().catch(() => ({ error: "invalid_input" }));
