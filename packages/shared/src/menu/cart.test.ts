@@ -8,14 +8,17 @@ import {
   cartSchema,
   cartSubtotalCents,
   createEmptyCart,
+  cartQuoteRequestSchema,
+  cartQuoteResponseSchema,
   lineSubtotalCents,
+  lineUnitCents,
   sameLineChoices,
   setCartLineQuantity,
   validateCartLine,
   type CartLine,
 } from "./cart.js";
 import { burger, ids, publicMenu, soda, unavailableItem } from "./fixtures.js";
-import { indexMenuItems } from "./schema.js";
+import { complementGroupSchema, indexMenuItems } from "./schema.js";
 
 const itemsById = indexMenuItems(publicMenu);
 
@@ -160,9 +163,43 @@ describe("validateCartLine", () => {
 });
 
 describe("subtotais", () => {
-  it("calcula a linha: (item + Adicionais) × quantidade", () => {
-    expect(lineSubtotalCents(burger, validBurgerLine)).toBe((2500 + 300) * 2);
+  it("calcula a linha: (item + opções de Complemento + Adicionais) × quantidade", () => {
+    // Barbecue +R$ 1,50 (P-1.1); Ao ponto e Maionese sem preço (padrão 0).
+    expect(lineSubtotalCents(burger, validBurgerLine)).toBe((2500 + 150 + 300) * 2);
     expect(lineSubtotalCents(soda, sodaLine)).toBe(600);
+  });
+
+  it("soma o preço de cada opção escolhida em grupos diferentes (P-1.1)", () => {
+    const line = {
+      additionalIds: [],
+      complementSelections: {
+        [ids.groupSteak]: [ids.optionSteakRare],
+        [ids.groupBread]: [ids.optionBreadBrioche],
+        [ids.groupSauces]: [ids.optionSauceBbq],
+      },
+    };
+    expect(lineUnitCents(burger, line)).toBe(2500 + 250 + 150);
+    expect(lineUnitCents(burger, { ...line, complementSelections: {} })).toBe(2500);
+  });
+
+  it("opção sem preço no contrato vale 0", () => {
+    const parsed = complementGroupSchema.parse({
+      id: ids.groupBread,
+      maxSelect: 1,
+      minSelect: 0,
+      name: "Pão",
+      options: [{ id: ids.optionBreadWhole, name: "Integral" }],
+    });
+    expect(parsed.options[0]?.priceCents).toBe(0);
+  });
+
+  it("lança para opção que não é do item (erro de programação, não de entrada)", () => {
+    expect(() =>
+      lineUnitCents(burger, {
+        additionalIds: [],
+        complementSelections: { [ids.groupSteak]: [ids.optionSauceBbq] },
+      }),
+    ).toThrow();
   });
 
   it("devolve null para linha inválida", () => {
@@ -174,11 +211,11 @@ describe("subtotais", () => {
     const ok = cartSubtotalCents(itemsById, { lines: [validBurgerLine, sodaLine] });
     expect(ok).toEqual({
       lines: [
-        { itemId: ids.burger, subtotalCents: 5600 },
+        { itemId: ids.burger, subtotalCents: 5900 },
         { itemId: ids.soda, subtotalCents: 600 },
       ],
       ok: true,
-      subtotalCents: 6200,
+      subtotalCents: 6500,
     });
 
     const bad = cartSubtotalCents(itemsById, {
@@ -270,5 +307,24 @@ describe("mutações puras do carrinho", () => {
     expect(setCartLineQuantity(cart, 0, 1.5)).toBe(cart);
     expect(setCartLineQuantity(cart, 0, MAX_LINE_QUANTITY + 1)).toBe(cart);
     expect(cart.lines).toHaveLength(2);
+  });
+});
+
+describe("recálculo no servidor (contrato)", () => {
+  it("o pedido de cotação só leva ids e quantidades, sem store_id nem preço", () => {
+    expect(cartQuoteRequestSchema.safeParse({ lines: [validBurgerLine] }).success).toBe(true);
+    expect(cartQuoteRequestSchema.safeParse({ lines: [] }).success).toBe(false);
+    const parsed = cartQuoteRequestSchema.parse({
+      lines: [{ ...sodaLine, priceCents: 1 }],
+      storeId: "x",
+    });
+    expect(parsed).toEqual({ lines: [sodaLine] });
+  });
+
+  it("a resposta é o próprio CartSubtotal", () => {
+    const ok = cartSubtotalCents(itemsById, { lines: [validBurgerLine, sodaLine] });
+    expect(cartQuoteResponseSchema.parse(ok)).toEqual(ok);
+    const bad = cartSubtotalCents(itemsById, { lines: [{ ...sodaLine, quantity: 0 }] });
+    expect(cartQuoteResponseSchema.parse(bad)).toEqual(bad);
   });
 });

@@ -26,6 +26,10 @@
     "ENVIRONMENT": "production",
     "BETTER_AUTH_URL": "https://foode-admin.marciopetigrosso.workers.dev",
     "EMAIL_FROM": "Foode <no-reply@foodedelivery.com.br>",
+    // Ticket 23: nome do bucket para assinar o PUT na API S3 do R2 (mesmo do binding MEDIA).
+    // R2_ACCOUNT_ID e R2_PUBLIC_BASE_URL chegam do deploy (`--var`) quando existirem;
+    // R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY são secrets. Sem eles o upload responde erro controlado.
+    "R2_BUCKET": "foode-media",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).
@@ -37,5 +41,7 @@
       "migrations_dir": "../../packages/db/migrations",
     },
   ],
+  // Imagens do Cardápio (decisão 57/59): leitura pública por R2_PUBLIC_BASE_URL; o binding
+  // confere/apaga objetos sob `stores/{store_id}/menu/`.
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "foode-media" }],
 }

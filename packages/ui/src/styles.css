@@ -30,13 +30,14 @@
   outline-offset: 3px;
 }
 
+/* Fill com texto: primary-strong (P-DS-1, contraste AA com branco). */
 .foode-button--primary {
-  background: var(--color-primary);
+  background: var(--color-primary-strong);
   color: var(--color-on-primary);
 }
 
 .foode-button--primary:hover {
-  background: var(--color-primary-active);
+  background: var(--color-primary-strong-active);
 }
 
 .foode-button--secondary {
@@ -47,7 +48,7 @@
 
 .foode-button--secondary:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary-active);
+  color: var(--color-primary-strong);
 }
 
 .foode-outline {
@@ -241,7 +242,7 @@
 
 .foode-badge--primary {
   border-color: var(--color-primary);
-  color: var(--color-primary-active);
+  color: var(--color-primary-strong);
 }
 
 .foode-badge--accent {
