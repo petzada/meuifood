@@ -6,6 +6,8 @@
 // Ticket 26: Pedido PIX ainda não pago mostra o bloco do PIX no lugar dos passos (a Loja só
 // recebe depois do pagamento) e atualiza a cada PIX_POLL_INTERVAL_MS; tarifa de serviço do
 // pagamento online (decisão 71) em linha própria; oferta de conta para quem não entrou.
+// Ticket 27: Pedido por Cartão ainda não aprovado mostra o bloco do Cartão (processando / em
+// análise / recusado com ações) no lugar dos passos, com a mesma cadência de consulta do PIX.
 import { buildWhatsAppMeUrl } from "@foode/shared";
 import { formatBRL } from "@foode/shared/money";
 import {
@@ -22,12 +24,14 @@ import {
 import {
   PIX_POLL_INTERVAL_MS,
   SERVICE_FEE_LABEL_PT,
+  isCardAwaiting,
   isPixAwaiting,
+  type OrderCard,
   type OrderPix,
 } from "@foode/shared/payment";
 import { Badge, Button, OutlineContainer } from "@foode/ui";
 import { CheckCircle, Circle, WhatsappLogo } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   firePixelEvent,
@@ -35,7 +39,10 @@ import {
   type PixelIds,
   type PixelWindow,
 } from "../../storefront/pixels";
+import type { CardSdkFactory } from "../../finalizar/card-tokenizer";
 import { AccountOffer, type AccountOfferProps } from "./account-offer";
+import type { CardRetryApi } from "./card-api";
+import { CardPayment } from "./card-payment";
 import { PixPayment } from "./pix-payment";
 
 export type OrderTrackingViewProps = {
@@ -52,6 +59,9 @@ export type OrderTrackingViewProps = {
   /** Bloco do PIX: relógio e cópia injetáveis nos testes. */
   pixNow?: () => number;
   copy?: (text: string) => Promise<void>;
+  /** Bloco do Cartão (Ticket 27): api da nova tentativa e SDK injetáveis nos testes. */
+  cardApi?: CardRetryApi;
+  cardSdkFactory?: CardSdkFactory;
   storeSlug: string;
   token: string;
 };
@@ -59,6 +69,11 @@ export type OrderTrackingViewProps = {
 /** PIX que ainda não confirmou: a Loja não recebeu o Pedido. */
 function unpaidPix(pix: OrderPix | null): OrderPix | null {
   return pix && pix.state !== "paid" ? pix : null;
+}
+
+/** Cartão ainda não aprovado (processando, em análise ou recusado): idem. */
+function unpaidCard(card: OrderCard | null): OrderCard | null {
+  return card && card.state !== "approved" ? card : null;
 }
 
 export function trackingPollPath(storeSlug: string, token: string): string {
@@ -100,6 +115,8 @@ function stepLabel(status: OrderStatus, fulfillment: OrderTracking["fulfillment"
 
 export function OrderTrackingView({
   accountOffer = null,
+  cardApi,
+  cardSdkFactory,
   copy,
   initial,
   load,
@@ -113,11 +130,20 @@ export function OrderTrackingView({
   const [order, setOrder] = useState(initial);
   const final = isFinalStatus(order.status);
   const pendingPix = unpaidPix(order.pix);
-  const awaitingPix = pendingPix !== null && isPixAwaiting(pendingPix.state);
+  const pendingCard = unpaidCard(order.card);
+  /** Pagamento online ainda não confirmado: a Loja não recebeu o Pedido. */
+  const pendingPayment = pendingPix !== null || pendingCard !== null;
+  const awaitingPayment =
+    (pendingPix !== null && isPixAwaiting(pendingPix.state)) ||
+    (pendingCard !== null && isCardAwaiting(pendingCard.state));
+  const loader = useCallback(
+    () => (load ?? (() => fetchTracking(storeSlug, token)))(),
+    [load, storeSlug, token],
+  );
 
   // `purchase` só com o Pedido de fato enviado à Loja (PIX pago ou sem pagamento online).
   useEffect(() => {
-    if (!pixels || initial.status === "cancelled" || pendingPix) return;
+    if (!pixels || initial.status === "cancelled" || pendingPayment) return;
     const key = purchaseSentKey(storeSlug, initial.code);
     try {
       if (window.sessionStorage.getItem(key)) return;
@@ -130,12 +156,11 @@ export function OrderTrackingView({
       orderCode: initial.code,
       valueCents: initial.totalCents,
     });
-  }, [initial.code, initial.status, initial.totalCents, pendingPix, pixels, storeSlug]);
+  }, [initial.code, initial.status, initial.totalCents, pendingPayment, pixels, storeSlug]);
 
-  const interval = awaitingPix ? pixPollIntervalMs : pollIntervalMs;
+  const interval = awaitingPayment ? pixPollIntervalMs : pollIntervalMs;
   useEffect(() => {
     if (final) return;
-    const loader = load ?? (() => fetchTracking(storeSlug, token));
     let cancelled = false;
     const timer = setInterval(() => {
       void loader().then((next) => {
@@ -146,7 +171,27 @@ export function OrderTrackingView({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [final, interval, load, storeSlug, token]);
+  }, [final, interval, loader]);
+
+  // Nova tentativa aceita: mostra "Processando" já e consulta o estado em seguida.
+  function handleCardRetried() {
+    setOrder((current) =>
+      current.card
+        ? {
+            ...current,
+            card: {
+              ...current.card,
+              declineReason: null,
+              retryActions: [],
+              state: "processing",
+            },
+          }
+        : current,
+    );
+    void loader().then((next) => {
+      if (next) setOrder(next);
+    });
+  }
 
   const timeline = timelineOf(order);
   const currentIndex = timeline.indexOf(order.status);
@@ -179,7 +224,7 @@ export function OrderTrackingView({
       <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6 md:px-8">
         <OutlineContainer as="section" aria-labelledby="pedido-status" className="p-5">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">
-            {pendingPix ? "Pagamento" : "Status"}
+            {pendingPayment ? "Pagamento" : "Status"}
           </p>
           {pendingPix ? (
             <div className="mt-1">
@@ -191,7 +236,22 @@ export function OrderTrackingView({
               />
             </div>
           ) : null}
-          {pendingPix ? null : (
+          {pendingCard ? (
+            <div className="mt-1">
+              <CardPayment
+                {...(cardApi ? { api: cardApi } : {})}
+                {...(cardSdkFactory ? { sdkFactory: cardSdkFactory } : {})}
+                {...(pixNow ? { now: pixNow } : {})}
+                card={pendingCard}
+                customerName={order.customerFirstName}
+                menuHref={menuHref}
+                onRetried={handleCardRetried}
+                storeSlug={storeSlug}
+                token={token}
+              />
+            </div>
+          ) : null}
+          {pendingPayment ? null : (
             <h2
               aria-live="polite"
               className="mt-1 text-xl font-bold text-[var(--color-ink)]"
@@ -200,10 +260,10 @@ export function OrderTrackingView({
               {orderStatusConsumerLabelPt(order.fulfillment, order.status)}
             </h2>
           )}
-          {order.pix?.state === "paid" ? (
+          {order.pix?.state === "paid" || order.card?.state === "approved" ? (
             <p className="mt-1 text-sm text-[var(--color-body)]">Pagamento confirmado.</p>
           ) : null}
-          {pendingPix ? null : cancelled ? (
+          {pendingPayment ? null : cancelled ? (
             <Badge className="mt-2" tone="error">
               Cancelado
             </Badge>
@@ -235,13 +295,13 @@ export function OrderTrackingView({
               })}
             </ol>
           )}
-          {order.eta && !final && !pendingPix ? (
+          {order.eta && !final && !pendingPayment ? (
             <p className="mt-4 text-sm text-[var(--color-body)]">
               Previsão: {formatEtaPt(order.eta)}{" "}
               {order.fulfillment === "delivery" ? "para entregar" : "para retirar"}
             </p>
           ) : null}
-          {!final && !pendingPix ? (
+          {!final && !pendingPayment ? (
             <p className="mt-1 text-xs text-[var(--color-muted)]">Esta página atualiza sozinha.</p>
           ) : null}
         </OutlineContainer>
