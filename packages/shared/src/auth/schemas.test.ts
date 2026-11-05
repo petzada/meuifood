@@ -5,9 +5,11 @@ import {
   emailSchema,
   inviteMemberInputSchema,
   loginInputSchema,
+  memberStatusSchema,
   opsInviteOwnerInputSchema,
   removeMemberInputSchema,
   requestPasswordResetInputSchema,
+  resendInviteInputSchema,
   roleSchema,
   setPasswordInputSchema,
   switchActiveStoreInputSchema,
@@ -140,6 +142,15 @@ describe("switchActiveStoreInputSchema e removeMemberInputSchema", () => {
     expect(switchActiveStoreInputSchema.safeParse({ storeId: "1 OR 1=1" }).success).toBe(false);
     expect(removeMemberInputSchema.safeParse({ membershipId: STORE_ID }).success).toBe(true);
     expect(removeMemberInputSchema.safeParse({ membershipId: "" }).success).toBe(false);
+    expect(resendInviteInputSchema.safeParse({ membershipId: STORE_ID }).success).toBe(true);
+    expect(resendInviteInputSchema.safeParse({ membershipId: "m1" }).success).toBe(false);
+  });
+});
+
+describe("memberStatusSchema", () => {
+  it("só convite enviado ou ativo", () => {
+    expect(memberStatusSchema.options).toEqual(["invited", "active"]);
+    expect(memberStatusSchema.safeParse("pending").success).toBe(false);
   });
 });
 

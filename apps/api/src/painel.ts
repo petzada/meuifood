@@ -10,6 +10,7 @@ import type {
   InviteMemberInput,
   OpsInviteOwnerInput,
   RemoveMemberInput,
+  ResendInviteInput,
   RpcResult,
   SessionCtx,
   SwitchActiveStoreInput,
@@ -251,6 +252,13 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
 
   async removeMember(caller: PainelCaller, input: RemoveMemberInput): Promise<RpcResult<null>> {
     return this.run("removeMember", () => this.service().removeMember(caller, input));
+  }
+
+  async resendInvite(
+    caller: PainelCaller,
+    input: ResendInviteInput,
+  ): Promise<RpcResult<{ membershipId: string }>> {
+    return this.run("resendInvite", () => this.service().resendInvite(caller, input));
   }
 
   async menuGet(caller: PainelCaller): Promise<RpcResult<AdminMenu>> {

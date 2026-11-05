@@ -32,6 +32,7 @@ import {
   effectivePaymentFeesOf,
   type EffectivePaymentFee,
 } from "./ops-db";
+import { createCardPaymentOps } from "./card-payment-db";
 import { createPaymentOps } from "./payment-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
@@ -58,13 +59,20 @@ export type PublicStore = {
   name: string;
 };
 
+/** `active` = já definiu senha; `invited` = convite enviado, ainda sem senha (EQP-01). */
+export type MemberStatus = "invited" | "active";
+
 export type StoreMember = {
   membershipId: string;
   userId: string;
   email: string;
   name: string;
   role: MembershipRole;
+  status: MemberStatus;
 };
+
+/** Membership `m` cujo usuário já tem conta `credential` com senha (convite aceito). */
+const HAS_PASSWORD_SQL = `EXISTS (SELECT 1 FROM accounts a WHERE a.user_id = m.user_id AND a.provider_id = 'credential' AND a.password IS NOT NULL)`;
 
 export type AuditEvent = {
   id: string;
@@ -188,7 +196,6 @@ export function createFoodeDb(d1: D1Database) {
     const userId = newId();
     const membershipId = newId();
     const now = utcNow();
-    const hasPasswordSql = `EXISTS (SELECT 1 FROM accounts a WHERE a.user_id = m.user_id AND a.provider_id = 'credential' AND a.password IS NOT NULL)`;
 
     const [userInsert] = await d1.batch([
       d1
@@ -204,7 +211,7 @@ export function createFoodeDb(d1: D1Database) {
           `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action, target_type, target_id, metadata)
            SELECT ?, ?, ?, m.store_id, 'membership.invite_resent', 'store_membership', m.id, json_object('role', m.role)
            FROM store_memberships m JOIN users u ON u.id = m.user_id
-           WHERE m.store_id = ? AND u.email = ? AND NOT ${hasPasswordSql}`,
+           WHERE m.store_id = ? AND u.email = ? AND NOT ${HAS_PASSWORD_SQL}`,
         )
         .bind(newId(), now, actorUserId, storeId, email),
       d1
@@ -226,7 +233,7 @@ export function createFoodeDb(d1: D1Database) {
     const row = await d1
       .prepare(
         `SELECT m.id AS membershipId, m.user_id AS userId, u.email AS email, m.role AS role,
-                s.name AS storeName, ${hasPasswordSql} AS hasPassword
+                s.name AS storeName, ${HAS_PASSWORD_SQL} AS hasPassword
          FROM store_memberships m
          JOIN users u ON u.id = m.user_id
          JOIN stores s ON s.id = m.store_id
@@ -328,6 +335,12 @@ export function createFoodeDb(d1: D1Database) {
      * do Pedido (token conferido) ou o webhook autenticado do provedor.
      */
     payments: createPaymentOps(d1),
+
+    /**
+     * Cartão de crédito (Ticket 27): tentativas idempotentes, cobrança, recusa e confirmação
+     * canônica com Ledger e retenções. Mesmo modelo sem StoreContext do PIX.
+     */
+    cardPayments: createCardPaymentOps(d1),
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {
@@ -439,19 +452,26 @@ export function createFoodeDb(d1: D1Database) {
         /** Cupons e boas-vindas (Ticket 13): só o Dono (`forbidden` para Operador). */
         coupons: () => createCouponOps(d1, context),
 
+        /**
+         * Equipe da Loja com a situação de cada membro (EQP-01): `active` se já definiu senha
+         * (conta `credential` com senha, a mesma regra do convite); senão `invited`.
+         */
         async members(): Promise<StoreMember[]> {
-          return db
-            .select({
-              membershipId: storeMemberships.id,
-              userId: users.id,
-              email: users.email,
-              name: users.name,
-              role: storeMemberships.role,
-            })
-            .from(storeMemberships)
-            .innerJoin(users, eq(users.id, storeMemberships.userId))
-            .where(eq(storeMemberships.storeId, storeId))
-            .orderBy(asc(users.email));
+          const { results } = await d1
+            .prepare(
+              `SELECT m.id AS membershipId, u.id AS userId, u.email AS email, u.name AS name,
+                      m.role AS role, ${HAS_PASSWORD_SQL} AS hasPassword
+               FROM store_memberships m
+               JOIN users u ON u.id = m.user_id
+               WHERE m.store_id = ?
+               ORDER BY u.email ASC`,
+            )
+            .bind(storeId)
+            .all<Omit<StoreMember, "status"> & { hasPassword: number }>();
+          return results.map(({ hasPassword, ...member }) => ({
+            ...member,
+            status: hasPassword === 1 ? "active" : "invited",
+          }));
         },
 
         /** Só o Dono. Id de membership de outra Loja não remove nada (retorna false). */

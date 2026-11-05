@@ -618,6 +618,67 @@ describe("convite (fluxo único de provisionamento)", () => {
   });
 });
 
+describe("situação do membro e reenvio do convite (EQP-01)", () => {
+  it("listMembers: invited até definir senha, depois active", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const statusOf = async (userId: string) => {
+      const list = await t.service.listMembers(owner);
+      if (!list.ok) throw new Error(list.error);
+      return list.data.find((member) => member.userId === userId)?.status;
+    };
+    expect(await statusOf(fx.ownerA.id)).toBe("active");
+    expect(await statusOf(fx.operatorA.id)).toBe("invited");
+    await setPassword(fx.operatorA.id);
+    expect(await statusOf(fx.operatorA.id)).toBe("active");
+  });
+
+  it("Dono reenvia: link novo, auditoria e 1 reenvio a cada 5 min por membro", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const input = { membershipId: fx.memberships.operatorA.id };
+    await expect(t.service.resendInvite(owner, input)).resolves.toEqual({
+      ok: true,
+      data: { membershipId: fx.memberships.operatorA.id },
+    });
+    await t.flush();
+    const sent = t.emails.filter((email) => email.to === fx.operatorA.email);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.text).toContain(`${PANEL}/definir-senha`);
+    expect(tokenFromEmail(sent[0]!)).toBeTruthy();
+    expect(await auditActions(fx.storeA.id, fx.ownerA.id)).toContain("membership.invite_resent");
+
+    await expect(t.service.resendInvite(owner, input)).resolves.toEqual({
+      ok: false,
+      error: "rate_limited",
+    });
+    await t.flush();
+    expect(t.emails.filter((email) => email.to === fx.operatorA.email)).toHaveLength(1);
+  });
+
+  it("já ativo = conflict; outra Loja = not_found; Operador = forbidden; sem efeito", async () => {
+    const owner = await loginAs(fx.ownerA);
+    const operator = await loginAs(fx.operatorA);
+    const auditBefore = await auditActions(fx.storeA.id, fx.ownerA.id);
+
+    await expect(
+      t.service.resendInvite(owner, { membershipId: fx.memberships.operatorA.id }),
+    ).resolves.toEqual({ ok: false, error: "conflict" });
+    await expect(
+      t.service.resendInvite(owner, { membershipId: fx.memberships.ownerB.id }),
+    ).resolves.toEqual({ ok: false, error: "not_found" });
+    await expect(
+      t.service.resendInvite(operator, { membershipId: fx.memberships.multiA.id }),
+    ).resolves.toEqual({ ok: false, error: "forbidden" });
+    await expect(t.service.resendInvite(owner, { membershipId: "x" })).resolves.toEqual({
+      ok: false,
+      error: "invalid_input",
+    });
+
+    expect(await auditActions(fx.storeA.id, fx.ownerA.id)).toEqual(auditBefore);
+    await t.flush();
+    expect(t.emails).toHaveLength(0);
+  });
+});
+
 describe("remover membership", () => {
   it("o acesso cai na request seguinte; sem outra Loja, as sessões são revogadas", async () => {
     const owner = await loginAs(fx.ownerA);

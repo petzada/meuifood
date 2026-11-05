@@ -284,7 +284,7 @@ describe("checkPayment e meios", () => {
   const payment = (
     method: CheckoutCreateRequest["payment"]["method"],
     changeForCents: number | null = null,
-  ) => ({ method, changeForCents });
+  ) => ({ method, changeForCents, card: null });
 
   it("só on_delivery até os Tickets 26/27, mesmo com taxa Foode vigente", () => {
     expect(availablePaymentMethods([])).toEqual(["on_delivery"]);

@@ -10,6 +10,7 @@ import {
   inviteMemberInputSchema,
   opsInviteOwnerInputSchema,
   removeMemberInputSchema,
+  resendInviteInputSchema,
   type RpcResult,
   type SessionCtx,
   switchActiveStoreInputSchema,
@@ -27,6 +28,9 @@ import { inviteEmail, inviteNoticeEmail, loginUrl, setPasswordUrl } from "./emai
  * linhas mais velhas que isso, e uma janela maior seria zerada antes da hora.
  */
 export const INVITE_RATE_LIMIT = { windowSeconds: 300, max: 10 } as const;
+
+/** Reenvio de convite por membro: 1 a cada 5 min (clique repetido não manda e-mails em série). */
+export const RESEND_INVITE_RATE_LIMIT = { windowSeconds: 300, max: 1 } as const;
 
 export type PainelServiceDeps = {
   db: FoodeDb;
@@ -203,6 +207,50 @@ export function createPainelService(deps: PainelServiceDeps) {
         if (error instanceof FoodeDbError && error.code === "invalid_input") {
           return fail("invalid_input");
         }
+        throw error;
+      }
+    },
+
+    /**
+     * Reenvio do convite (EQP-01): só para membro desta Loja que ainda não definiu senha. Sem
+     * Turnstile (só o Dono autenticado, e só para quem já é membro); o rate limit é o mesmo dos
+     * convites por Dono, mais 1 reenvio a cada 5 min por membro. Reaproveita o provisionamento
+     * (que audita `membership.invite_resent`) e o e-mail de convite com link novo.
+     */
+    async resendInvite(
+      caller: PainelCaller,
+      input: unknown,
+    ): Promise<RpcResult<{ membershipId: string }>> {
+      const parsed = resendInviteInputSchema.safeParse(input);
+      if (!parsed.success) return fail("invalid_input");
+      const session = await sessionOf(caller);
+      if (!session) return fail("unauthenticated");
+      const result = await authorizeSession(db, session, rolesWith("store.members"));
+      if (!result.ok) return fail(result.error);
+      if (result.authorized.kind !== "store") return fail("forbidden");
+
+      const store = db.store(result.authorized.store);
+      const target = (await store.members()).find(
+        (member) => member.membershipId === parsed.data.membershipId,
+      );
+      // Id de outra Loja é indistinguível de inexistente.
+      if (!target) return fail("not_found");
+      if (target.status === "active") return fail("conflict");
+
+      const allowed =
+        (await db.rateLimit.consume(`painel:invite:user:${session.user.id}`, INVITE_RATE_LIMIT)) &&
+        (await db.rateLimit.consume(
+          `painel:invite:resend:${target.membershipId}`,
+          RESEND_INVITE_RATE_LIMIT,
+        ));
+      if (!allowed) return fail("rate_limited");
+
+      try {
+        const invite = await store.inviteMember({ email: target.email, role: target.role });
+        // Definiu a senha entre a leitura e o reenvio: `notify` devolve `conflict`.
+        return await notify(invite);
+      } catch (error) {
+        if (error instanceof FoodeDbError) return fail("forbidden");
         throw error;
       }
     },

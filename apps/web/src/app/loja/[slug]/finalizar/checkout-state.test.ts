@@ -223,7 +223,7 @@ describe("corpo do contrato e totais locais", () => {
       idempotencyKey: "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
       lines,
       note: "sem cebola",
-      payment: { changeForCents: 5000, method: "on_delivery" },
+      payment: { card: null, changeForCents: 5000, method: "on_delivery" },
     });
     expect(JSON.stringify(body)).not.toContain("priceCents");
   });

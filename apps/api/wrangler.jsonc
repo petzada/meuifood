@@ -15,6 +15,10 @@
 // ABACATEPAY_SIGNING_KEY são secrets OPCIONAIS (sincronizados se existirem no GitHub); sem os três,
 // PIX fica indisponível no checkout e `/webhooks/abacatepay` responde 503. O webhook é cadastrado
 // na AbacatePay pelo workflow manual setup-abacatepay-webhook (depois de criar as chaves).
+// Ticket 27 (Cartão, decisão 60): EFI_CLIENT_ID, EFI_CLIENT_SECRET e EFI_NOTIFICATION_SECRET são
+// secrets OPCIONAIS (Normal); o Rápido usa as chaves do PIX + a var ABACATEPAY_PUBLIC_KEY. Sem as
+// chaves do modo, o Crédito fica indisponível nas Lojas daquele modo e `/webhooks/efi` responde
+// 503. Eventos de cartão da AbacatePay chegam no mesmo webhook do PIX.
 // Vars de Auth (Ticket 22): os valores abaixo são o padrão; o deploy sobrescreve com as GitHub
 // variables BETTER_AUTH_URL e EMAIL_FROM quando existirem (`--var`).
 // - BETTER_AUTH_URL: URL pública do Painel (o admin repassa /api/auth/*): base dos links e origem
@@ -44,6 +48,12 @@
     // Ticket 31 (decisão 70): aviso de lead novo da landing pela MillionSend. É o e-mail do
     // próprio Dono da Foode (não é dado de terceiro nem segredo).
     "LEADS_NOTIFY_EMAIL": "marciopetigrosso@gmail.com",
+    // Ticket 27 (Cartão Normal, Efí): origem pública desta api para a `notification_url` por
+    // cobrança (`/webhooks/efi?secret=`; o segredo é o secret EFI_NOTIFICATION_SECRET) e o
+    // ambiente da API Cobranças. O payee code e a chave pública do abacatepay.js (públicos) vêm
+    // das GitHub variables EFI_PAYEE_CODE / ABACATEPAY_PUBLIC_KEY no deploy (`--var`).
+    "API_PUBLIC_URL": "https://api.foodedelivery.com.br",
+    "EFI_ENVIRONMENT": "production",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).

@@ -5,6 +5,7 @@
 import type { CartLine } from "@foode/shared/menu";
 import { formatBRL, reaisToCents } from "@foode/shared/money";
 import { normalizeBrazilianMobilePhone, normalizeNeighborhoodKey } from "@foode/shared";
+import type { CardPaymentInputRaw } from "@foode/shared/payment";
 import {
   ADDRESS_COMPLEMENT_MAX,
   ADDRESS_NUMBER_MAX,
@@ -22,6 +23,14 @@ import {
   type StorefrontStoreState,
 } from "@foode/shared/order";
 
+import {
+  emptyCardForm,
+  firstCardError,
+  validateCardForm,
+  type CardFormErrors,
+  type CardFormValues,
+} from "./card-form-state";
+
 // ---- Formulário.
 
 export type CheckoutAddress = {
@@ -38,6 +47,11 @@ export type CheckoutAddress = {
 
 export type CheckoutForm = {
   address: CheckoutAddress;
+  /**
+   * Cartão (Ticket 27): só na memória do navegador até a tokenização; nunca vai ao corpo nem ao
+   * `localStorage` (`rememberedFromForm` não o lê).
+   */
+  card: CardFormValues;
   /** "Troco para" em reais digitados ("50" ou "50,00"); vazio = sem troco. */
   changeFor: string;
   /** Cupom promocional aplicado pelo Consumidor (Ticket 13); vazio = nenhum. */
@@ -82,6 +96,7 @@ export function createCheckoutForm(
     address: remembered?.address
       ? applyAddress(emptyAddress, remembered.address, state)
       : emptyAddress,
+    card: emptyCardForm,
     changeFor: "",
     couponCode: "",
     fulfillment: fulfillments.length === 1 ? fulfillments[0]! : null,
@@ -219,6 +234,7 @@ export const CHECKOUT_FIELDS = [
   "reference",
   "payment",
   "changeFor",
+  "card",
   "note",
 ] as const;
 export type CheckoutField = (typeof CHECKOUT_FIELDS)[number];
@@ -226,6 +242,8 @@ export type CheckoutField = (typeof CHECKOUT_FIELDS)[number];
 export type CheckoutErrors = Partial<Record<CheckoutField, string>>;
 
 export type CheckoutValidation = {
+  /** Por campo do Cartão (só com Cartão escolhido); `errors.card` resume. */
+  cardErrors: CardFormErrors;
   errors: CheckoutErrors;
   firstError: CheckoutField | null;
   /** Faixa "Faltam R$ X" (P-2.5): só Delivery, sobre o subtotal dos itens. */
@@ -236,12 +254,14 @@ export type CheckoutValidation = {
 export function validateCheckout(
   form: CheckoutForm,
   context: {
-    state: Pick<StorefrontStoreState, "delivery" | "pickup" | "paymentMethods">;
+    now?: Date;
+    state: Pick<StorefrontStoreState, "cardTokenizer" | "delivery" | "pickup" | "paymentMethods">;
     subtotalCents: number;
     totalCents: number;
   },
 ): CheckoutValidation {
   const errors: CheckoutErrors = {};
+  let cardErrors: CardFormErrors = {};
   const { state } = context;
 
   if (!form.name.trim()) errors.name = "Informe seu nome.";
@@ -295,6 +315,16 @@ export function validateCheckout(
     }
   }
 
+  // Cartão (Ticket 27): só com o tokenizador da Loja (meio indisponível sem ele) e à vista.
+  if (form.payment === "credit" && !errors.payment) {
+    const tokenizer = state.cardTokenizer ?? null;
+    if (!tokenizer) errors.payment = "Cartão indisponível no momento. Escolha outro meio.";
+    else {
+      cardErrors = validateCardForm(form.card, tokenizer.sdk, context.now);
+      if (firstCardError(cardErrors)) errors.card = "Confira os dados do cartão.";
+    }
+  }
+
   if (form.note.length > ORDER_NOTE_MAX) errors.note = `Até ${ORDER_NOTE_MAX} caracteres.`;
 
   const minimum =
@@ -304,7 +334,7 @@ export function validateCheckout(
 
   const firstError = CHECKOUT_FIELDS.find((field) => errors[field]) ?? null;
   const belowMinimum = minimum !== null && minimum.missingCents > 0;
-  return { errors, firstError, minimum, ok: firstError === null && !belowMinimum };
+  return { cardErrors, errors, firstError, minimum, ok: firstError === null && !belowMinimum };
 }
 
 /** Rótulo do CTA (G1/G2): próxima ação + total, ou o que falta. */
@@ -337,6 +367,8 @@ export function checkoutCtaLabel(
       return "Escolha como pagar";
     case "changeFor":
       return "Confira o troco";
+    case "card":
+      return "Complete os dados do cartão";
     case "note":
       return "Encurte a observação";
   }
@@ -378,11 +410,17 @@ export function buildCartBody(
   };
 }
 
+/**
+ * `card` (Ticket 27) é o resultado da tokenização no navegador (token + pagador): só entra com
+ * Crédito. O formulário do cartão (`form.card`) nunca é lido aqui: número/CVV/validade não têm
+ * caminho até o corpo.
+ */
 export function buildCreateRequest(
   form: CheckoutForm,
   lines: CartLine[],
   state: Pick<StorefrontStoreState, "delivery">,
   idempotencyKey: string,
+  card: CardPaymentInputRaw | null = null,
 ): CheckoutCreateRequestInput {
   const change = form.payment === "on_delivery" ? changeForCents(form.changeFor) : null;
   return {
@@ -390,7 +428,11 @@ export function buildCreateRequest(
     customer: { name: form.name.trim(), phone: form.phone },
     idempotencyKey,
     note: form.note.trim() || null,
-    payment: { changeForCents: change, method: form.payment ?? "on_delivery" },
+    payment: {
+      changeForCents: change,
+      method: form.payment ?? "on_delivery",
+      card: form.payment === "credit" ? card : null,
+    },
   };
 }
 

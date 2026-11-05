@@ -33,6 +33,8 @@ describe("migration 0007 × schema/payments.ts", () => {
       const columnsInSql = [...body.matchAll(/^\t`(\w+)` /gm)].map((m) => m[1]);
       expect(columnsInSql.sort()).toEqual(config.columns.map((c) => c.name).sort());
       for (const index of config.indexes) {
+        // Índice do Cartão (Ticket 27) nasce na 0009 (card-payments-schema.test.ts).
+        if (index.config.name === "payment_intents_credit_active_unique") continue;
         expect(migration).toContain(`INDEX \`${index.config.name}\` ON \`${config.name}\``);
       }
     });

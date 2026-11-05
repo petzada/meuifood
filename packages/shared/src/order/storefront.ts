@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 import { centsSchema } from "../money.js";
+import { cardTokenizerSchema, orderCardSchema } from "../payment/card.js";
 import { orderPixSchema } from "../payment/pix.js";
 import { storefrontShowcaseSchema } from "../onboarding/showcase.js";
 import { phoneE164Schema, customerPhoneSchema } from "./checkout.js";
@@ -70,6 +71,12 @@ export const storefrontStoreStateSchema = z.object({
   /** Meios disponíveis agora (online só com taxa Foode vigente), sem destaque (P-4.4). */
   paymentMethods: z.array(paymentMethodSchema),
   cardBrands: cardBrandsSchema,
+  /**
+   * Ticket 27: qual SDK de tokenização carregar (e o identificador público da conta), derivado do
+   * modo do Cartão da Loja no servidor; null = Crédito indisponível. O Storefront não escolhe o
+   * provedor. Opcional só para respostas anteriores ao 27 (ausente = null).
+   */
+  cardTokenizer: cardTokenizerSchema.nullable().optional(),
   /** WhatsApp da Loja para `wa.me` "Falar com a Loja". */
   whatsapp: phoneE164Schema.nullable(),
   /**
@@ -151,6 +158,8 @@ export const orderTrackingSchema = z.object({
   payment: z.object({ method: paymentMethodSchema, changeForCents: centsSchema.nullable() }),
   /** Cobrança PIX (Ticket 26): só em Pedido `pix`; null nos demais meios. */
   pix: orderPixSchema.nullable().default(null),
+  /** Pagamento por Cartão (Ticket 27): só em Pedido `credit` (última tentativa); null nos demais. */
+  card: orderCardSchema.nullable().default(null),
   note: z.string().nullable(),
   address: orderAddressViewSchema.nullable(),
 });
