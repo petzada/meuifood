@@ -1,7 +1,7 @@
 // Taxas PIX/Cartão (decisão 70): recebe a tabela padrão do `/ops` (só o que estiver
 // vigente) e um card do modo Rápido. Sem tabela, as taxas não aparecem; o card do Rápido
-// fica. TODO(31-taxas): a api ainda não expõe a tabela padrão publicamente; a página passa
-// `fees={null}` até existir `GET /storefront/taxas` (ou equivalente) — nada é inventado.
+// fica. A tabela vem de `GET /storefront/taxas` da api (via `/contato/taxas` do web, em
+// live-payment-fees.tsx) — nada é inventado.
 import { Lightning, PixLogo, CreditCard } from "@phosphor-icons/react/dist/ssr";
 import type { FeePaymentMethod } from "@foode/shared/ops";
 import type { ReactNode } from "react";

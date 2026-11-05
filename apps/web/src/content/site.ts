@@ -19,10 +19,16 @@ export const LEGAL = {
   email: "contato@foodedelivery.com.br",
 } as const;
 
-/** Rota da outra fatia do Ticket 31: redireciona no servidor para o `wa.me` de vendas. */
+/** Redireciona no servidor para o `wa.me` de vendas (secret `SALES_WHATSAPP`, nunca no HTML). */
 export const FALAR_PATH = "/falar";
-/** Route handler desta fatia (`POST`), por ora responde 503 controlado. */
+/** Route handler do lead (`POST`): valida e repassa à api (Turnstile + rate limit por IP). */
 export const LEAD_PATH = "/contato/lead";
+/** Route handler da tabela padrão de taxas (`GET`), repassada da api. */
+export const FEES_PATH = "/contato/taxas";
+/** Âncora do formulário de contato (fallback do `/falar` sem número configurado). */
+export const CONTACT_ANCHOR = "/#contato";
+/** Texto inicial da conversa no WhatsApp de vendas. */
+export const FALAR_MESSAGE = "Olá! Vim pelo site da Foode e quero saber mais.";
 
 export const REFUND_LINE = "Reembolso integral em até 7 dias";
 

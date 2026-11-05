@@ -145,6 +145,23 @@ jobs:
           test "$ops" = "2" || { echo "::error::esperado 2 usuários foode_ops, veio $ops"; exit 1; }
           others=$(q "SELECT (SELECT count(*) FROM stores) + (SELECT count(*) FROM store_memberships) AS n" | jq -r '.[0].results[0].n')
           test "$others" = "0" || { echo "::error::o seed não pode criar Loja nem membership"; exit 1; }
+      # Prova do SQL do workflow contas-de-teste (senha fictícia, só no D1 efêmero).
+      - name: Seed das contas de teste duas vezes (idempotente)
+        env:
+          SEED_TEST_PASSWORD: senha-ficticia-do-ci-123
+        run: |
+          umask 077
+          for run in 1 2; do
+            node ../../apps/api/scripts/seed-test-accounts.mjs "$RUNNER_TEMP/contas.sql"
+            pnpm exec wrangler d1 execute "$D1_NAME" --remote -c wrangler.ci.json --file "$RUNNER_TEMP/contas.sql" > /dev/null
+          done
+          rm -f "$RUNNER_TEMP/contas.sql"
+          q() { pnpm exec wrangler d1 execute "$D1_NAME" --remote -c wrangler.ci.json --json --command "$1" | jq -r '.[0].results[0].n'; }
+          test "$(q "SELECT count(*) AS n FROM stores WHERE slug = 'loja-piloto' AND status = 'onboarding'")" = "1" || { echo "::error::Loja Piloto"; exit 1; }
+          test "$(q "SELECT count(*) AS n FROM store_profiles p JOIN stores s ON s.id = p.store_id WHERE s.slug = 'loja-piloto'")" = "1" || { echo "::error::perfil da Loja Piloto"; exit 1; }
+          test "$(q "SELECT count(*) AS n FROM store_memberships m JOIN stores s ON s.id = m.store_id WHERE s.slug = 'loja-piloto'")" = "2" || { echo "::error::memberships"; exit 1; }
+          test "$(q "SELECT count(*) AS n FROM users u JOIN accounts a ON a.user_id = u.id AND a.account_id = u.id AND a.provider_id = 'credential' WHERE u.email IN ('lojista@teste.com','operador@teste.com') AND u.email_verified = 1")" = "2" || { echo "::error::contas credential"; exit 1; }
+          test "$(q "SELECT count(*) AS n FROM audit_events WHERE action IN ('store.created','membership.test_account_seeded')")" = "3" || { echo "::error::auditoria duplicada ou ausente"; exit 1; }
       - name: Apagar D1 efêmero
         if: always() && steps.criar.outputs.created == 'true'
         run: pnpm exec wrangler d1 delete "$D1_NAME" -y

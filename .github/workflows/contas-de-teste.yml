@@ -1,0 +1,76 @@
+name: Contas de teste (produção)
+# Manual: cria/atualiza no D1 `foode-prod` as contas de teste `lojista@teste.com` (Dono) e
+# `operador@teste.com` (Operador), com e-mail verificado e senha do secret SEED_TEST_PASSWORD
+# (só o hash do Better Auth vai para o banco), e a "Loja Piloto" (`loja-piloto`) em onboarding.
+# Idempotente: rodar de novo só troca a senha. Runbook: AGENTS.md §Contas de teste.
+#   gh workflow run contas-de-teste.yml --ref master -f confirmar=criar
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Digite "criar" para confirmar'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Mesmo grupo do db-migrate: nunca escreve no D1 de produção junto com uma migration.
+  group: db-migrate-producao
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Validar confirmação
+        working-directory: .
+        env:
+          CONFIRMAR: ${{ inputs.confirmar }}
+          SEED_TEST_PASSWORD: ${{ secrets.SEED_TEST_PASSWORD }}
+        run: |
+          [ "$CONFIRMAR" = "criar" ] || { echo "::error::Confirmação inválida (digite criar)"; exit 1; }
+          [ "$GITHUB_REF" = "refs/heads/master" ] || { echo "::error::só a partir da master"; exit 1; }
+          : "${CLOUDFLARE_API_TOKEN:?secret CLOUDFLARE_API_TOKEN ausente}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID ausente}"
+          [ -n "$SEED_TEST_PASSWORD" ] || { echo "::error::secret SEED_TEST_PASSWORD ausente"; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - name: Conferir que as migrations estão aplicadas
+        run: |
+          out=$(pnpm exec wrangler d1 migrations list foode-prod --remote 2>&1) || { echo "$out"; exit 1; }
+          if grep -qE '[0-9]{4}_[a-z0-9_]+\.sql' <<< "$out"; then
+            echo "$out"
+            echo "::error::há migration pendente: rode o db-migrate antes"; exit 1
+          fi
+      - name: Criar/atualizar contas e Loja Piloto
+        env:
+          SEED_TEST_PASSWORD: ${{ secrets.SEED_TEST_PASSWORD }}
+        run: |
+          umask 077
+          sql="$RUNNER_TEMP/contas-de-teste.sql"
+          trap 'rm -f "$sql"' EXIT
+          node scripts/seed-test-accounts.mjs "$sql"
+          # Saída descartada: o SQL tem o hash da senha.
+          pnpm exec wrangler d1 execute foode-prod --remote --file "$sql" > /dev/null
+          echo "contas de teste aplicadas."
+      - name: Conferir
+        run: |
+          q() { pnpm exec wrangler d1 execute foode-prod --remote --json --command "$1" | jq -r '.[0].results[0].n'; }
+          users=$(q "SELECT count(*) AS n FROM users u JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential' AND a.password IS NOT NULL WHERE u.email IN ('lojista@teste.com','operador@teste.com') AND u.email_verified = 1")
+          members=$(q "SELECT count(*) AS n FROM store_memberships m JOIN stores s ON s.id = m.store_id JOIN users u ON u.id = m.user_id WHERE s.slug = 'loja-piloto' AND u.email IN ('lojista@teste.com','operador@teste.com')")
+          echo "contas com senha: $users; memberships na Loja Piloto: $members"
+          test "$users" = "2" && test "$members" = "2" || { echo "::error::contas de teste incompletas"; exit 1; }

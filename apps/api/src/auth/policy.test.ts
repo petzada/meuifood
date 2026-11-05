@@ -6,7 +6,9 @@ import { rolesWith } from "./guard";
 
 describe("janelas de rate limit", () => {
   it("o convite não usa janela maior que a maior do Better Auth (poda da tabela)", () => {
-    const longest = Math.max(...Object.values(AUTH_RATE_LIMIT_RULES).map((rule) => rule.window));
+    const longest = Math.max(
+      ...Object.values(AUTH_RATE_LIMIT_RULES).flatMap((rule) => (rule ? [rule.window] : [])),
+    );
     expect(INVITE_RATE_LIMIT.windowSeconds).toBeLessThanOrEqual(longest);
   });
 });

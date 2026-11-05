@@ -3,12 +3,13 @@
 // Entrega (CFG-03, decisão 42, P-CFG-1/2/5): Retirada liga/desliga; Delivery com UM modo —
 // "Por bairro" ou "Taxa fixa" — com aviso do que deixa de valer ao trocar; tabela Bairro · Taxa ·
 // interruptor ativo/inativo; "+ Bairro" abre o cadastro em modal (decisão 74) e salva na hora;
-// pedido mínimo só do Delivery; tempo
-// estimado mín–máx por Fulfillment. Validação (mín ≤ máx, ≥ 1 bairro ativo) no servidor.
-// Sugestão por km (decisão 73): "Quanto você cobra por km" (só neste navegador, por Loja) vira
+// pedido mínimo só do Delivery; tempo estimado mín–máx por Fulfillment. Validação (mín ≤ máx,
+// ≥ 1 bairro ativo) no servidor.
+// Sugestão por km (decisão 73): "Quanto você cobra por km" fica na Loja (RPC
+// `storeSetDeliveryRate`, lido de `storeOperationGet`; salva ao sair do campo ou no Enter) e vira
 // PLACEHOLDER das taxas — bairro: centro do bairro e da Loja pelo Nominatim, linha reta × 1,3;
 // Taxa fixa: média dos bairros (ou 3 km); Pedido mínimo: 3× a Taxa fixa. Nunca cobra por km.
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import {
   type DeliveryMode,
   type DeliveryNeighborhood,
@@ -16,7 +17,7 @@ import {
   MAX_ETA_MINUTES,
   type StoreOperationSettings,
 } from "@foode/shared/order";
-import { useActionState, useEffect, useId, useMemo, useState } from "react";
+import { useActionState, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { NeighborhoodModal } from "./neighborhood-modal";
 
@@ -113,15 +114,26 @@ function Switch({
   );
 }
 
-// TODO(decisão 73/74): trocar o R$/km do localStorage pela RPC `storeSetDeliveryRate` (coluna
-// `delivery_rate_per_km_cents`, migration 0008) quando o Ticket 31-leads entrar na master.
-const PER_KM_KEY = (storeId: string) => `foode.painel.reais-por-km.v1:${storeId}`;
+/** Chave antiga do R$/km no navegador (antes da RPC): migrada para a Loja e apagada. */
+export const LEGACY_PER_KM_KEY = (storeId: string) => `foode.painel.reais-por-km.v1:${storeId}`;
 
-function readPerKm(storage: Storage | null, storeId: string): string {
+export type SaveDeliveryRate = (
+  ratePerKmCents: number | null,
+) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+function readLegacy(storage: Storage | null, storeId: string): string | null {
   try {
-    return storage?.getItem(PER_KM_KEY(storeId)) ?? "";
+    return storage?.getItem(LEGACY_PER_KM_KEY(storeId)) ?? null;
   } catch {
-    return "";
+    return null;
+  }
+}
+
+function clearLegacy(storage: Storage | null, storeId: string): void {
+  try {
+    storage?.removeItem(LEGACY_PER_KM_KEY(storeId));
+  } catch {
+    // Sem localStorage: nada a limpar.
   }
 }
 
@@ -193,6 +205,7 @@ export function FulfillmentForm({
   area = null,
   initial,
   locate,
+  saveRate,
   storage = typeof window === "undefined" ? null : window.localStorage,
   storeId,
 }: {
@@ -202,6 +215,9 @@ export function FulfillmentForm({
   initial: StoreOperationSettings;
   /** Geocodificador (padrão: Nominatim do navegador); injetável nos testes. */
   locate?: Locate;
+  /** Grava o R$/km na Loja (server action → `storeSetDeliveryRate`). */
+  saveRate: SaveDeliveryRate;
+  /** Só para migrar o R$/km antigo deste navegador (antes da RPC). */
   storage?: Storage | null;
   storeId: string;
 }) {
@@ -222,8 +238,42 @@ export function FulfillmentForm({
   const headingId = useId();
   const modeId = useId();
   const errors = state.errors;
-  const [perKm, setPerKm] = useState("");
-  useEffect(() => setPerKm(readPerKm(storage, storeId)), [storage, storeId]);
+  const toast = useToast();
+  const savedRate = useRef<number | null>(initial.deliveryRatePerKmCents ?? null);
+  const [perKm, setPerKm] = useState(() =>
+    savedRate.current === null ? "" : formatMoneyInput(savedRate.current),
+  );
+
+  async function persistRate(cents: number | null, silent = false): Promise<boolean> {
+    const result = await saveRate(cents);
+    if (!result.ok) {
+      toast.error(result.message);
+      return false;
+    }
+    savedRate.current = cents;
+    if (!silent) toast.success(cents === null ? "R$/km removido." : "R$/km salvo.");
+    return true;
+  }
+
+  // 1ª carga depois da RPC: o R$/km que ficou neste navegador vai para a Loja (se a Loja ainda
+  // não tem) e a chave antiga é apagada.
+  const migrated = useRef(false);
+  useEffect(() => {
+    if (migrated.current) return;
+    migrated.current = true;
+    const legacy = readLegacy(storage, storeId);
+    if (legacy === null) return;
+    const cents = parseMoneyToCents(legacy);
+    if (savedRate.current !== null || cents === null || cents <= 0) {
+      clearLegacy(storage, storeId);
+      return;
+    }
+    setPerKm(formatMoneyInput(cents));
+    void persistRate(cents, true).then((ok) => {
+      if (ok) clearLegacy(storage, storeId);
+    });
+    // `persistRate` só usa refs e props estáveis desta tela.
+  }, [storage, storeId]);
   const locateFn = useMemo<Locate>(() => locate ?? ((query) => geocoder().locate(query)), [locate]);
   const suggestion = useFeeSuggestions({
     area,
@@ -232,14 +282,16 @@ export function FulfillmentForm({
     perKmCents: parseMoneyToCents(perKm),
   });
 
-  function savePerKm(value: string) {
-    setPerKm(value);
-    try {
-      if (value) storage?.setItem(PER_KM_KEY(storeId), value);
-      else storage?.removeItem(PER_KM_KEY(storeId));
-    } catch {
-      // Sem localStorage: a sugestão vale só nesta tela.
+  /** Salva o R$/km se mudou (sair do campo ou Enter). Vazio limpa; inválido não grava. */
+  function commitPerKm() {
+    const trimmed = perKm.trim();
+    const cents = trimmed === "" ? null : parseMoneyToCents(trimmed);
+    if (trimmed !== "" && (cents === null || cents <= 0)) {
+      toast.error("Informe o R$/km (ex.: R$ 1,50) ou deixe vazio.");
+      return;
     }
+    if (cents === savedRate.current) return;
+    void persistRate(cents);
   }
 
   const touch = () => queueMicrotask(onChange);
@@ -332,9 +384,16 @@ export function FulfillmentForm({
               data-money=""
               autoComplete="off"
               value={perKm}
-              onChange={(event) => savePerKm(event.currentTarget.value)}
+              onChange={(event) => setPerKm(event.currentTarget.value)}
+              onBlur={commitPerKm}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitPerKm();
+                }
+              }}
               placeholder="R$ 0,00"
-              hint="Só para sugerir as taxas abaixo (aparecem apagadas no campo). O Consumidor paga a taxa do bairro ou a Taxa fixa, nunca por km. Fica salvo neste navegador."
+              hint="Só para sugerir as taxas abaixo (aparecem apagadas no campo). O Consumidor paga a taxa do bairro ou a Taxa fixa, nunca por km. Salvo na Loja ao sair do campo."
             />
           </div>
         ) : null}

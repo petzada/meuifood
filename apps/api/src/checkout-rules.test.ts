@@ -47,8 +47,9 @@ function operation(overrides: Partial<OperationSettings> = {}): OperationSetting
     pickupEta: { minMinutes: 15, maxMinutes: 20 },
     cardBrands: { debit: ["visa", "elo"], credit: ["mastercard"] },
     printOnAccept: false,
+    deliveryRatePerKmCents: null,
     ...overrides,
-  };
+  } as OperationSettings;
 }
 
 function snapshot(overrides: Partial<OperationSettings> = {}): CheckoutSnapshot {

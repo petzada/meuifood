@@ -97,11 +97,32 @@ describe("HoursForm", () => {
   });
 });
 
+/** R$/km na Loja (RPC `storeSetDeliveryRate`): por padrão grava sem erro. */
+const okRate = vi.fn(async () => ({ ok: true as const }));
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial));
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+  } as unknown as Storage;
+  return { storage, store };
+}
+
 describe("FulfillmentForm", () => {
   it("trocar para Taxa fixa avisa o que deixa de valer e exige o valor", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={SETTINGS}
+        saveRate={okRate}
+        storeId="loja-a"
+        storage={null}
+      />,
+    );
     await user.click(screen.getByRole("radio", { name: "Taxa fixa" }));
     expect(screen.getByRole("status")).toHaveTextContent("a lista de bairros deixa de valer");
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -122,7 +143,15 @@ describe("FulfillmentForm", () => {
   it("interruptor do bairro e '+ Bairro' (modal) vão no envio; sem bairro ativo é erro", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={SETTINGS}
+        saveRate={okRate}
+        storeId="loja-a"
+        storage={null}
+      />,
+    );
     const table = screen.getByRole("table", { name: "Bairros atendidos" });
     await user.click(within(table).getByRole("switch", { name: "Ativo" }));
     expect(within(table).getByRole("switch", { name: "Inativo" })).not.toBeChecked();
@@ -164,7 +193,15 @@ describe("FulfillmentForm", () => {
   it("tempo estimado com mínimo maior que o máximo é erro no campo", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    render(<FulfillmentForm action={action} initial={SETTINGS} storeId="loja-a" storage={null} />);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={SETTINGS}
+        saveRate={okRate}
+        storeId="loja-a"
+        storage={null}
+      />,
+    );
     const max = screen.getByLabelText("Tempo estimado do Delivery: máximo em minutos");
     await user.clear(max);
     await user.type(max, "10");
@@ -176,12 +213,8 @@ describe("FulfillmentForm", () => {
   it("R$/km sugere as taxas como placeholder (bairro, Taxa fixa e mínimo) sem ir no envio", async () => {
     const user = userEvent.setup();
     const { action, rpc } = actionWith(parseSetFulfillment);
-    const store = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => void store.set(key, value),
-      removeItem: (key: string) => void store.delete(key),
-    } as unknown as Storage;
+    const { storage } = memoryStorage();
+    const saveRate = vi.fn(async () => ({ ok: true as const }));
     // Sé (Loja) → Paulista ("Centro" do teste): ~2,5 km em linha reta, ~3,3 km de rota.
     const locate = vi.fn(async (query: string) =>
       query.startsWith("Sé")
@@ -196,6 +229,7 @@ describe("FulfillmentForm", () => {
         area={{ district: "Sé", city: "São Paulo", state: "SP" }}
         initial={SETTINGS}
         locate={locate}
+        saveRate={saveRate}
         storage={storage}
         storeId="loja-a"
       />,
@@ -203,7 +237,10 @@ describe("FulfillmentForm", () => {
     const perKm = screen.getByLabelText("Quanto você cobra por km (R$)");
     await user.type(perKm, "200");
     expect(perKm).toHaveValue("R$ 2,00");
-    expect(store.get("foode.painel.reais-por-km.v1:loja-a")).toBe("R$ 2,00");
+    // Salva na Loja ao sair do campo (não a cada tecla).
+    expect(saveRate).not.toHaveBeenCalled();
+    await user.tab();
+    await vi.waitFor(() => expect(saveRate).toHaveBeenCalledWith(200));
 
     const fee = screen.getByLabelText("Taxa do bairro 1 (R$)");
     await waitFor(() => expect(fee.getAttribute("placeholder")).toMatch(/^R\$ 6,\d\d$/u), {
@@ -235,6 +272,61 @@ describe("FulfillmentForm", () => {
       }),
     );
     expect(JSON.stringify(rpc.mock.calls[0])).not.toContain("km");
+  });
+});
+
+describe("FulfillmentForm: R$/km na Loja (decisão 73)", () => {
+  it("mostra o R$/km gravado na Loja e limpa a chave antiga do navegador sem regravar", async () => {
+    const { storage, store } = memoryStorage({ "foode.painel.reais-por-km.v1:loja-a": "R$ 9,99" });
+    const saveRate = vi.fn(async () => ({ ok: true as const }));
+    const { action } = actionWith(parseSetFulfillment);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={{ ...SETTINGS, deliveryRatePerKmCents: 150 }}
+        saveRate={saveRate}
+        storage={storage}
+        storeId="loja-a"
+      />,
+    );
+    expect(screen.getByLabelText("Quanto você cobra por km (R$)")).toHaveValue("R$ 1,50");
+    await vi.waitFor(() => expect(store.size).toBe(0));
+    expect(saveRate).not.toHaveBeenCalled();
+  });
+
+  it("1ª carga: R$/km antigo do navegador vai para a Loja e a chave é apagada", async () => {
+    const { storage, store } = memoryStorage({ "foode.painel.reais-por-km.v1:loja-a": "R$ 2,00" });
+    const saveRate = vi.fn(async () => ({ ok: true as const }));
+    const { action } = actionWith(parseSetFulfillment);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={{ ...SETTINGS, deliveryRatePerKmCents: null }}
+        saveRate={saveRate}
+        storage={storage}
+        storeId="loja-a"
+      />,
+    );
+    await vi.waitFor(() => expect(saveRate).toHaveBeenCalledWith(200));
+    await vi.waitFor(() => expect(store.size).toBe(0));
+    expect(screen.getByLabelText("Quanto você cobra por km (R$)")).toHaveValue("R$ 2,00");
+  });
+
+  it("falha da RPC mantém a chave antiga (tenta de novo na próxima carga) e avisa", async () => {
+    const { storage, store } = memoryStorage({ "foode.painel.reais-por-km.v1:loja-a": "R$ 2,00" });
+    const saveRate = vi.fn(async () => ({ ok: false as const, message: "Sem conexão." }));
+    const { action } = actionWith(parseSetFulfillment);
+    render(
+      <FulfillmentForm
+        action={action}
+        initial={{ ...SETTINGS, deliveryRatePerKmCents: null }}
+        saveRate={saveRate}
+        storage={storage}
+        storeId="loja-a"
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sem conexão.");
+    expect(store.size).toBe(1);
   });
 });
 

@@ -24,7 +24,14 @@ import {
   type PublicShowcaseRow,
   recordFunnelEvent,
 } from "./onboarding-db";
-import { createOpsOperations, effectivePaymentFeesOf, type EffectivePaymentFee } from "./ops-db";
+import { createLeadOps, createOpsLeadOps } from "./lead-db";
+import {
+  createOpsOperations,
+  type DefaultPaymentFee,
+  defaultPaymentFeesOf,
+  effectivePaymentFeesOf,
+  type EffectivePaymentFee,
+} from "./ops-db";
 import { createPaymentOps } from "./payment-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
@@ -542,7 +549,15 @@ export function createFoodeDb(d1: D1Database) {
         if (!row) return [];
         return effectivePaymentFeesOf(d1, row.id, row.cardMode, at);
       },
+
+      /** Tabela padrão Foode vigente (landing, Ticket 31): só `store_id IS NULL`, nunca override. */
+      defaultPaymentFees(at = utcNow()): Promise<DefaultPaymentFee[]> {
+        return defaultPaymentFeesOf(d1, at);
+      },
     },
+
+    /** Leads da landing (Ticket 31): gravação pública; lista e status só no `ops(context)`. */
+    leads: createLeadOps(d1),
 
     /** Área Ops (`foode_ops`): Lojas, Plano, faixas, taxas e custos, sempre com auditoria. */
     ops(context: OpsContext) {
@@ -553,6 +568,9 @@ export function createFoodeDb(d1: D1Database) {
 
         /** Conta do Consumidor (Ticket 13): busca por telefone/CPF e troca de telefone auditada. */
         ...createOpsCustomerOps(d1, context),
+
+        /** Leads da landing (Ticket 31): lista e troca de status auditada. */
+        ...createOpsLeadOps(d1, context),
 
         /**
          * Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado).

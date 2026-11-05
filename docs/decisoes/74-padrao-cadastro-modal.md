@@ -44,6 +44,6 @@ Pedidos do Dono depois de usar o Painel em produção (fila do orquestrador, `pl
 
 Componente (decisão 67): `cadastro-modal.test.tsx` (etapas, Voltar, Pular, Esc com e sem mudança, clique no fundo, foco preso e devolvido, sheet no celular, abas) e os fluxos migrados (`cardapio-cadastros.test.tsx`, Cupom, bairro, convite, Toast com ação, prévia no Storefront).
 
-## Pendência ligada
+## R$/km na Loja
 
-- O R$/km da sugestão de taxa ([73](73-sugestao-taxa-por-km.md)) ainda é do `localStorage`; troca pela RPC `storeSetDeliveryRate` (migration 0008, Ticket 31-leads) quando ela entrar na `master` (TODO em `fulfillment-form.tsx`).
+- O R$/km da sugestão de taxa ([73](73-sugestao-taxa-por-km.md)) sai do `localStorage`: é lido de `storeOperationGet` (`deliveryRatePerKmCents`) e gravado pela RPC `storeSetDeliveryRate` (migration 0008) ao sair do campo ou no Enter, com Toast. Na 1ª carga, um valor antigo do navegador vai para a Loja (se ela ainda não tem) e a chave é apagada; se a RPC falhar, a chave fica para a próxima carga.

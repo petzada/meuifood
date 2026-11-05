@@ -37,6 +37,8 @@ const LATER_COLUMNS = new Set([
   // Ticket 26 (migration 0007).
   "orders.payment_status",
   "orders.service_fee_cents",
+  // Ticket 31 / decisão 73 (migration 0008): R$/km do Delivery.
+  "store_operation_settings.delivery_rate_per_km_cents",
 ]);
 const LATER_INDEXES = new Set(["orders_store_account_created_idx"]);
 

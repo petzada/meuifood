@@ -32,6 +32,8 @@ export const ROUTES: readonly RouteRule[] = [
   { prefix: "/ops/taxas", permission: "ops.area", label: "Taxas Foode" },
   { prefix: "/ops/custos", permission: "ops.area", label: "Custos dos provedores" },
   { prefix: "/ops/clientes", permission: "ops.area", label: "Consumidores" },
+  // Leads da landing (Ticket 31, decisão 70).
+  { prefix: "/ops/leads", permission: "ops.area", label: "Leads" },
   { prefix: "/selecionar-loja", permission: null },
 ];
 

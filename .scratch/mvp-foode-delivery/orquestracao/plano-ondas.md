@@ -31,3 +31,16 @@ Regras: numeração de migrations reservada pelo orquestrador (efetivo: 21→000
 2026-11-05: Ticket 20 cortado (decisão 64); critérios do 20 entram no /code-review de cada ticket de UI. UI de cada ticket segue docs/referencias/anota-ai/DIRETRIZES-UX-*.md e decisões 63/64.
 
 2026-11-05: Ticket 24 dividido em 24a (Storefront, dono do contrato e da migration 0004) e 24b (Painel); migrations renumeradas a partir da 0006 (reservada ao 24b). Tour de 3 passos (P-ONB-1) passou do 28 para o 24b.
+
+## Fila do orquestrador (2026-11-05, pedidos do Dono ainda não despachados)
+
+Próximo agente "decisão 74" (Opus, api+web+admin), escrever `docs/decisoes/74-padrao-cadastro-modal.md`:
+- Todo cadastro do lojista em modal (desktop, fundo desfocado) / sheet inferior (mobile); etapas quando houver mais de uma (item: Dados → Complementos → Adicionais, com "Pular"; ao concluir volta ao Cardápio com toast); sem o link "Configurar complementos e adicionais agora"; edição com abas.
+- Menos scroll vertical no desktop (abas/etapas); Cardápio vindo do onboarding só com "Adicionar item" (topo) e "Criar categoria" (esquerda).
+- Toast padrão (packages/ui, do agente do Painel) também no Storefront.
+- Loja em `onboarding`: Storefront mostra o Cardápio em prévia com faixa "Esta Loja ainda não está recebendo pedidos", checkout bloqueado, noindex (api passa a devolver o menu com estado; `suspended` continua indisponível).
+- Nota na decisão 71: Anual sem teto de Pedidos (plano mais completo) = faixa básica × 12, até 6× com 2,99%; badge "66%" correto.
+
+Próximo agente "landing v2" (Fable, apps/web): corrigir motions bugados (principalmente "Como funciona": o passo a passo da esquerda some ao rolar — sticky/scrollytelling quebrado); parallax de verdade: ao rolar, os mockups sobem e COBREM o hero (camada à frente, velocidade diferente, overlap real), não só deslocam; mockups realistas (capturas reais das telas do Storefront e da fila em moldura de celular/laptop fiéis, sombra de mockup permitida só na moldura do dispositivo se a marca permitir — confirmar com FOODE-BRAND; senão borda), sem desenho artificial; revisar todos os efeitos em desktop e 375 px, com prefers-reduced-motion e sem CLS.
+
+Pendente "taxas padrão (decisão 76)": cadastrar em produção a tabela padrão de taxa Foode (PIX 1,19%; Cartão Normal 3,49% + R$ 0,99; Rápido 5,42% + R$ 1,59) com vigência, por migration de dados expand ou RPC do Ops; preço do Anual NÃO muda (decisão 75 corrigida: 12 × R$ 84,99).

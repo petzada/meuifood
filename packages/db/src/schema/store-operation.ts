@@ -70,6 +70,12 @@ export const storeOperationSettings = sqliteTable(
     debitBrands: text("debit_brands").notNull().default("[]"),
     creditBrands: text("credit_brands").notNull().default("[]"),
     printOnAccept: integer("print_on_accept", { mode: "boolean" }).notNull().default(false),
+    /**
+     * R$/km do Delivery (decisão 73; migration 0008, expand). NULL = não configurado. Sem CHECK de
+     * tabela: no SQLite um CHECK novo recriaria a tabela populada (contract). O limite
+     * (1..MENU_MAX_CENTS) fica no Zod (`storeSetDeliveryRateInputSchema`) e no UPDATE.
+     */
+    deliveryRatePerKmCents: integer("delivery_rate_per_km_cents"),
     createdAt: text("created_at").notNull().default(utcNowDefault),
     updatedAt: text("updated_at").notNull().default(utcNowDefault),
   },
