@@ -1,0 +1,185 @@
+name: E2E produção (Playwright)
+# Smoke E2E pós-deploy (Ticket 30, decisão 67): roda sozinho quando o "Deploy (Cloudflare
+# Workers)" termina verde (e manual, para depurar). Playwright Chromium + axe contra os domínios
+# próprios, com a Loja sintética `smoke-foode` (scripts/e2e/smoke-store.mjs):
+#   1. seed idempotente no D1 `foode-prod`: Loja ativa só de retirada, Cardápio de 2 itens,
+#      Operador e Ops sintéticos SEM senha e sessões do Better Auth de 45 min (o cookie é assinado
+#      no runner com BETTER_AUTH_SECRET; o Turnstile do login segue ligado e intocado);
+#   2. Playwright: Storefront, busca, carrinho, checkout na entrega com troco, fila, impressão,
+#      cancelamento, Pausa, `/ops`, estados vazio/carregando/erro (T-04) e axe;
+#   3. cleanup (sempre): apaga sessões e Pedidos/eventos da Loja de smoke e tira o `foode_ops`.
+# Sem os secrets (CLOUDFLARE_API_TOKEN, BETTER_AUTH_SECRET) ou com migration pendente, PULA com
+# aviso (não falha). No fim, a verificação de configuração (scripts/check-config.mjs) só avisa.
+#   gh workflow run e2e-producao.yml --ref master
+on:
+  workflow_run:
+    workflows: ["Deploy (Cloudflare Workers)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Mesmo grupo do db-migrate/contas-de-teste: nunca escreve no D1 junto com uma migration.
+  group: db-migrate-producao
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+  SMOKE_API_URL: ${{ vars.SMOKE_API_URL || 'https://api.foodedelivery.com.br' }}
+  SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL || 'https://foodedelivery.com.br' }}
+  SMOKE_ADMIN_URL: ${{ vars.SMOKE_ADMIN_URL || 'https://admin.foodedelivery.com.br' }}
+
+jobs:
+  pre-requisitos:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.migrations.outputs.run || steps.checar.outputs.run }}
+    steps:
+      - name: Secrets e ref
+        id: checar
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/master" ]; then
+            echo "::error::o E2E de produção só roda a partir da master (ref: $GITHUB_REF)"; exit 1
+          fi
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$BETTER_AUTH_SECRET" ] || missing="$missing BETTER_AUTH_SECRET"
+          if [ -n "$missing" ]; then
+            echo "::warning::E2E de produção pulado: falta$missing"
+            echo "### E2E pulado: falta$missing" >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.checar.outputs.run == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+        if: steps.checar.outputs.run == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.checar.outputs.run == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.checar.outputs.run == 'true'
+      # Deploy adiado (migration pendente) = schema e código fora de sincronia: não semeia.
+      - name: Migrations em dia no D1 de produção
+        id: migrations
+        if: steps.checar.outputs.run == 'true'
+        working-directory: apps/api
+        run: |
+          out=$(pnpm exec wrangler d1 migrations list foode-prod --remote 2>&1) || { echo "$out"; exit 1; }
+          if grep -qE '[0-9]{4}_[a-z0-9_]+\.sql' <<< "$out"; then
+            echo "::warning::E2E de produção pulado: há migration pendente (rode o db-migrate)"
+            echo "### E2E pulado: migration pendente" >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  e2e:
+    needs: pre-requisitos
+    if: needs.pre-requisitos.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      E2E_OUTPUT_DIR: ${{ github.workspace }}/test-results/e2e
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Versão do Playwright
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache dos browsers do Playwright
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - name: Instalar Chromium
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Dependências do sistema (cache de browser restaurado)
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      # SQL e estado em arquivos 0600 do runner; tokens/cookies mascarados; nada impresso.
+      - name: Semear a Loja de smoke e as sessões
+        id: seed
+        working-directory: apps/api
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+        run: |
+          umask 077
+          sql="$RUNNER_TEMP/e2e-seed.sql"
+          state="$RUNNER_TEMP/e2e-state.json"
+          trap 'rm -f "$sql"' EXIT
+          node ../../scripts/e2e/smoke-store.mjs seed "$sql" "$state"
+          echo "seeded=true" >> "$GITHUB_OUTPUT"
+          pnpm exec wrangler d1 execute foode-prod --remote --file "$sql" > /dev/null
+          echo "SMOKE_E2E_STATE=$state" >> "$GITHUB_ENV"
+      - name: Playwright (Chromium + axe)
+        run: pnpm exec playwright test -c scripts/e2e/playwright.config.mjs
+      - name: Limpar dados de smoke
+        if: always() && steps.seed.outputs.seeded == 'true'
+        working-directory: apps/api
+        run: |
+          umask 077
+          sql="$RUNNER_TEMP/e2e-cleanup.sql"
+          trap 'rm -f "$sql" "$RUNNER_TEMP/e2e-state.json"' EXIT
+          node ../../scripts/e2e/smoke-store.mjs cleanup "$sql"
+          pnpm exec wrangler d1 execute foode-prod --remote --file "$sql" > /dev/null
+          q() { pnpm exec wrangler d1 execute foode-prod --remote --json --command "$1" | jq -r '.[0].results[0].n'; }
+          orders=$(q "SELECT count(*) AS n FROM orders WHERE store_id = '00000000-0000-4000-8000-00000000e2e0'")
+          sessions=$(q "SELECT count(*) AS n FROM sessions s JOIN users u ON u.id = s.user_id WHERE u.email LIKE 'smoke-%@foode.invalid'")
+          ops=$(q "SELECT count(*) AS n FROM users WHERE email LIKE 'smoke-%@foode.invalid' AND platform_role IS NOT NULL")
+          echo "Pedidos de smoke: $orders; sessões de smoke: $sessions; Ops sintético ativo: $ops"
+          test "$orders" = "0" && test "$sessions" = "0" && test "$ops" = "0" || {
+            echo "::error::limpeza do smoke incompleta"; exit 1; }
+      # Só em falha: trace/screenshot de dados sintéticos (as sessões já foram apagadas acima).
+      - name: Artefatos do Playwright (falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-producao-${{ github.run_id }}
+          path: test-results/e2e
+          retention-days: 7
+          if-no-files-found: ignore
+
+  configuracao:
+    needs: pre-requisitos
+    if: always() && needs.pre-requisitos.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verificação de configuração (só aviso)
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          D1_PROD_DATABASE_ID: ${{ vars.D1_PROD_DATABASE_ID }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          MILLIONSEND_API_KEY: ${{ secrets.MILLIONSEND_API_KEY }}
+          ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
+          SENTRY_DSN_API: ${{ secrets.SENTRY_DSN_API }}
+          SENTRY_DSN_WEB: ${{ secrets.SENTRY_DSN_WEB }}
+          SENTRY_DSN_ADMIN: ${{ secrets.SENTRY_DSN_ADMIN }}
+        run: node scripts/check-config.mjs --warn-only
