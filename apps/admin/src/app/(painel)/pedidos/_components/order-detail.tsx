@@ -3,13 +3,17 @@
 // Detalhe do Pedido (PED-07): painel lateral no desktop, tela cheia no celular. Itens com
 // Complementos/Adicionais, observação geral, Fulfillment e endereço, pagamento e "Troco para",
 // telefone, "Avisar no WhatsApp" (P-WPP-1), Imprimir (IMP-01), avançar e Cancelar por último
-// (T-12: confirmação que nomeia o Pedido e a consequência; sem Estorno até o Ticket 12).
+// (T-12: diálogo que nomeia o Pedido e a consequência financeira, Ticket 12). Pedido cancelado:
+// motivo e hora visíveis, selo do Estorno separado do status (CAN-02) e nenhuma ação de avanço.
 import { Badge, Button } from "@foode/ui";
 import { formatBRL } from "@foode/shared/money";
 import { SERVICE_FEE_LABEL_PT } from "@foode/shared/payment";
 import {
   advanceActionLabelPt,
+  cancelReasonLabel,
+  type CancelReason,
   formatEtaPt,
+  hasRefundBadge,
   nextAdvanceStatus,
   type OrderDetail,
   type OrderStatus,
@@ -25,9 +29,11 @@ import {
   FULFILLMENT_LABEL,
   isPaidOnline,
   paymentBadgeLabel,
+  REFUND_BADGE,
   whatsappMessageFor,
   whatsappUrl,
 } from "../../../../lib/orders-labels";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 
 export type LoadDetail = (orderId: string) => Promise<OrderDetail>;
 
@@ -46,7 +52,8 @@ export function OrderDetailPanel({
   busy: boolean;
   loadDetail: LoadDetail;
   onAdvance: (order: OrderDetail, to: OrderStatus) => Promise<void>;
-  onCancel: (order: OrderDetail) => Promise<void>;
+  /** Cancela com motivo opcional (P-OPE-3); resolve quando a fila já respondeu (sucesso ou erro). */
+  onCancel: (order: OrderDetail, reason: CancelReason | undefined) => Promise<void>;
   onClose: () => void;
   onPrint: (order: OrderDetail) => void;
   orderId: string;
@@ -60,7 +67,6 @@ export function OrderDetailPanel({
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const titleId = useId();
-  const cancelTitleId = useId();
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,13 +87,16 @@ export function OrderDetailPanel({
   useEffect(() => {
     panel.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // Com o diálogo de cancelamento aberto, Esc é dele (Voltar), não do painel.
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const to = order ? nextAdvanceStatus(order.fulfillment, order.status) : null;
+  const cancelled = order?.status === "cancelled";
+  const to = order && !cancelled ? nextAdvanceStatus(order.fulfillment, order.status) : null;
+  const refund = order && hasRefundBadge(order.status, order.refund) ? order.refund : null;
   const paid = order ? isPaidOnline(order.payment.method) : false;
   const whatsapp = order
     ? whatsappUrl(
@@ -143,7 +152,7 @@ export function OrderDetailPanel({
       ) : (
         <div className="flex-1 space-y-6 px-5 py-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="primary">{orderStatusLabelPt(order.status)}</Badge>
+            <Badge tone={cancelled ? "error" : "primary"}>{orderStatusLabelPt(order.status)}</Badge>
             <Badge tone="neutral">{FULFILLMENT_LABEL[order.fulfillment]}</Badge>
             <Badge tone={paid ? "success" : "accent"}>
               {paymentBadgeLabel(order.payment.method)}
@@ -152,6 +161,30 @@ export function OrderDetailPanel({
               Recebido às {formatTimeSp(order.createdAt)}
             </span>
           </div>
+
+          {cancelled ? (
+            <section
+              aria-label="Cancelamento"
+              className="space-y-2 rounded-2xl border border-[var(--color-error)] px-4 py-3"
+            >
+              <p className="font-bold text-[var(--color-ink)]">
+                Pedido cancelado
+                {order.cancellation ? ` às ${formatTimeSp(order.cancellation.at)}` : ""}
+              </p>
+              <p className="text-sm text-[var(--color-body)]">
+                Motivo: {cancelReasonLabel(order.cancellation?.reason ?? null) ?? "não informado"}
+              </p>
+              {refund ? (
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <Badge tone={REFUND_BADGE[refund.state].tone}>
+                    <span aria-hidden="true">{REFUND_BADGE[refund.state].symbol} </span>
+                    {REFUND_BADGE[refund.state].label}
+                  </Badge>
+                  <span className="text-[var(--color-body)]">{formatBRL(refund.amountCents)}</span>
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           <section aria-label="Consumidor" className="space-y-1">
             <p className="font-bold text-[var(--color-ink)]">{order.customer.name}</p>
@@ -280,49 +313,26 @@ export function OrderDetailPanel({
                 </Button>
               ) : null}
             </div>
-            {order.cancellable && !confirmingCancel ? (
+            {order.cancellable && !cancelled ? (
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => setConfirmingCancel(true)}
-                className="min-h-11 rounded-full border border-[var(--color-error)] px-5 text-sm font-bold text-[var(--color-error)] hover:bg-[#fbeae5]"
+                className="min-h-11 rounded-full border border-[var(--color-error)] px-5 text-sm font-bold text-[var(--color-error)] hover:bg-[#fbeae5] disabled:opacity-60"
               >
                 Cancelar Pedido
               </button>
             ) : null}
-            {confirmingCancel ? (
-              <div
-                role="dialog"
-                aria-labelledby={cancelTitleId}
-                className="space-y-3 rounded-2xl border border-[var(--color-error)] p-4"
-              >
-                <p id={cancelTitleId} className="font-bold text-[var(--color-ink)]">
-                  Cancelar o Pedido #{order.code}?
-                </p>
-                <p className="text-sm leading-relaxed text-[var(--color-body)]">
-                  {paid
-                    ? `O Pedido será cancelado. O valor pago online (${formatBRL(order.totalCents)}) precisa ser devolvido ao Consumidor.`
-                    : "O Pedido será cancelado. Nada foi cobrado do Consumidor."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void onCancel(order).then(() => setConfirmingCancel(false))}
-                    className="min-h-11 rounded-full bg-[var(--color-error)] px-5 text-sm font-bold text-white disabled:opacity-60"
-                  >
-                    {busy ? "Cancelando..." : "Confirmar cancelamento"}
-                  </button>
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    onClick={() => setConfirmingCancel(false)}
-                  >
-                    Voltar
-                  </Button>
-                </div>
-              </div>
-            ) : null}
           </section>
+
+          {confirmingCancel && !cancelled ? (
+            <CancelOrderDialog
+              busy={busy}
+              onClose={() => setConfirmingCancel(false)}
+              onConfirm={(reason) => onCancel(order, reason).then(() => setConfirmingCancel(false))}
+              order={order}
+            />
+          ) : null}
 
           {order.history.length > 0 ? (
             <section aria-label="Histórico" className="text-sm text-[var(--color-muted)]">

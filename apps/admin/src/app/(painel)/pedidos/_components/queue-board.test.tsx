@@ -8,7 +8,7 @@ import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OrderActionResult } from "../actions";
+import type { CancelActionResult, OrderActionResult } from "../actions";
 import { QueueBoard, type QueueBoardProps } from "./queue-board";
 import type { QueueSound } from "./sound";
 
@@ -69,7 +69,15 @@ function detail(order: OrderQueueItem): OrderDetail {
     note: null,
     eta: { minMinutes: 30, maxMinutes: 45 },
     next: order.next,
-    cancellable: true,
+    cancellable: order.status !== "cancelled" && order.status !== "completed",
+    cancelPreview:
+      order.paymentMethod === "on_delivery"
+        ? { kind: "on_delivery", text: "O Pedido será cancelado." }
+        : {
+            kind: "refund",
+            amountCents: 5490,
+            text: "R$ 54,90 serão estornados automaticamente ao Consumidor.",
+          },
     history: [],
     trackingPath: "/loja/pizza/pedido/tok",
   };
@@ -320,6 +328,112 @@ describe("QueueBoard (fila de Pedidos)", () => {
     await user.click(screen.getByRole("button", { name: "Começar preparo" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Este Pedido mudou em outra tela.");
     expect(loadList).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancelar só pelo detalhe: manda o motivo, avisa a consequência e tira o Pedido da fila", async () => {
+    const { cancel, loadDetail, loadList, props, user } = setup();
+    const pending = item({ id: "a", code: 12 });
+    loadDetail.mockImplementation(async () => detail(pending));
+    loadList.mockResolvedValueOnce(list([pending]));
+    loadList.mockResolvedValue(list([]));
+    cancel.mockResolvedValue({
+      ok: true,
+      data: {
+        status: "cancelled",
+        next: [],
+        print: false,
+        reason: "no_courier",
+        consequence: { kind: "refund", refund: { state: "pending", amountCents: 5490 } },
+      },
+    } satisfies CancelActionResult);
+    render(<QueueBoard {...props} />);
+    await flush();
+
+    const received = screen.getByRole("region", { name: "Recebidos (1)" });
+    expect(within(received).queryByRole("button", { name: /cancelar/iu })).not.toBeInTheDocument();
+    await user.click(within(received).getByRole("button", { name: /Abrir detalhe/u }));
+    await user.click(await screen.findByRole("button", { name: "Cancelar Pedido" }));
+    expect(screen.getByRole("dialog", { name: "Cancelar o Pedido #12?" })).toHaveTextContent(
+      "R$ 54,90 serão estornados automaticamente ao Consumidor.",
+    );
+    await user.click(screen.getByRole("radio", { name: "Loja sem entregador" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar o Pedido" }));
+    await flush();
+
+    expect(cancel).toHaveBeenCalledWith({ orderId: "a", from: "received", reason: "no_courier" });
+    // `formatBRL` separa "R$" do valor com NBSP; o toast de sucesso \u00e9 `role="status"`.
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /^Pedido #12 cancelado\. Estorno de R\$\s54,90 em andamento\.$/u,
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "Cancelar o Pedido #12?" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Nenhum Pedido agora.")).toBeInTheDocument();
+  });
+
+  it("cancelar de novo (conflict): erro no toast e fila recarregada", async () => {
+    const { cancel, loadDetail, loadList, props, user } = setup();
+    const onDelivery = item({ id: "a", code: 12, paymentMethod: "on_delivery" });
+    loadDetail.mockImplementation(async () => detail(onDelivery));
+    loadList.mockResolvedValue(list([onDelivery]));
+    cancel.mockResolvedValue({
+      ok: false,
+      error: "conflict",
+      message: "Este Pedido mudou em outra tela. A fila foi atualizada.",
+    } satisfies CancelActionResult);
+    render(<QueueBoard {...props} />);
+    await flush();
+
+    await user.click(screen.getByRole("button", { name: /Abrir detalhe/u }));
+    await user.click(await screen.findByRole("button", { name: "Cancelar Pedido" }));
+    expect(screen.getByRole("dialog", { name: "Cancelar o Pedido #12?" })).toHaveTextContent(
+      "O Pedido será cancelado.",
+    );
+    await user.click(screen.getByRole("button", { name: "Cancelar o Pedido" }));
+    await flush();
+
+    expect(cancel).toHaveBeenCalledWith({ orderId: "a", from: "received" });
+    expect(
+      await screen.findByText("Este Pedido mudou em outra tela. A fila foi atualizada."),
+    ).toBeInTheDocument();
+    expect(loadList).toHaveBeenCalledTimes(2);
+  });
+
+  it("'Concluídos hoje · Cancelados hoje' abre os cards fechados com o selo do Estorno", async () => {
+    const loadClosed = vi.fn<() => Promise<OrdersList>>();
+    const { loadList, props, user } = setup({ loadClosed });
+    loadList.mockResolvedValue(list([item({ id: "a", code: 12 })]));
+    loadClosed.mockResolvedValue(
+      list([
+        item({ id: "x", code: 9, status: "completed", next: [] }),
+        item({ id: "y", code: 10, status: "cancelled", next: [], refund: { state: "succeeded" } }),
+        item({
+          id: "z",
+          code: 11,
+          status: "cancelled",
+          next: [],
+          paymentMethod: "on_delivery",
+          refund: null,
+        }),
+      ]),
+    );
+    render(<QueueBoard {...props} />);
+    await flush();
+
+    await user.click(
+      screen.getByRole("button", { name: "Concluídos hoje (3) · Cancelados hoje (1)" }),
+    );
+    await flush();
+    const cancelled = within(
+      screen.getByRole("region", { name: "Concluídos e Cancelados de hoje" }),
+    ).getByRole("region", { name: "Cancelados (2)" });
+    expect(within(cancelled).getByText("#10")).toBeInTheDocument();
+    expect(within(cancelled).getByText("Estorno concluído")).toBeInTheDocument();
+    expect(within(cancelled).getAllByText("Cancelado")).toHaveLength(2);
+    expect(
+      within(cancelled).queryByRole("button", { name: /cancelar|Marcar|Começar/iu }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Concluídos (1)" })).toHaveTextContent("#9");
   });
 
   it("1ª carga falhou: erro com 'Tentar de novo', nunca a fila vazia", async () => {

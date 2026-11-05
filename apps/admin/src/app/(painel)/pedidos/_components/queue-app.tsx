@@ -31,10 +31,17 @@ function loadList(): Promise<OrdersList> {
   return getJson<OrdersList>("/api/pedidos?filter=all&scope=active", "fila");
 }
 
+/** Concluídos e Cancelados do dia (PED-01: fora das colunas; cards com o selo do Estorno, CAN-02). */
+function loadClosed(): Promise<OrdersList> {
+  return getJson<OrdersList>("/api/pedidos?filter=all&scope=closed_today", "concluídos");
+}
+
 function loadDetail(orderId: string): Promise<OrderDetail> {
   return getJson<OrderDetail>(`/api/pedidos/${encodeURIComponent(orderId)}`, "pedido");
 }
 
-export function QueueApp(props: Omit<QueueBoardProps, "loadDetail" | "loadList">) {
-  return <QueueBoard {...props} loadDetail={loadDetail} loadList={loadList} />;
+export function QueueApp(props: Omit<QueueBoardProps, "loadClosed" | "loadDetail" | "loadList">) {
+  return (
+    <QueueBoard {...props} loadClosed={loadClosed} loadDetail={loadDetail} loadList={loadList} />
+  );
 }
