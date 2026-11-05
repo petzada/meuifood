@@ -3,7 +3,11 @@
 // Equipe do Dono (feedback do Dono, item 9; EQP-01): convidar Operador por e-mail (Turnstile +
 // rate limit na api, contrato do Ticket 22) e remover acesso. A api confere `store.members` de
 // novo e usa a Loja ATIVA da sessão — nunca um id de Loja do formulário.
-import { inviteMemberInputSchema, removeMemberInputSchema } from "@foode/shared/auth";
+import {
+  inviteMemberInputSchema,
+  removeMemberInputSchema,
+  resendInviteInputSchema,
+} from "@foode/shared/auth";
 import type { AuthErrorCode } from "@foode/shared/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -66,4 +70,22 @@ export const removeMember: TeamAction = async (_prev, formData) => {
   }
   revalidatePath("/equipe");
   return formSuccess(`${name || "O membro"} não tem mais acesso à Loja.`);
+};
+
+export const resendInvite: TeamAction = async (_prev, formData) => {
+  const parsed = resendInviteInputSchema.safeParse({
+    membershipId: text(formData, "membershipId"),
+  });
+  if (!parsed.success) return formError({}, "Membro inválido. Recarregue a página.");
+  const name = text(formData, "name");
+  const result = await painelRpc((api, caller) => api.resendInvite(caller, parsed.data));
+  if (!result.ok) {
+    return failure(result.error, {
+      conflict: `${name || "Este membro"} já definiu a senha e está ativo.`,
+      not_found: "Este membro já não faz parte da equipe.",
+      rate_limited: "Convite reenviado há pouco. Aguarde alguns minutos para reenviar de novo.",
+    });
+  }
+  revalidatePath("/equipe");
+  return formSuccess(`Convite reenviado para ${name || "o membro"}.`);
 };

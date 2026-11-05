@@ -1,5 +1,6 @@
-// Equipe do Dono (item 9; EQP-01): lista, convite de Operador com Turnstile e remoção com
-// confirmação que nomeia a pessoa e a consequência. Actions entram como vi.fn() (sem rede).
+// Equipe do Dono (item 9; EQP-01): lista com a situação de cada membro, convite de Operador com
+// Turnstile, reenvio do convite e remoção com confirmação que nomeia a pessoa e a consequência.
+// Actions entram como vi.fn() (sem rede).
 import type { StoreMemberView } from "@foode/shared";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,14 +24,47 @@ vi.mock("../../../../components/turnstile", async () => {
 });
 
 const MEMBERS: StoreMemberView[] = [
-  { membershipId: "m1", userId: "u1", email: "dono@ze.com", name: "Zé", role: "owner" },
-  { membershipId: "m2", userId: "u2", email: "ana@ze.com", name: "Ana", role: "operator" },
+  {
+    membershipId: "m1",
+    userId: "u1",
+    email: "dono@ze.com",
+    name: "Zé",
+    role: "owner",
+    status: "active",
+  },
+  {
+    membershipId: "m2",
+    userId: "u2",
+    email: "ana@ze.com",
+    name: "Ana",
+    role: "operator",
+    status: "active",
+  },
+  {
+    membershipId: "m3",
+    userId: "u3",
+    email: "bia@ze.com",
+    name: "Bia",
+    role: "operator",
+    status: "invited",
+  },
 ];
 
-function setup(invite: Action = vi.fn<Action>(), remove: Action = vi.fn<Action>()) {
+function setup(
+  invite: Action = vi.fn<Action>(),
+  remove: Action = vi.fn<Action>(),
+  resend: Action = vi.fn<Action>(),
+) {
   const user = userEvent.setup();
   render(
-    <TeamPanel currentUserId="u1" invite={invite} members={MEMBERS} remove={remove} siteKey="k" />,
+    <TeamPanel
+      currentUserId="u1"
+      invite={invite}
+      members={MEMBERS}
+      remove={remove}
+      resend={resend}
+      siteKey="k"
+    />,
   );
   return { user };
 }
@@ -39,7 +73,7 @@ describe("TeamPanel (Equipe)", () => {
   it("lista a equipe com papel e não oferece remover a si mesmo", () => {
     setup();
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     expect(within(items[0]!).getByText("Dono")).toBeInTheDocument();
     expect(within(items[0]!).getByText("(você)")).toBeInTheDocument();
     expect(within(items[0]!).queryByRole("button")).not.toBeInTheDocument();
@@ -94,5 +128,39 @@ describe("TeamPanel (Equipe)", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Ana não tem mais acesso");
     expect(remove.mock.calls[0]?.[1].get("membershipId")).toBe("m2");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("mostra a situação de cada membro e só oferece reenviar a quem não aceitou", () => {
+    setup();
+    const [owner, ana, bia] = screen.getAllByRole("listitem");
+    expect(within(owner!).getByText("Ativo")).toBeInTheDocument();
+    expect(within(ana!).getByText("Ativo")).toBeInTheDocument();
+    expect(
+      within(ana!).queryByRole("button", { name: /Reenviar convite/ }),
+    ).not.toBeInTheDocument();
+    expect(within(bia!).getByText("Convite enviado")).toBeInTheDocument();
+    expect(
+      within(bia!).getByRole("button", { name: "Reenviar convite para Bia" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reenviar convite chama a action com o membro e confirma no Toast", async () => {
+    const resend = vi.fn<Action>(async () => formSuccess("Convite reenviado para Bia."));
+    const { user } = setup(undefined, undefined, resend);
+    await user.click(screen.getByRole("button", { name: "Reenviar convite para Bia" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Convite reenviado para Bia.");
+    expect(resend).toHaveBeenCalledTimes(1);
+    const sent = resend.mock.calls[0]?.[1];
+    expect(sent?.get("membershipId")).toBe("m3");
+    expect(sent?.get("name")).toBe("Bia");
+  });
+
+  it("reenvio recusado (rate limit) avisa o erro no Toast", async () => {
+    const resend = vi.fn<Action>(async () =>
+      formError({}, "Convite reenviado há pouco. Aguarde alguns minutos para reenviar de novo."),
+    );
+    const { user } = setup(undefined, undefined, resend);
+    await user.click(screen.getByRole("button", { name: "Reenviar convite para Bia" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Aguarde alguns minutos");
   });
 });

@@ -34,6 +34,7 @@ export {
   type MembershipInvite,
   type MembershipInviteInput,
   type PublicStore,
+  type MemberStatus,
   type StoreMember,
   type StoreSummary,
 } from "./foode-db";

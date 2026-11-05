@@ -148,9 +148,11 @@ export function useFocusFirstError(
 
 type NoticeState = { status: string; message?: string; errors: Record<string, string> };
 
-/** Estados já anunciados (o mesmo objeto de estado não repete o Toast ao re-renderizar). */
-const announced = new WeakSet<object>();
-const announcedFallback = new WeakSet<object>();
+/**
+ * Mensagem já anunciada por estado: o mesmo objeto de estado não repete o Toast ao re-renderizar,
+ * nem quando o `fallback` muda depois (erro geral já anunciado não sai duas vezes).
+ */
+const announced = new WeakMap<object, string>();
 
 /** Mensagem do Toast para o estado da action; null = nada a anunciar (erro só de campo). */
 export function noticeMessage(state: NoticeState, fallback: boolean): string | null {
@@ -177,12 +179,9 @@ export function ActionNotice({ state }: { state: NoticeState }) {
   const toast = useToast();
   useEffect(() => {
     if (state.status === "idle") return;
-    const seen = fallback ? announcedFallback : announced;
-    if (seen.has(state)) return;
     const message = noticeMessage(state, fallback);
-    if (!message) return;
-    seen.add(state);
-    announced.add(state);
+    if (!message || announced.get(state) === message) return;
+    announced.set(state, message);
     if (state.status === "success") toast.success(message);
     else toast.error(message);
   }, [fallback, state, toast]);
