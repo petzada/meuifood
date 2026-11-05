@@ -119,4 +119,60 @@ describe("OrderTrackingView", () => {
     expect(screen.queryByRole("link", { name: "Falar com a Loja" })).not.toBeInTheDocument();
     expect(screen.queryByText(/troco/u)).not.toBeInTheDocument();
   });
+
+  describe("PIX (Ticket 26)", () => {
+    const pixOrder: OrderTracking = {
+      ...order,
+      payment: { changeForCents: null, method: "pix" },
+      serviceFeeCents: 150,
+      pix: {
+        state: "pending",
+        amountCents: 6750,
+        copyPaste: "000201-codigo",
+        qrCodeDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+        expiresAt: "2026-11-05T22:30:00.000Z",
+      },
+    };
+
+    it("aguardando: bloco do PIX no lugar dos passos, tarifa em linha própria e total pago", () => {
+      render(
+        <OrderTrackingView
+          initial={pixOrder}
+          pixNow={() => Date.parse("2026-11-05T22:00:00.000Z")}
+          storeSlug="s"
+          token="t"
+        />,
+      );
+      expect(screen.getByRole("heading", { name: "Aguardando pagamento" })).toBeInTheDocument();
+      expect(screen.queryByText("Recebido")).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Pedido recebido pela Loja" })).toBeNull();
+      expect(
+        screen.getByText("Tarifa de serviço (pagamento online)").nextElementSibling,
+      ).toHaveTextContent("R$ 1,50");
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 67,50");
+    });
+
+    it("atualiza no intervalo do PIX e troca sozinha para 'Pagamento confirmado'", async () => {
+      const load = vi.fn<() => Promise<OrderTracking | null>>().mockResolvedValue({
+        ...pixOrder,
+        pix: { ...pixOrder.pix!, state: "paid", copyPaste: null, qrCodeDataUrl: null },
+      });
+      render(
+        <OrderTrackingView
+          initial={pixOrder}
+          load={load}
+          pixNow={() => Date.parse("2026-11-05T22:00:00.000Z")}
+          pixPollIntervalMs={500}
+          pollIntervalMs={60_000}
+          storeSlug="s"
+          token="t"
+        />,
+      );
+      await act(() => vi.advanceTimersByTimeAsync(500));
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("heading", { name: "Pedido recebido pela Loja" })).toBeVisible();
+      expect(screen.getByText("Pagamento confirmado.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Copiar código" })).toBeNull();
+    });
+  });
 });

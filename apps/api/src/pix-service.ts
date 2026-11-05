@@ -334,8 +334,13 @@ export function createPixService(deps: PixServiceDeps) {
         devMode: event.devMode,
         providerChargeId: charge.id,
       };
-      // Cartão (Ticket 27) e estorno/disputa (Ticket 12): registrados, sem efeito aqui.
-      if (event.type !== "transparent.completed" || charge.method !== "PIX") {
+      // Cartão (Ticket 27), estorno/disputa (Ticket 12) e PIX "completed" sem status PAID:
+      // registrados, sem efeito no dinheiro aqui.
+      if (
+        event.type !== "transparent.completed" ||
+        charge.method !== "PIX" ||
+        charge.status.toUpperCase() !== "PAID"
+      ) {
         await db.payments.recordWebhookEvent({ ...base, intentId: null, outcome: "deferred" });
         return { status: 200, body: { ok: true, outcome: "deferred" } };
       }
