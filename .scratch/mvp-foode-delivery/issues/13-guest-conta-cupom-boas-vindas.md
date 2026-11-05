@@ -28,3 +28,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-3.4 (endereços salvos na conta), P-CUP-1 (teto %), P-CUP-3 (dias da semana), P-CUP-5 (modelos), P-7.1 (sem vitrine); apoio ao P-2.1. Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): mantém magic link, vínculo e Cupom de boas-vindas; corta vários endereços salvos; Cupom mantém dias da semana.
+
+- 2026-11-05 — Decisão [65](../../../docs/decisoes/65-login-consumidor-codigo-whatsapp.md): login do Consumidor por código de 4 dígitos no WhatsApp (whatsmiau.dev), sem magic link; conta única Foode com CPF obrigatório e único; vínculo de Pedidos pelo telefone verificado na mesma Loja. Instância e secrets da whatsmiau ficam para o fim da implementação (erro controlado até lá).

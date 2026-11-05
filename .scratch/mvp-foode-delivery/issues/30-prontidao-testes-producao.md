@@ -22,3 +22,5 @@
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-ONB-5 (espaço do widget de chat de suporte, desligado sem configuração); runbook. Vale sobre as perguntas em aberto dos comentários anteriores.
 
 - 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): sem wa.me de suporte; espaço do widget + base de integração mapeada para agentes.chat/MCP (implementação pós-lançamento); passa a depender de 14 e 15 (20 cortado).
+
+- 2026-11-05 — Antes da prontidão: passo humano de conectar o número oficial na whatsmiau.dev e gravar os secrets (decisão 65).

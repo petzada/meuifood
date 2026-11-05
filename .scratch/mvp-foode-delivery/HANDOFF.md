@@ -23,7 +23,7 @@
 
 **Integração autorizada pelo Dono nesta execução:** por ticket, PR → CI verde → squash merge na `master` → `db-migrate` se houver migration (contract exige confirmação) → deploy pelo CI → smoke. Credenciais de pagamento de produção.
 
-**Passos humanos previstos (o orquestrador pede e aguarda):** trocar nameservers no Registro.br; gerar no painel o que não tiver API (aplicação Efí com Cobranças + identificador de conta; API key e webhook secret da AbacatePay; token Cloudflare para o GitHub se o `cf` não conseguir criar); um PIX e um cartão reais de valor baixo nos smokes. `MILLIONSEND_API_KEY` já está nos secrets do GitHub.
+**Passos humanos previstos (o orquestrador pede e aguarda):** trocar nameservers no Registro.br; gerar no painel o que não tiver API (aplicação Efí com Cobranças + identificador de conta; API key e webhook secret da AbacatePay; token Cloudflare para o GitHub se o `cf` não conseguir criar); um PIX e um cartão reais de valor baixo nos smokes; **no fim da implementação**, conectar o número oficial da Foode na whatsmiau.dev (login do Consumidor, decisão 65). `MILLIONSEND_API_KEY` já está nos secrets do GitHub.
 
 ---
 
