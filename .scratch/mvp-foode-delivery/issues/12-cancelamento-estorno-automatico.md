@@ -6,7 +6,7 @@
 
 **Agente:** Opus (geral); feedback de Estorno no Painel por Fable, se necessário.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Dono e Operador usam o mesmo contrato de cancelamento para um Pedido elegível da própria Loja.
 - [ ] Não existe comando independente de Estorno sem cancelamento.
@@ -33,3 +33,5 @@
 - 2026-11-05 — Critérios consolidados com 63–65: P-OPE-3, CAN-01/CAN-02 e o critério de UI/`/code-review` do antigo Ticket 20 entraram no checklist; seam de testes renomeado para `@cloudflare/vitest-plugin`. O detalhe e a fila do Painel nascem no [24b](24b-painel-operacao-pedido.md).
 
 - 2026-11-05 — Decisão [71](../../../docs/decisoes/71-tarifa-servico-parcelamento-anual.md) aplicada.
+
+- 2026-11-05 — Done no PR do Ticket 12 (squash na `master`); migration `0010_cancelamento_estorno` (tabelas `order_cancellations`, `refunds`, `ledger_reversals`, `ledger_entry_payouts` — motivo e marca de repasse em tabelas próprias porque `ADD COLUMN` não aceita o CHECK de UTC sem recriar a tabela). Entrou: `ordersCancel` com motivo opcional e consequência (`on_delivery`/`refund`/`charge_cancel`), Estorno total (com a tarifa R$ 1,50) na AbacatePay (PIX/Rápido) ou Efí (Normal) com chave `refund:<intentId>`, webhooks de estorno idempotentes, Ledger anulado antes do repasse e débito compensado depois, PIX expirado → Cancelado `pix_expired` (libera Cupom, sai da faixa; Pedido cancelado nunca pago não conta como primeira compra), varreduras `retryPendingRefunds`/`expireUnpaidPix`/`expireStaleCardAttempts` (`createPaymentMaintenance`, ligadas ao Cron no Ticket 15), diálogo de cancelamento e selo de Estorno no Painel. Pendência: confirmar no sandbox se a Efí estorna cobrança `approved` antes de `paid` (`TODO(12)` em `refund-service.ts`).
