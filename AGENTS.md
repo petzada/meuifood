@@ -33,16 +33,23 @@ Os mesmos nomes de script de todos os repositórios (rode na raiz):
 | --- | --- |
 | `pnpm lint` | ESLint do repositório + lint das migrations |
 | `pnpm typecheck` | build de `shared`/`ui` e `tsc --noEmit` em todos os pacotes |
-| `pnpm test` | testes sem banco (vitest, todos os projetos) |
+| `pnpm test` | testes sem banco (vitest, todos os projetos, inclusive componentes) |
+| `pnpm test:coverage` | `test` com cobertura V8 e limiar de 80% de linhas em `shared`/`db` (o que o CI roda) |
 | `pnpm test:related` | só os testes ligados ao diff contra `origin/master`, **sem testes com D1** |
 | `pnpm test:workers` | testes com D1 no workerd (`*.d1.test.ts`, `@cloudflare/vitest-plugin`) — **só no CI** |
-| `pnpm test:ci` | `test` + `test:workers` (o que o CI roda) |
+| `pnpm test:ci` | `test:coverage` + `test:workers` (o que o CI roda) |
 | `pnpm build` | bundle da api (`wrangler --dry-run`) e `next build` de web/admin |
 | `pnpm build:cf` | build OpenNext de web/admin (o que o deploy publica) |
 | `pnpm e2e` | smoke HTTP contra os Workers publicados (`scripts/smoke.mjs`) |
 | `pnpm db:generate -- --name <nome>` | gera a migration SQL a partir de `packages/db/src/schema/*.ts` |
 
 Gates locais (`lefthook.yml`): pre-commit formata (prettier, `stage_fixed`) e roda ESLint com cache nos arquivos em stage e o lint das migrations; pre-push roda `1_typecheck` e `2_related`. Nunca `--no-verify`.
+
+### Testes (decisão 67)
+
+- **Componente** (`apps/web`, `apps/admin`): `*.test.tsx` ao lado do componente, com Testing Library + `user-event` sobre happy-dom (ambiente padrão dos dois apps; setup em `src/test/setup.ts` com os matchers do jest-dom). Cubra o fluxo crítico do ticket pelo que o usuário vê: consulta por papel e nome acessível (`getByRole("button", { name })`, `getByLabelText`), interação com `userEvent.setup()`, asserção de estado visível (`toBeDisabled`, `toHaveAccessibleDescription`, `role="alert"`). Nada de rede: server actions e RPC entram como props/`vi.fn()`, `fetch` por `vi.stubGlobal`, `next/navigation` por `vi.mock` (ver `storefront.test.tsx`, roteador em memória). Teste de código de servidor dentro dos apps (Request/Headers do Node) começa com `// @vitest-environment node`.
+- **Cobertura**: `pnpm test:coverage` (job `qualidade` do CI) falha abaixo de **80% de linhas** em `packages/shared` e `packages/db`; nunca baixe o limiar — escreva o teste. Ficam fora da conta só testes, fixtures, `src/testing/` e os módulos de acesso ao D1 (`foode-db.ts`, `menu.ts`, `ops-db.ts`), exercitados pelos `*.d1.test.ts` no workerd (sem cobertura V8). Módulo novo de D1 entra nessa lista no `vitest.config.ts` da raiz; regra pura fica num módulo testável sem banco.
+- **Propriedade** (`fast-check`, em `packages/shared`): dinheiro, taxa/líquido, Estorno/Ledger e datas úteis (`*.property.test.ts`).
 
 **Sem banco local nem Docker.** Testes com D1 e a prova das migrations rodam só no CI. Não rode `wrangler deploy`, `wrangler d1 migrations apply --remote`, `wrangler d1 execute --remote` nem nada que altere produção do notebook.
 
