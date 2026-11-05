@@ -23,3 +23,5 @@
 - 2026-11-05 — Referência Anota (lojista): aplicar [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md) REL-01 a REL-04, NAV-01/NAV-02 (rotas `/relatorios`, `/repasses`, `/plano` no grupo Financeiro; sugestão de permissão `store.finance`) e OPS-01/OPS-04 para os lotes; mapa em [MAPA-UX-LOJISTA](../../../docs/referencias/anota-ai/MAPA-UX-LOJISTA.md) §1, §7 e §15. Em aberto: P-REL-1 a P-REL-5 e P-PLN-1 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md).
 
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-REL-1 (PDF+XLSX), P-REL-2 (top 10 + dia da semana), P-REL-3 (TOP 10 clientes), P-REL-4 (funil próprio), P-REL-5 (comparativo), P-PLN-1. Vale sobre as perguntas em aberto dos comentários anteriores.
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): exportação CSV + impressão em PDF pelo navegador (sem PDF/XLSX no servidor); TOP 10 clientes só com conta Foode (nunca Guest); funil próprio mantido; top itens com dia da semana.

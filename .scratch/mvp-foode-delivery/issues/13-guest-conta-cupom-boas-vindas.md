@@ -26,3 +26,5 @@
 - 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) U1–U4 (Cupom inline no checkout, um erro específico por código, desconto fora da taxa de entrega) e §6 criar conta. Não adotar o lookup por telefone do print 17 (P-2.1; diverge da decisão 43). Pendentes: P-3.4 e P-7.1 em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).
 
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-3.4 (endereços salvos na conta), P-CUP-1 (teto %), P-CUP-3 (dias da semana), P-CUP-5 (modelos), P-7.1 (sem vitrine); apoio ao P-2.1. Vale sobre as perguntas em aberto dos comentários anteriores.
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): mantém magic link, vínculo e Cupom de boas-vindas; corta vários endereços salvos; Cupom mantém dias da semana.

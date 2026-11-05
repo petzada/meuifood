@@ -26,3 +26,5 @@
 - 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) §6 Pixel — `view_item` ao abrir o item (I1), `add_to_cart` ao confirmar "Adicionar" (I7), `purchase` na confirmação. Pendente: P-5.4 (compartilhar Loja/item) em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).
 
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-ONB-1 (tour 3 passos), P-ONB-3, P-ONB-4 (2 perguntas de perfil gravadas), P-VIS-1 (logo), P-VIS-2 (capa), P-VIS-3 (descrição), P-5.4 (compartilhar Loja), P-CFG-4, eventos do funil (P-REL-4). Vale sobre as perguntas em aberto dos comentários anteriores.
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): tour de 3 passos, capa, perfil no 1º acesso e eventos do funil próprio mantidos.

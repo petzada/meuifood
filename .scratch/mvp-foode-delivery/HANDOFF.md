@@ -1,6 +1,6 @@
 # Estado atual — 2026-11-04 (revisão final antes da orquestração)
 
-**Fonte da verdade:** [spec v2](spec.md) + decisões [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Cloudflare/D1/testes/CI/domínio), [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX AbacatePay, Cartão Efí Normal/AbacatePay Rápido, custódia, repasse D+1 útil), [61](../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md) (faixas por Pedidos, taxas no `/ops`) e [62](../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md) (Ops, multi-Loja, Pixel, Cupons, impressão). Glossário em `CONTEXT.md`.
+**Fonte da verdade:** [spec v2](spec.md) + decisões [59](../../docs/decisoes/59-pivo-cloudflare-d1-workers.md) (Cloudflare/D1/testes/CI/domínio), [60](../../docs/decisoes/60-pagamentos-efi-abacatepay.md) (PIX AbacatePay, Cartão Efí Normal/AbacatePay Rápido, custódia, repasse D+1 útil), [61](../../docs/decisoes/61-monetizacao-faixas-taxas-anota.md) (faixas por Pedidos, taxas no `/ops`) e [62](../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md) (Ops, multi-Loja, Pixel, Cupons, impressão), [63](../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (UX do benchmark Anota) e [64](../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md) (revisão de escopo). Glossário em `CONTEXT.md`.
 
 **Entregue na stack antiga (referência de comportamento a portar):** Tickets 01–09.
 
@@ -17,10 +17,9 @@
 | 7 | [27](issues/27-credito-efi-abacatepay.md) Cartão Normal (Efí) e Rápido (AbacatePay) + avaliar débito | 26 |
 | 8 | [12](issues/12-cancelamento-estorno-automatico.md) Cancelamento e Estorno | 27 |
 | 9 | [14](issues/14-plano-relatorios-ledger-dono.md) Plano/faixa, relatórios, Repasses e lotes ∥ [15](issues/15-reconciliacao-railway-cron.md) Reconciliação | 12 |
-| 10 | [20](issues/20-aprofundar-contratos-e-modules-do-front.md) Deepening do front | 14, 15 |
-| 11 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção | 20 |
+| 10 | [30](issues/30-prontidao-testes-producao.md) Prontidão para testes em produção | 14, 15 |
 
-**Fora da fila:** 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
+**Fora da fila:** 20 (cortado pela decisão 64; critérios no /code-review de cada ticket), 10 e 11 (superseded por 26/27), 16 (arquivado), 17–19 (superseded pelos tickets de port).
 
 **Integração autorizada pelo Dono nesta execução:** por ticket, PR → CI verde → squash merge na `master` → `db-migrate` se houver migration (contract exige confirmação) → deploy pelo CI → smoke. Credenciais de pagamento de produção.
 

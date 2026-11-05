@@ -20,3 +20,5 @@
 - 2026-11-05 — Referência Anota (lojista): o smoke e o runbook conferem os estados de T-04 (vazio/carregando/erro) da fila e do `/ops` em [DIRETRIZES-UX-LOJISTA](../../../docs/referencias/anota-ai/DIRETRIZES-UX-LOJISTA.md); se P-IMP-1 ou P-ONB-2 de [PERGUNTAS-LOJISTA](../../../docs/referencias/anota-ai/PERGUNTAS-LOJISTA.md) ficarem na opção recomendada, o runbook ganha o modo quiosque de impressão e o Pedido de teste com Pagamento na entrega cancelado.
 
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-ONB-5 (espaço do widget de chat de suporte, desligado sem configuração); runbook. Vale sobre as perguntas em aberto dos comentários anteriores.
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): sem wa.me de suporte; espaço do widget + base de integração mapeada para agentes.chat/MCP (implementação pós-lançamento); passa a depender de 14 e 15 (20 cortado).

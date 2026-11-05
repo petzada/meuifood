@@ -22,8 +22,9 @@ Fatia "C" = commit de contrato (Zod em `packages/shared/src/<domínio>/*`, `pack
 | 15 | 12-UI | 14-C |
 | 16 | 15-API (migration 15, cron) | 14-API |
 | 17 | 14-migration+lotes | 30-ops (rascunho runbook) |
-| 18 | 14-UI | 20-C |
-| 19 | 20-web | 20-admin |
-| 20 | 30-E2E (lockfile) | 30-ops final |
+| 18 | 14-UI | 30-ops (widget + base agentes.chat) |
+| 19 | 30-E2E (lockfile) | 30-ops final |
 
-Regras: numeração de migrations reservada pelo orquestrador (22→N+1, 23→N+2, 29→N+3, 24→N+4, 28→N+5, 13→N+6, 26→N+7, 27→N+8, 12→N+9, 15→N+10, 14→N+11; N = última do 21); um dono por onda de lockfile, wrangler.jsonc, CI; schema partido por domínio; subpath exports; navegação do admin é do 22-UI; caminho de escrita do Pedido: 24→13→26→27→12; 25-legado só após 24/28/29 na master.
+Regras: numeração de migrations reservada pelo orquestrador (efetivo: 21→0000, 22→0001, 29→0002, 23→0003; seguintes 24→0004, 28→0005, 13→0006, 26→0007, 27→0008, 12→0009, 15→0010, 14→0011; plano original: 22→N+1, 23→N+2, 29→N+3, 24→N+4, 28→N+5, 13→N+6, 26→N+7, 27→N+8, 12→N+9, 15→N+10, 14→N+11; N = última do 21); um dono por onda de lockfile, wrangler.jsonc, CI; schema partido por domínio; subpath exports; navegação do admin é do 22-UI; caminho de escrita do Pedido: 24→13→26→27→12; 25-legado só após 24/28/29 na master.
+
+2026-11-05: Ticket 20 cortado (decisão 64); critérios do 20 entram no /code-review de cada ticket de UI. UI de cada ticket segue docs/referencias/anota-ai/DIRETRIZES-UX-*.md e decisões 63/64.

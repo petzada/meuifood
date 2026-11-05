@@ -26,3 +26,5 @@
 - 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) G1–G10, C1/C6, K7, X1–X4, X6–X9 e o bloco "Pagar na entrega" de X5. Pendentes em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md): P-2.2–P-2.5, P-3.3, P-4.1, P-4.2, P-5.1, P-6.1; se aprovadas, observações, subtipo na entrega e troco entram no detalhe do Pedido e no cupom 80 mm.
 
 - 2026-11-05 — Decisão [63](../../../docs/decisoes/63-decisoes-ux-benchmark-anota.md) (benchmark Anota): entram neste ticket P-2.1 (busca por telefone com salvaguardas), P-2.2, P-2.3, P-2.4, P-2.5, P-3.1 (CEP), P-3.3, P-4.2 (troco), P-4.3 (bandeiras débito/crédito), P-5.1, P-6.1, P-6.2, P-OPE-2, P-OPE-4 (Operador pausa e retoma), P-IMP-1 (Imprimir ao aceitar), P-IMP-2, P-WPP-1, P-CFG-5. Vale sobre as perguntas em aberto dos comentários anteriores.
+
+- 2026-11-05 — Decisão [64](../../../docs/decisoes/64-revisao-adversarial-escopo-mvp.md): 'Imprimir ao aceitar' é configuração da Loja; 'Avisar no WhatsApp' é ação por Pedido; busca por telefone e CEP mantidos com salvaguardas.
