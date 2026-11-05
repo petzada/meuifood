@@ -3,8 +3,11 @@
 // A Loja sai SÓ do Slug (sempre `active` em @foode/db); preço, Delivery, mínimo, troco e total
 // são recalculados aqui; Loja ativa, Pausa, horário, Fulfillment, bairro, mínimo e itens são
 // conferidos de novo na própria escrita (`db.storefront.createOrder`).
+// Ticket 13: Cupom (código digitado ou boas-vindas automático) recalculado no servidor na cotação e
+// na criação, contado na mesma escrita do Pedido; Pedido autenticado nasce ligado à conta; a busca
+// por telefone com conta Foode só sinaliza "Entrar com WhatsApp" (decisão 68).
 // Dados pessoais: nenhum log aqui. Telefone, endereço e tokens nunca vão para log/Sentry.
-import type { FoodeDb } from "@foode/db";
+import type { CustomerSession, FoodeDb } from "@foode/db";
 import {
   type CheckoutCreateResponse,
   checkoutCreateRequestSchema,
@@ -40,6 +43,7 @@ import {
   orderAddressOf,
   quoteCheckout,
 } from "./checkout-rules";
+import { resolveCheckoutCoupon, withDiscount } from "./coupon-checkout";
 import { toStorefrontShowcase } from "./showcase";
 import {
   canonicalJson,
@@ -59,6 +63,8 @@ export type StorefrontServiceDeps = {
   phoneLookupIpSalt: string | undefined;
   /** Base pública das imagens (logo/capa da vitrine, Ticket 28); null = sem URL. */
   mediaBaseUrl?: string | null;
+  /** Sessão do Consumidor pelo header `cookie` (Ticket 13); ausente = sempre Guest. */
+  customerSessionOf?: (cookie: string | null) => Promise<CustomerSession | null>;
   now?: () => Date;
 };
 
@@ -84,6 +90,11 @@ function checkoutFailure(error: CheckoutError): Reply<CheckoutCreateResponse> {
 export function createStorefrontService(deps: StorefrontServiceDeps) {
   const { db, turnstile } = deps;
   const clock = deps.now ?? (() => new Date());
+
+  async function accountOf(cookie: string | null) {
+    if (!cookie || !deps.customerSessionOf) return null;
+    return (await deps.customerSessionOf(cookie))?.account ?? null;
+  }
 
   async function paymentMethodsOf(storeId: string) {
     return availablePaymentMethods(await db.checkout.effectivePaymentFees(storeId));
@@ -171,14 +182,24 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     async quote(
       slug: string,
       body: unknown,
+      cookie: string | null = null,
     ): Promise<Reply<CheckoutQuoteResponse | { error: string }>> {
       const parsed = checkoutQuoteRequestSchema.safeParse(body);
       if (!parsed.success) return INVALID_INPUT;
       const snapshot = await db.storefront.checkoutSnapshot(slug);
       if (!snapshot) return STORE_NOT_FOUND;
-      const outcome = quoteCheckout(snapshot, parsed.data, clock());
+      const now = clock();
+      const outcome = quoteCheckout(snapshot, parsed.data, now);
       if (!outcome.ok) return { status: 200, body: { ok: false, error: outcome.error } };
-      const { quote } = outcome;
+      const coupon = await resolveCheckoutCoupon(db, {
+        storeId: snapshot.store.id,
+        couponCode: parsed.data.couponCode ?? null,
+        account: await accountOf(cookie),
+        itemsSubtotalCents: outcome.quote.subtotalCents,
+        now,
+      });
+      if (!coupon.ok) return { status: 200, body: { ok: false, error: coupon.error } };
+      const quote = withDiscount(outcome.quote, coupon.applied?.discountCents ?? 0);
       return {
         status: 200,
         body: {
@@ -190,6 +211,7 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           minimumOrder: quote.minimumOrder,
           eta: quote.eta,
           paymentMethods: await paymentMethodsOf(snapshot.store.id),
+          coupon: coupon.applied,
         },
       };
     },
@@ -201,6 +223,7 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     async create(
       slug: string,
       body: unknown,
+      cookie: string | null = null,
     ): Promise<Reply<CheckoutCreateResponse | { error: string }>> {
       const parsed = checkoutCreateRequestSchema.safeParse(body);
       if (!parsed.success) return INVALID_INPUT;
@@ -219,6 +242,7 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
       const secret = requireSecret(deps.orderTokenSecret, "ORDER_TOKEN_SECRET");
       const orderId = crypto.randomUUID();
       const accessTokenHash = await sha256Hex(await orderAccessToken(secret, orderId));
+      const account = await accountOf(cookie);
 
       for (let attempt = 0; attempt < CREATE_ATTEMPTS; attempt += 1) {
         const snapshot = await db.storefront.checkoutSnapshot(slug);
@@ -226,7 +250,15 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
         const now = clock();
         const outcome = quoteCheckout(snapshot, request, now);
         if (!outcome.ok) return checkoutFailure(outcome.error);
-        const { quote } = outcome;
+        const coupon = await resolveCheckoutCoupon(db, {
+          storeId: snapshot.store.id,
+          couponCode: request.couponCode ?? null,
+          account,
+          itemsSubtotalCents: outcome.quote.subtotalCents,
+          now,
+        });
+        if (!coupon.ok) return checkoutFailure(coupon.error);
+        const quote = withDiscount(outcome.quote, coupon.applied?.discountCents ?? 0);
         const paymentError = checkPayment(
           quote,
           request.payment,
@@ -259,6 +291,8 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           eta: quote.eta,
           lines: quote.lines,
           itemPrices: quote.itemPrices,
+          customerAccountId: account?.id ?? null,
+          coupon: coupon.coupon,
         });
         if (result.kind === "created") {
           await countFunnel(slug, "order");
@@ -341,6 +375,14 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
       if (!(await turnstile.verify(parsed.data.turnstileToken, ip))) {
         await db.storefront.phoneLookupFail(begin.lookupId, "captcha_failed");
         return { status: 403, body: { error: "captcha_failed" } } as const;
+      }
+      // Decisão 68: telefone com conta Foode = só "Entrar com WhatsApp"; nada da conta nem dos
+      // Pedidos aparece sem o código (nem mascarado), em nenhuma Loja.
+      if (await db.customer.phoneHasAccount(parsed.data.phone)) {
+        return {
+          status: 200,
+          body: phoneLookupResponseSchema.parse({ found: false, hasAccount: true }),
+        } as const;
       }
       const confirmToken = randomToken();
       const match = await db.storefront.phoneLookupMatch({

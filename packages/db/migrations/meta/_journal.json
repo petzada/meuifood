@@ -43,6 +43,13 @@
       "when": 1793856281669,
       "tag": "0005_onboarding_vitrine_funil",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793857000151,
+      "tag": "0006_conta_consumidor_cupons",
+      "breakpoints": true
     }
   ]
 }

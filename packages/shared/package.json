@@ -31,6 +31,14 @@
       "types": "./dist/onboarding/index.d.ts",
       "default": "./dist/onboarding/index.js"
     },
+    "./customer": {
+      "types": "./dist/customer/index.d.ts",
+      "default": "./dist/customer/index.js"
+    },
+    "./coupon": {
+      "types": "./dist/coupon/index.d.ts",
+      "default": "./dist/coupon/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {

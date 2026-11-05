@@ -73,9 +73,7 @@ describe("taxa de Delivery", () => {
   });
 
   it("exige streetLine e neighborhood", () => {
-    expect(
-      sanitizeDeliveryAddress({ neighborhood: "Centro", streetLine: "" }).ok,
-    ).toBe(false);
+    expect(sanitizeDeliveryAddress({ neighborhood: "Centro", streetLine: "" }).ok).toBe(false);
     expect(
       resolveDeliveryFeeCents(
         { fixedDeliveryFeeCents: 100, mode: "fixed", neighborhoods: [] },

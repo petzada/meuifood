@@ -4,7 +4,7 @@
 
 **Blocked by:** 24a — Storefront: checkout, Pedido e acompanhamento.
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Agente:** Opus para API/regras; Fable para telas de cupom (Painel) e conta (Storefront), após o contrato.
 
@@ -64,3 +64,5 @@
 - 2026-11-05 — Decisão [66](../../../docs/decisoes/66-esclarecimentos-consolidacao-v3.md): Cupom de boas-vindas é de primeira compra por Loja (Pedido Guest vinculado bloqueia; uso único por conta por Loja); conflito de conta orienta o suporte pelo widget de chat do Storefront quando ativo (sem canal enquanto desligado, risco aceito).
 
 - 2026-11-05 — Decisão [68](../../../docs/decisoes/68-busca-telefone-com-conta.md): busca por telefone com conta usa o código do WhatsApp e os dados da conta.
+
+- 2026-11-05 — Done (PR do 13). API `5e1935a`, UI `5fd1a0e`; migration `0006_conta_consumidor_cupons`. Login por WhatsApp fica indisponível (erro controlado) até o Dono conectar a whatsmiau no bloco final; `supportChatActive=false` até o widget (30). Oferta de criar conta pós-Pedido não feita (fora dos critérios).

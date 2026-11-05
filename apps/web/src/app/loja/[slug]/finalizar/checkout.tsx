@@ -5,6 +5,7 @@
 // a taxa, "Sem número") → Pagamento (meios neutros; troco inline; bandeiras) → Observações →
 // Resumo com totais do servidor → aviso de Privacidade, selo "Ambiente seguro" e CTA fixo que
 // diz o que falta (G1/G2). Envio idempotente (X7): a mesma chave em todo retry.
+import type { CustomerAccountView, CustomerSessionState } from "@foode/shared/customer";
 import type { PublicMenu } from "@foode/shared/menu";
 import { formatBRL } from "@foode/shared/money";
 import {
@@ -35,13 +36,17 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Turnstile, type TurnstileHandle } from "../../../../components/turnstile";
+import { createAccountApi, type AccountApi } from "../conta/account-api";
+import { LoginSheet } from "../conta/login-sheet";
 import { summarizeCart } from "../storefront/cart-store";
 import { trackFunnel } from "../storefront/funnel";
 import { blockedCheckoutMessage, describeAvailability } from "../storefront/store-status";
 import { useStoreCart } from "../storefront/use-store-cart";
 import { lookupCep } from "./cep";
 import { createCheckoutApi, type CheckoutApi } from "./checkout-api";
+import { CouponField } from "./coupon-field";
 import {
+  applyAccount,
   applyAddress,
   availableFulfillments,
   buildCartBody,
@@ -64,12 +69,16 @@ import {
 } from "./checkout-state";
 
 export type CheckoutProps = {
+  /** Injetável nos testes; por padrão fala com `/conta/*`. */
+  accountApi?: AccountApi;
   /** Injetável nos testes; por padrão fala com `/loja/{slug}/finalizar/*`. */
   api?: CheckoutApi;
   cepLookup?: typeof lookupCep;
   menu: PublicMenu;
   now?: number;
-  /** Site key pública do Turnstile; vazia = busca por telefone indisponível. */
+  /** Sessão do Consumidor lida no servidor (Ticket 13); ausente = anônimo. */
+  session?: CustomerSessionState;
+  /** Site key pública do Turnstile; vazia = busca por telefone e login indisponíveis. */
   siteKey: string;
   state: StorefrontStoreState;
 };
@@ -89,8 +98,15 @@ type LookupState =
       confirmToken: string;
     }
   | { status: "confirming"; masked: Extract<PhoneLookupResponse, { found: true }>["masked"] }
+  /** Telefone com conta Foode (decisão 68): só "Entrar com WhatsApp", nada da conta antes do código. */
+  | { status: "has_account" }
   | { status: "done" }
   | { status: "unavailable"; message: string };
+
+/** Como o `web` pede uma nova chave quando o corpo muda (idempotência, X7). */
+function newIdempotencyKey(): string {
+  return crypto.randomUUID();
+}
 
 function Section({
   children,
@@ -138,15 +154,18 @@ function methodDescription(method: PaymentMethod, available: boolean): string {
 }
 
 export function Checkout({
+  accountApi: accountApiProp,
   api: apiProp,
   cepLookup = lookupCep,
   menu,
   now,
+  session,
   siteKey,
   state,
 }: CheckoutProps) {
   const router = useRouter();
   const api = useMemo(() => apiProp ?? createCheckoutApi(), [apiProp]);
+  const accountApi = useMemo(() => accountApiProp ?? createAccountApi(), [accountApiProp]);
   const { cart, dispatch, hydrated } = useStoreCart(menu.slug);
   const itemsById = useMemo(
     () => new Map(menu.categories.flatMap((c) => c.items.map((i) => [i.id, i] as const))),
@@ -163,10 +182,19 @@ export function Checkout({
   const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
   const [lookup, setLookup] = useState<LookupState>({ status: "idle" });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [cepStatus, setCepStatus] = useState<"idle" | "searching">("idle");
+  // Conta do Consumidor (Ticket 13): logado preenche com a conta; anônimo pode entrar daqui.
+  const [account, setAccount] = useState<CustomerAccountView | null>(() =>
+    session?.state === "signed_in" ? session.account : null,
+  );
+  const [loginOpen, setLoginOpen] = useState(false);
+  // Cupom (Ticket 13): código no campo (mantido quando recusado) e recusa inline.
+  const [pendingCoupon, setPendingCoupon] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [quotePending, setQuotePending] = useState(false);
   const turnstile = useRef<TurnstileHandle>(null);
   const alertRef = useRef<HTMLParagraphElement>(null);
   const lookedUpPhone = useRef<string | null>(null);
@@ -179,14 +207,16 @@ export function Checkout({
     trackFunnel(menu.slug, "checkout_start");
   }, [menu.slug]);
 
-  // Dados lembrados no aparelho (P-2.2), só depois da hidratação.
+  // Dados lembrados no aparelho (P-2.2), só depois da hidratação; a conta, quando há, vence.
   useEffect(() => {
     const stored = readRememberedCustomer(window.localStorage, menu.slug);
-    if (!stored) return;
-    setRemembered(stored);
-    setForm(createCheckoutForm(state, stored));
+    const signedIn = session?.state === "signed_in" ? session.account : null;
+    if (!stored && !signedIn) return;
+    if (stored) setRemembered(stored);
+    const base = createCheckoutForm(state, stored);
+    setForm(signedIn ? applyAccount(base, signedIn, state) : base);
     setLookup({ status: "done" });
-  }, [menu.slug, state]);
+  }, [menu.slug, session, state]);
 
   const update = useCallback(<K extends keyof CheckoutForm>(key: K, value: CheckoutForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -200,9 +230,9 @@ export function Checkout({
     setTouched((current) => (current.has(field) ? current : new Set(current).add(field)));
   }, []);
 
-  // Cotação no servidor (G7) a cada mudança de Fulfillment/bairro/linhas, com debounce.
+  // Cotação no servidor (G7) a cada mudança de Fulfillment/bairro/linhas/Cupom, com debounce.
   const { lines } = cart;
-  const { fulfillment } = form;
+  const { couponCode, fulfillment } = form;
   const { neighborhoodId, neighborhoodName } = form.address;
   const quoteReady =
     hydrated &&
@@ -219,28 +249,51 @@ export function Checkout({
       return;
     }
     let cancelled = false;
+    setQuotePending(true);
     const timer = setTimeout(() => {
-      // O contrato exige rua e número; a cotação só depende de Fulfillment, bairro e linhas.
+      // O contrato exige rua e número; a cotação só depende de Fulfillment, bairro, linhas e Cupom.
       const { address } = formRef.current;
       const body = buildCartBody(
         {
           address: { ...address, number: address.number || "0", street: address.street || "-" },
+          couponCode,
           fulfillment,
         },
         lines,
         state,
       );
       void api.quote(menu.slug, body).then((result) => {
-        if (!cancelled) setQuote(result);
+        if (cancelled) return;
+        setQuotePending(false);
+        // Cupom recusado (U2): mensagem inline no campo, o código fica para corrigir e a
+        // cotação volta a rodar sem ele (totais certos, boas-vindas se elegível).
+        if (result && !result.ok && result.error.code === "coupon_invalid" && couponCode) {
+          setCouponError(checkoutErrorMessagePt(result.error));
+          setPendingCoupon(couponCode);
+          setForm((current) => ({ ...current, couponCode: "" }));
+          return;
+        }
+        setQuote(result);
       });
     }, QUOTE_DEBOUNCE_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [api, fulfillment, lines, menu.slug, neighborhoodId, neighborhoodName, quoteReady, state]);
+  }, [
+    api,
+    couponCode,
+    fulfillment,
+    lines,
+    menu.slug,
+    neighborhoodId,
+    neighborhoodName,
+    quoteReady,
+    state,
+  ]);
 
   const totals = quote?.ok ? quote : localTotals(state, form, summary.subtotalCents);
+  const appliedCoupon = quote?.ok ? (quote.coupon ?? null) : null;
   const paymentMethods = quote?.ok ? quote.paymentMethods : state.paymentMethods;
   const eta = quote?.ok ? quote.eta : fulfillment ? (state[fulfillment]?.eta ?? null) : null;
   const validation = validateCheckout(form, {
@@ -287,12 +340,43 @@ export function Checkout({
           status: "unavailable",
           message: "Muitas consultas por agora. Preencha seus dados.",
         });
+      } else if ("hasAccount" in result && result.hasAccount) {
+        setLookup({ status: "has_account" });
       } else {
         setLookup({ status: "done" });
       }
       return;
     }
     setLookup({ confirmToken: result.confirmToken, masked: result.masked, status: "found" });
+  }
+
+  // ---- Conta do Consumidor (Ticket 13, decisão 68): entrar preenche com a conta; sair mantém o
+  // que está na tela (o Pedido segue como Guest).
+  function handleSignedIn(signedIn: CustomerAccountView) {
+    setAccount(signedIn);
+    setForm((current) => applyAccount(current, signedIn, state));
+    setLookup({ status: "done" });
+    setSubmitError(null);
+  }
+
+  async function signOut() {
+    await accountApi.signOut();
+    setAccount(null);
+    setLookup({ status: "done" });
+  }
+
+  // ---- Cupom (Ticket 13): aplicar manda o código na cotação; remover volta ao boas-vindas.
+  function applyCoupon(code: string) {
+    setCouponError(null);
+    setPendingCoupon(code);
+    setForm((current) => ({ ...current, couponCode: code }));
+    setSubmitError(null);
+  }
+
+  function removeCoupon() {
+    setCouponError(null);
+    setPendingCoupon("");
+    setForm((current) => ({ ...current, couponCode: "" }));
   }
 
   async function confirmLookup() {
@@ -383,8 +467,21 @@ export function Checkout({
       return;
     }
     if (!result.ok) {
+      if (result.error.code === "coupon_invalid") {
+        // U4: o Cupom perdeu a validade entre aplicar e enviar. Sai do Pedido, a cotação mostra
+        // o novo total e o Consumidor confirma de novo (corpo mudou = chave nova).
+        setCouponError(checkoutErrorMessagePt(result.error));
+        setPendingCoupon(form.couponCode);
+        setForm((current) => ({ ...current, couponCode: "" }));
+        setIdempotencyKey(newIdempotencyKey());
+        setSubmitError(
+          `${checkoutErrorMessagePt(result.error)} Confira o novo total e toque em Fazer pedido de novo.`,
+        );
+        alertRef.current?.focus();
+        return;
+      }
       setSubmitError(checkoutErrorMessagePt(result.error));
-      if (result.error.code === "idempotency_conflict") setIdempotencyKey(crypto.randomUUID());
+      if (result.error.code === "idempotency_conflict") setIdempotencyKey(newIdempotencyKey());
       alertRef.current?.focus();
       return;
     }
@@ -448,7 +545,45 @@ export function Checkout({
           step={1}
           title="Seus dados"
         >
-          {remembered ? (
+          {account ? (
+            <div
+              aria-label="Conta Foode"
+              className="foode-outline flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+              role="group"
+            >
+              <p className="text-sm text-[var(--color-body)]">
+                Pedindo com a sua conta Foode:{" "}
+                <strong className="text-[var(--color-ink)]">{account.name}</strong>
+              </p>
+              <p className="flex items-center gap-3 text-sm">
+                <a
+                  className="font-bold text-[var(--color-primary-strong)] underline-offset-2 hover:underline"
+                  href={`${menuHref}/conta`}
+                >
+                  Minha conta
+                </a>
+                <button
+                  className="font-bold text-[var(--color-primary-strong)] underline-offset-2 hover:underline"
+                  onClick={() => void signOut()}
+                  type="button"
+                >
+                  Sair
+                </button>
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--color-body)]">
+              Já tem conta Foode?{" "}
+              <button
+                className="font-bold text-[var(--color-primary-strong)] underline-offset-2 hover:underline"
+                onClick={() => setLoginOpen(true)}
+                type="button"
+              >
+                Entrar com WhatsApp
+              </button>
+            </p>
+          )}
+          {remembered && !account ? (
             <p className="text-sm text-[var(--color-body)]">
               Dados lembrados neste aparelho.{" "}
               <button
@@ -535,6 +670,23 @@ export function Checkout({
                 </Button>
                 <Button onClick={() => setLookup({ status: "done" })} variant="secondary">
                   Não sou eu
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {lookup.status === "has_account" ? (
+            <div
+              aria-label="Conta Foode encontrada"
+              className="foode-outline grid gap-3 p-4"
+              role="group"
+            >
+              <p className="text-[var(--color-body)]">
+                Esse WhatsApp tem conta Foode. Entre com o código para preencher com os seus dados.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setLoginOpen(true)}>Entrar com WhatsApp</Button>
+                <Button onClick={() => setLookup({ status: "done" })} variant="secondary">
+                  Continuar sem entrar
                 </Button>
               </div>
             </div>
@@ -865,6 +1017,17 @@ export function Checkout({
             <a className="text-sm font-bold text-[var(--color-primary-strong)]" href={menuHref}>
               Alterar itens
             </a>
+            <div className="border-t border-[var(--color-hairline-soft)] pt-3">
+              <CouponField
+                applied={appliedCoupon}
+                checking={quotePending && form.couponCode !== ""}
+                delivery={fulfillment === "delivery"}
+                error={couponError}
+                onApply={applyCoupon}
+                onRemove={removeCoupon}
+                pendingCode={pendingCoupon}
+              />
+            </div>
             <dl className="grid gap-1 border-t border-[var(--color-hairline-soft)] pt-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-[var(--color-body)]">Subtotal</dt>
@@ -880,7 +1043,11 @@ export function Checkout({
               </div>
               {totals.discountCents > 0 ? (
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-body)]">Desconto</dt>
+                  <dt className="text-[var(--color-body)]">
+                    {appliedCoupon?.source === "promo" && appliedCoupon.code
+                      ? `Cupom ${appliedCoupon.code}`
+                      : "Cupom de boas-vindas"}
+                  </dt>
                   <dd className="m-0 tabular-nums">−{formatBRL(totals.discountCents)}</dd>
                 </div>
               ) : null}
@@ -956,6 +1123,16 @@ export function Checkout({
           </div>
         </div>
       </form>
+
+      <LoginSheet
+        api={accountApi}
+        initialPhone={form.phone}
+        onClose={() => setLoginOpen(false)}
+        onSignedIn={handleSignedIn}
+        open={loginOpen}
+        siteKey={siteKey}
+        startAtSignup={!account && session?.state === "signup_required"}
+      />
     </main>
   );
 }

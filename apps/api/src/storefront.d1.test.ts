@@ -208,6 +208,7 @@ describe("estado da Loja e cotação", () => {
         discountCents: 0,
         totalCents: 5680,
         minimumOrder: null,
+        coupon: null,
         eta: { minMinutes: 40, maxMinutes: 60 },
         paymentMethods: ["on_delivery"],
       },

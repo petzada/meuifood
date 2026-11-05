@@ -9,6 +9,8 @@ import { RESERVED_STORE_SLUGS, SLUG_PATTERN } from "@foode/shared/ops";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { parseCustomerChangePhone, parseCustomerFind } from "../../../lib/customer-forms";
+import type { CustomerFindState } from "./_components/customer-finder";
 import {
   formError,
   formSuccess,
@@ -268,4 +270,39 @@ export const endProviderCost: Action = async (_prev, formData) => {
   }
   revalidatePath("/ops/custos");
   return formSuccess(`Vigência encerrada em ${formatDateTimeSp(parsed.data.validTo)}.`);
+};
+
+// ---- Conta do Consumidor (Ticket 13, decisão 65): busca e troca de telefone auditada ----
+
+export async function findCustomer(
+  _prev: CustomerFindState,
+  formData: FormData,
+): Promise<CustomerFindState> {
+  const parsed = parseCustomerFind(formData);
+  if (!parsed.ok) return { ...formError(parsed.errors), customer: null };
+  const result = await opsRpc((api, caller) => api.opsCustomerFind(caller, parsed.data));
+  if (!result.ok) {
+    if (result.error === "not_found") {
+      return { ...formError({}, "Nenhuma conta com esse dado."), customer: null };
+    }
+    return { ...rpcFailure(result.error), customer: null };
+  }
+  return { status: "success", errors: {}, customer: result.data };
+}
+
+export const changeCustomerPhone: Action = async (_prev, formData) => {
+  const parsed = parseCustomerChangePhone(formData);
+  if (!parsed.ok) return formError(parsed.errors);
+  const result = await opsRpc((api, caller) => api.opsCustomerChangePhone(caller, parsed.data));
+  if (!result.ok) {
+    return rpcFailure(result.error, {
+      conflict: {
+        field: "phone",
+        message: "Esse número já pertence a outra conta ou é o atual.",
+      },
+      not_found: { message: "Esta conta não existe mais. Busque de novo." },
+    });
+  }
+  revalidatePath("/ops/clientes");
+  return formSuccess("Telefone trocado. As sessões abertas dessa conta foram encerradas.");
 };

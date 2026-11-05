@@ -177,7 +177,11 @@ export const phoneLookupConfirmTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32
  * de uso único e curto. 429 `rate_limited`; 403 `captcha_failed`.
  */
 export const phoneLookupResponseSchema = z.discriminatedUnion("found", [
-  z.object({ found: z.literal(false) }),
+  /**
+   * `hasAccount: true` (decisão 68, Ticket 13): o telefone tem conta Foode; o checkout oferece
+   * "Entrar com WhatsApp" e NADA da conta nem de Pedidos aparece sem o código (nem mascarado).
+   */
+  z.object({ found: z.literal(false), hasAccount: z.boolean().optional() }),
   z.object({
     found: z.literal(true),
     confirmToken: phoneLookupConfirmTokenSchema,

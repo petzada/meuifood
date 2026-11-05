@@ -20,9 +20,7 @@ describe("máquina de estados do Pedido", () => {
     expect(canTransitionDelivery("preparing", "out_for_delivery")).toBe(true);
     expect(canTransitionDelivery("out_for_delivery", "completed")).toBe(true);
     expect(canTransitionDelivery("preparing", "ready_for_pickup")).toBe(false);
-    expect(canTransitionOrder("delivery", "preparing", "out_for_delivery")).toBe(
-      true,
-    );
+    expect(canTransitionOrder("delivery", "preparing", "out_for_delivery")).toBe(true);
     expect(orderStatusLabelPt("out_for_delivery")).toBe("Saiu para entrega");
   });
 });
