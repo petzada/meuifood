@@ -22,3 +22,7 @@ Thumbs.db
 
 .scratch/*/.work/
 .scratch/*.txt
+
+# Playwright (smoke E2E)
+test-results/
+playwright-report/
