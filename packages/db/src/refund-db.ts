@@ -25,6 +25,7 @@ import type {
 import {
   type OrderCancelReasonValue,
   type OrderPaymentStatus,
+  type OrderSystemCancelReasonValue,
   PAINEL_VISIBLE_PAYMENT_SQL,
   type RefundOriginValue,
   type RefundStateValue,
@@ -267,6 +268,108 @@ export type ExpirablePix = {
 };
 
 export type RefundConfirmOutcome = "applied" | "already_applied" | "unmatched" | "duplicate";
+
+/** Pedido de Cartão abandonado (varredura do Cron, Ticket 15). */
+export type AbandonedCard = { orderId: string; storeId: string };
+
+/**
+ * Pedido `credit` aguardando pagamento, sem tentativa viva, com recusa e sem atividade em
+ * nenhuma tentativa depois do único bind (`abandonedBefore`).
+ */
+function abandonedCardGuard(o: string): string {
+  return `${o}.payment_method = 'credit' AND ${o}.status IN ${ACTIVE_STATUSES_SQL}
+    AND ${o}.payment_status = 'awaiting'
+    AND EXISTS (SELECT 1 FROM payment_intents f WHERE f.store_id = ${o}.store_id
+      AND f.order_id = ${o}.id AND f.method = 'credit' AND f.state = 'failed')
+    AND NOT EXISTS (SELECT 1 FROM payment_intents x WHERE x.store_id = ${o}.store_id
+      AND x.order_id = ${o}.id AND x.method = 'credit'
+      AND (x.state IN ('creating', 'pending', 'paid') OR x.updated_at > ?))`;
+}
+
+/**
+ * Cancelamento de sistema de um Pedido sem pagamento (PIX vencido, Cartão abandonado) num único
+ * batch: `before` (ex.: intenção expirada), histórico, motivo (sem autor), Pedido `cancelled`
+ * (pagamento aguardando vira `unpaidStatus`), Cupom liberado (uso desfeito + `coupon.released`).
+ * `guard` (sobre `orders o`) decide tudo; repetir não muda nada. Os valores do motivo são
+ * constantes deste módulo (nunca entrada).
+ */
+async function cancelUnpaidOrder(
+  d1: D1Database,
+  input: {
+    now: string;
+    orderId: string;
+    storeId: string;
+    guard: string;
+    guardBinds: unknown[];
+    reason:
+      | { column: "reason"; value: "pix_expired" }
+      | { column: "system_reason"; value: OrderSystemCancelReasonValue };
+    unpaidStatus: "expired" | "failed";
+    before: D1PreparedStatement[];
+  },
+): Promise<boolean> {
+  const { now, guard, guardBinds } = input;
+  const column = input.reason.column;
+  const reason = input.reason.value;
+  const cancelledNow = `EXISTS (SELECT 1 FROM order_cancellations c WHERE c.order_id = ?
+    AND c.store_id = ? AND c.cancelled_at = ? AND c.${column} = '${reason}')`;
+  const cancelledBinds = [input.orderId, input.storeId, now];
+  const results = await d1.batch([
+    ...input.before,
+    d1
+      .prepare(
+        `INSERT INTO order_status_events (id, store_id, order_id, from_status, to_status,
+           actor_user_id, actor_role, occurred_at)
+         SELECT ?, o.store_id, o.id, o.status, 'cancelled', NULL, NULL, ? FROM orders o
+         WHERE ${guard}`,
+      )
+      .bind(newId(), now, ...guardBinds),
+    d1
+      .prepare(
+        `INSERT INTO order_cancellations (order_id, store_id, ${column}, actor_user_id,
+           actor_role, cancelled_at, created_at)
+         SELECT o.id, o.store_id, '${reason}', NULL, NULL, ?, ? FROM orders o
+         WHERE ${guard}
+         ON CONFLICT DO NOTHING`,
+      )
+      .bind(now, now, ...guardBinds),
+    d1
+      .prepare(
+        `UPDATE orders AS o SET status = 'cancelled',
+           payment_status = CASE WHEN payment_status = 'awaiting' THEN '${input.unpaidStatus}'
+             ELSE payment_status END,
+           updated_at = ?
+         WHERE ${guard} AND ${cancelledNow}`,
+      )
+      .bind(now, ...guardBinds, ...cancelledBinds),
+    // Cupom: desfaz o uso (o limite volta a ter vaga) e o boas-vindas volta a valer.
+    d1
+      .prepare(
+        `UPDATE coupons SET used_count = used_count - 1
+         WHERE used_count > 0 AND store_id = ? AND id IN (
+           SELECT coupon_id FROM coupon_redemptions WHERE store_id = ? AND order_id = ?
+             AND source = 'promo')
+           AND ${cancelledNow}`,
+      )
+      .bind(input.storeId, input.storeId, input.orderId, ...cancelledBinds),
+    d1
+      .prepare(
+        `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action,
+           target_type, target_id, metadata)
+         SELECT ?, ?, NULL, store_id, 'coupon.released', 'order', order_id,
+           json_object('source', source, 'couponId', coupon_id, 'reason', '${reason}')
+         FROM coupon_redemptions WHERE store_id = ? AND order_id = ? AND ${cancelledNow}`,
+      )
+      .bind(newId(), now, input.storeId, input.orderId, ...cancelledBinds),
+    d1
+      .prepare(
+        `DELETE FROM coupon_redemptions WHERE store_id = ? AND order_id = ?
+           AND ${cancelledNow}`,
+      )
+      .bind(input.storeId, input.orderId, ...cancelledBinds),
+  ]);
+  return changed(results[input.before.length + 2]);
+}
 
 export function createRefundOps(d1: D1Database) {
   async function refundWhere(where: string, ...binds: unknown[]): Promise<RefundView | null> {
@@ -525,88 +628,82 @@ export function createRefundOps(d1: D1Database) {
       storeId: string;
     }): Promise<boolean> {
       const now = utcNow();
-      const guard = `o.id = ? AND o.store_id = ? AND o.payment_method = 'pix'
-        AND o.status IN ${ACTIVE_STATUSES_SQL}
-        AND o.payment_status IN ('awaiting', 'expired', 'failed')
-        AND EXISTS (SELECT 1 FROM payment_intents i WHERE i.id = ? AND i.store_id = o.store_id
-          AND i.order_id = o.id AND i.method = 'pix' AND i.state IN ('expired', 'failed'))`;
-      const guardBinds = [target.orderId, target.storeId, target.intentId];
-      const cancelledNow = `EXISTS (SELECT 1 FROM order_cancellations c WHERE c.order_id = ?
-        AND c.store_id = ? AND c.cancelled_at = ? AND c.reason = 'pix_expired')`;
-      const cancelledBinds = [target.orderId, target.storeId, now];
-      const [, , , update] = await d1.batch([
-        d1
-          .prepare(
-            `UPDATE payment_intents SET state = 'expired', updated_at = ?
-             WHERE id = ? AND store_id = ? AND order_id = ? AND method = 'pix'
-               AND state IN ('creating', 'pending')`,
-          )
-          .bind(now, target.intentId, target.storeId, target.orderId),
-        d1
-          .prepare(
-            `INSERT INTO order_status_events (id, store_id, order_id, from_status, to_status,
-               actor_user_id, actor_role, occurred_at)
-             SELECT ?, o.store_id, o.id, o.status, 'cancelled', NULL, NULL, ? FROM orders o
-             WHERE ${guard}`,
-          )
-          .bind(newId(), now, ...guardBinds),
-        d1
-          .prepare(
-            `INSERT INTO order_cancellations (order_id, store_id, reason, actor_user_id,
-               actor_role, cancelled_at, created_at)
-             SELECT o.id, o.store_id, 'pix_expired', NULL, NULL, ?, ? FROM orders o
-             WHERE ${guard}
-             ON CONFLICT DO NOTHING`,
-          )
-          .bind(now, now, ...guardBinds),
-        d1
-          .prepare(
-            `UPDATE orders AS o SET status = 'cancelled',
-               payment_status = CASE WHEN payment_status = 'awaiting' THEN 'expired'
-                 ELSE payment_status END,
-               updated_at = ?
-             WHERE ${guard} AND ${cancelledNow}`,
-          )
-          .bind(now, ...guardBinds, ...cancelledBinds),
-        // Cupom: desfaz o uso (o limite volta a ter vaga) e o boas-vindas volta a valer.
-        d1
-          .prepare(
-            `UPDATE coupons SET used_count = used_count - 1
-             WHERE used_count > 0 AND store_id = ? AND id IN (
-               SELECT coupon_id FROM coupon_redemptions WHERE store_id = ? AND order_id = ?
-                 AND source = 'promo')
-               AND ${cancelledNow}`,
-          )
-          .bind(target.storeId, target.storeId, target.orderId, ...cancelledBinds),
-        d1
-          .prepare(
-            `INSERT INTO audit_events (id, occurred_at, actor_user_id, store_id, action,
-               target_type, target_id, metadata)
-             SELECT ?, ?, NULL, store_id, 'coupon.released', 'order', order_id,
-               json_object('source', source, 'couponId', coupon_id, 'reason', 'pix_expired')
-             FROM coupon_redemptions WHERE store_id = ? AND order_id = ? AND ${cancelledNow}`,
-          )
-          .bind(newId(), now, target.storeId, target.orderId, ...cancelledBinds),
-        d1
-          .prepare(
-            `DELETE FROM coupon_redemptions WHERE store_id = ? AND order_id = ?
-               AND ${cancelledNow}`,
-          )
-          .bind(target.storeId, target.orderId, ...cancelledBinds),
-      ]);
-      return changed(update);
+      return cancelUnpaidOrder(d1, {
+        now,
+        orderId: target.orderId,
+        storeId: target.storeId,
+        guard: `o.id = ? AND o.store_id = ? AND o.payment_method = 'pix'
+          AND o.status IN ${ACTIVE_STATUSES_SQL}
+          AND o.payment_status IN ('awaiting', 'expired', 'failed')
+          AND EXISTS (SELECT 1 FROM payment_intents i WHERE i.id = ? AND i.store_id = o.store_id
+            AND i.order_id = o.id AND i.method = 'pix' AND i.state IN ('expired', 'failed'))`,
+        guardBinds: [target.orderId, target.storeId, target.intentId],
+        reason: { column: "reason", value: "pix_expired" },
+        unpaidStatus: "expired",
+        before: [
+          d1
+            .prepare(
+              `UPDATE payment_intents SET state = 'expired', updated_at = ?
+               WHERE id = ? AND store_id = ? AND order_id = ? AND method = 'pix'
+                 AND state IN ('creating', 'pending')`,
+            )
+            .bind(now, target.intentId, target.storeId, target.orderId),
+        ],
+      });
+    },
+
+    /**
+     * Pedidos de Cartão abandonados (Ticket 15): ainda aguardando pagamento, sem tentativa viva
+     * (creating/pending/paid), com pelo menos uma recusada e nenhuma tentativa mexida depois de
+     * `abandonedBefore`. Quem trocou para PIX já saiu daqui (`payment_method = 'pix'`).
+     */
+    async abandonedCardOrders(abandonedBefore: string, limit: number): Promise<AbandonedCard[]> {
+      const { results } = await d1
+        .prepare(
+          `SELECT o.id AS orderId, o.store_id AS storeId FROM orders o
+           WHERE ${abandonedCardGuard("o")}
+           ORDER BY o.created_at LIMIT ?`,
+        )
+        .bind(abandonedBefore, limit)
+        .all<AbandonedCard>();
+      return results;
+    },
+
+    /**
+     * Cancela o Pedido de Cartão abandonado (motivo de sistema `card_abandoned`, sem autor) com o
+     * mesmo batch do PIX vencido: histórico, motivo, Pedido `cancelled` (pagamento `failed`, sai da
+     * faixa), Cupom liberado com auditoria. A condição de abandono é reavaliada DENTRO do batch:
+     * uma tentativa nova ou a troca para PIX no meio do caminho = nada muda. Aprovação atrasada de
+     * uma tentativa recusada converge para Estorno total pela confirmação (`lateRefundStatements`).
+     */
+    async cancelAbandonedCard(target: {
+      orderId: string;
+      storeId: string;
+      abandonedBefore: string;
+    }): Promise<boolean> {
+      return cancelUnpaidOrder(d1, {
+        now: utcNow(),
+        orderId: target.orderId,
+        storeId: target.storeId,
+        guard: `o.id = ? AND o.store_id = ? AND ${abandonedCardGuard("o")}`,
+        guardBinds: [target.orderId, target.storeId, target.abandonedBefore],
+        reason: { column: "system_reason", value: "card_abandoned" },
+        unpaidStatus: "failed",
+        before: [],
+      });
     },
 
     /** Motivo e instante do cancelamento (conferência e testes). */
     async cancellationOf(orderId: string) {
       return d1
         .prepare(
-          `SELECT reason, actor_user_id AS actorUserId, actor_role AS actorRole,
-             cancelled_at AS cancelledAt FROM order_cancellations WHERE order_id = ?`,
+          `SELECT COALESCE(system_reason, reason) AS reason, actor_user_id AS actorUserId,
+             actor_role AS actorRole, cancelled_at AS cancelledAt
+           FROM order_cancellations WHERE order_id = ?`,
         )
         .bind(orderId)
         .first<{
-          reason: OrderCancelReasonValue | null;
+          reason: OrderCancelReasonValue | OrderSystemCancelReasonValue | null;
           actorUserId: string | null;
           actorRole: "owner" | "operator" | null;
           cancelledAt: string;

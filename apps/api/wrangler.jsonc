@@ -38,6 +38,11 @@
   "routes": [{ "pattern": "api.foodedelivery.com.br", "custom_domain": true }],
   "preview_urls": false,
   "observability": { "enabled": true },
+  // Ticket 15 (reconciliação, src/reconciliation.ts): handler `scheduled` deste Worker, sem worker
+  // sempre-on, fila ou Redis. A cada 5 min: PIX sem webhook/vencido, Cartão sem desfecho ou
+  // abandonado (2 h), Estornos pendentes. Diário às 09:00 UTC (06:00 em São Paulo, antes do lote
+  // de repasse): liberações do Cartão confirmadas e divergências da obrigação de repasse.
+  "triggers": { "crons": ["*/5 * * * *", "0 9 * * *"] },
   "vars": {
     "ENVIRONMENT": "production",
     "BETTER_AUTH_URL": "https://admin.foodedelivery.com.br",

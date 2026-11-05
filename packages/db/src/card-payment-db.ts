@@ -152,6 +152,11 @@ export type DeclineCardInput = {
   /** Código curto do erro (vai em `payment_intents.failure_code`), sem corpo nem dado pessoal. */
   failureCode: string;
   event: WebhookEventInput | null;
+  /**
+   * Instante da api (o mesmo relógio do lease e do prazo); padrão = agora. O abandono do Cartão
+   * (Ticket 15) conta a partir daqui.
+   */
+  now?: string;
 };
 
 /** Retenção do provedor como parcela separada do lançamento. */
@@ -339,7 +344,7 @@ export function createCardPaymentOps(d1: D1Database) {
 
     /** Recusa (ou desistência): intenção `failed` e cartão `declined`, só de creating/pending. */
     async decline(input: DeclineCardInput): Promise<boolean> {
-      const now = utcNow();
+      const now = input.now ?? utcNow();
       const eventRowId = newId();
       const statements: D1PreparedStatement[] = [];
       if (input.event) {

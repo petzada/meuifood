@@ -145,6 +145,8 @@ export type RetryRefundsSummary = {
   failed: number;
   /** `requested` confirmados por consulta autenticada. */
   confirmed: number;
+  /** Consultas que falharam (provedor fora): ficam para a próxima rodada. */
+  checkFailed: number;
 };
 
 export function createRefundService(deps: RefundServiceDeps) {
@@ -268,6 +270,7 @@ export function createRefundService(deps: RefundServiceDeps) {
         requested: 0,
         failed: 0,
         confirmed: 0,
+        checkFailed: 0,
       };
       const due = await db.refunds.dueForAttempt(
         now.toISOString(),
@@ -276,10 +279,20 @@ export function createRefundService(deps: RefundServiceDeps) {
       );
       for (const refund of due) {
         summary.attempted += 1;
-        const after = await execute(refund.refundId, now);
-        if (after?.state === "succeeded") summary.succeeded += 1;
-        else if (after?.state === "requested") summary.requested += 1;
-        else summary.failed += 1;
+        try {
+          const after = await execute(refund.refundId, now);
+          if (after?.state === "succeeded") summary.succeeded += 1;
+          else if (after?.state === "requested") summary.requested += 1;
+          else summary.failed += 1;
+        } catch (error) {
+          // Erro fora do provedor (ex.: D1): o Estorno segue devido; os demais continuam.
+          summary.failed += 1;
+          report({
+            message: "refund_failed",
+            provider: refund.provider,
+            code: refundErrorCode(error),
+          });
+        }
       }
       const toCheck = await db.refunds.dueForCheck(
         new Date(now.getTime() - REFUND_CHECK_INTERVAL_MS).toISOString(),
@@ -289,6 +302,7 @@ export function createRefundService(deps: RefundServiceDeps) {
         try {
           if (await check(refund, now)) summary.confirmed += 1;
         } catch (error) {
+          summary.checkFailed += 1;
           report({
             message: "refund_check_failed",
             provider: refund.provider,

@@ -28,6 +28,9 @@ const journal = JSON.parse(readFileSync(join(migrationsDir, "meta/_journal.json"
 
 const tables: SQLiteTable[] = [refunds, ledgerReversals, orderCancellations, ledgerEntryPayouts];
 const perOrder = new Set(["refunds", "ledger_reversals", "order_cancellations"]);
+/** Acrescentados depois por ADD COLUMN (0011, Ticket 15; ver reconciliation-schema.test.ts). */
+const LATER_COLUMNS = new Set(["system_reason"]);
+const LATER_CHECKS = new Set(["order_cancellations_system_reason_only"]);
 
 function tableSql(name: string): string {
   return migration.match(new RegExp(`CREATE TABLE \`${name}\` \\(([\\s\\S]*?)\\n\\);`))?.[1] ?? "";
@@ -39,9 +42,16 @@ describe("migration 0010 × schema/refunds.ts", () => {
     it(`cria ${config.name} com todas as colunas, checks e índices`, () => {
       const body = tableSql(config.name);
       expect(body, config.name).not.toBe("");
-      for (const check of config.checks) expect(body).toContain(`CONSTRAINT "${check.name}"`);
+      for (const check of config.checks) {
+        if (!LATER_CHECKS.has(check.name)) expect(body).toContain(`CONSTRAINT "${check.name}"`);
+      }
       const columnsInSql = [...body.matchAll(/^\t`(\w+)` /gm)].map((m) => m[1]);
-      expect(columnsInSql.sort()).toEqual(config.columns.map((c) => c.name).sort());
+      expect(columnsInSql.sort()).toEqual(
+        config.columns
+          .map((c) => c.name)
+          .filter((name) => !LATER_COLUMNS.has(name))
+          .sort(),
+      );
       for (const index of config.indexes) {
         expect(migration).toContain(`INDEX \`${index.config.name}\` ON \`${config.name}\``);
       }
