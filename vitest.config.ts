@@ -7,7 +7,7 @@
 // `packages/shared` e `packages/db`. Fora da conta: testes, fixtures, ajudantes de teste e
 // os módulos de acesso ao D1 de `packages/db` (foode-db, menu, ops-db, store-operation-db,
 // storefront-order-db, onboarding-db, customer-db, coupon-db, payment-db, card-payment-db,
-// refund-db, lead-db, report-db, payout-db), que só rodam no
+// refund-db, lead-db, reconciliation-db, report-db, payout-db), que só rodam no
 // workerd dos testes `*.d1.test.ts` — o pool do Cloudflare não emite cobertura V8.
 import { defineConfig } from "vitest/config";
 
@@ -51,6 +51,7 @@ export default defineConfig({
         "packages/db/src/lead-db.ts",
         "packages/db/src/report-db.ts",
         "packages/db/src/payout-db.ts",
+        "packages/db/src/reconciliation-db.ts",
       ],
       thresholds: {
         "packages/shared/src/**": { lines: COVERAGE_LINES },

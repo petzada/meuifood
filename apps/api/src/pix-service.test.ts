@@ -429,7 +429,12 @@ describe("Ticket 12: Estorno e PIX vencido", () => {
       }),
       now: () => NOW,
     });
-    await expect(pix.expireUnpaidPix(NOW)).resolves.toEqual({ cancelled: 2, paid: 1, skipped: 1 });
+    await expect(pix.expireUnpaidPix(NOW)).resolves.toEqual({
+      cancelled: 2,
+      paid: 1,
+      skipped: 1,
+      failed: 0,
+    });
     expect(payments.confirmPayment).toHaveBeenCalledTimes(1);
     expect(dbRefunds.cancelExpiredPix.mock.calls.map((call) => call[0].intentId)).toEqual([
       "i-exp",
@@ -442,6 +447,7 @@ describe("Ticket 12: Estorno e PIX vencido", () => {
       cancelled: 1,
       paid: 0,
       skipped: 0,
+      failed: 0,
     });
   });
 });

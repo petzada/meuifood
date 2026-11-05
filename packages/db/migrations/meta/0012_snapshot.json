@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ef9a5394-8c2e-4b24-8818-1ce19f45a721",
-  "prevId": "02202458-4151-4e3d-9945-19d285bd9516",
+  "id": "4efe1b1a-334c-493d-b359-ae00db7b6f21",
+  "prevId": "61b47f95-a38c-40e8-bf17-8e3019317a62",
   "tables": {
     "audit_events": {
       "name": "audit_events",
@@ -6588,6 +6588,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "system_reason": {
+          "name": "system_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "cancelled_at": {
           "name": "cancelled_at",
           "type": "text",
@@ -6671,6 +6678,10 @@
         "order_cancellations_system_reason": {
           "name": "order_cancellations_system_reason",
           "value": "\"reason\" IS NOT 'pix_expired' OR \"actor_user_id\" IS NULL"
+        },
+        "order_cancellations_system_reason_only": {
+          "name": "order_cancellations_system_reason_only",
+          "value": "\"system_reason\" IS NULL OR (\"system_reason\" IN ('card_abandoned') AND \"reason\" IS NULL AND \"actor_user_id\" IS NULL)"
         },
         "order_cancellations_cancelled_at_utc": {
           "name": "order_cancellations_cancelled_at_utc",
@@ -7501,6 +7512,271 @@
         "payout_batches_created_at_utc": {
           "name": "payout_batches_created_at_utc",
           "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "ledger_release_confirmations": {
+      "name": "ledger_release_confirmations",
+      "columns": {
+        "ledger_entry_id": {
+          "name": "ledger_entry_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_status": {
+          "name": "provider_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "release_date": {
+          "name": "release_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_payout_date": {
+          "name": "expected_payout_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "previous_release_date": {
+          "name": "previous_release_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "previous_expected_payout_date": {
+          "name": "previous_expected_payout_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {
+        "ledger_release_confirmations_store_idx": {
+          "name": "ledger_release_confirmations_store_idx",
+          "columns": [
+            "store_id",
+            "expected_payout_date"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ledger_release_confirmations_ledger_entry_id_ledger_entries_id_fk": {
+          "name": "ledger_release_confirmations_ledger_entry_id_ledger_entries_id_fk",
+          "tableFrom": "ledger_release_confirmations",
+          "tableTo": "ledger_entries",
+          "columnsFrom": [
+            "ledger_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ledger_release_confirmations_store_id_stores_id_fk": {
+          "name": "ledger_release_confirmations_store_id_stores_id_fk",
+          "tableFrom": "ledger_release_confirmations",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ledger_release_confirmations_order_fk": {
+          "name": "ledger_release_confirmations_order_fk",
+          "tableFrom": "ledger_release_confirmations",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "store_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "store_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ledger_release_confirmations_provider": {
+          "name": "ledger_release_confirmations_provider",
+          "value": "\"provider\" IN ('abacatepay', 'efi')"
+        },
+        "ledger_release_confirmations_provider_status": {
+          "name": "ledger_release_confirmations_provider_status",
+          "value": "length(\"provider_status\") BETWEEN 1 AND 40"
+        },
+        "ledger_release_confirmations_release_date": {
+          "name": "ledger_release_confirmations_release_date",
+          "value": "strftime('%Y-%m-%d', \"release_date\") IS \"release_date\""
+        },
+        "ledger_release_confirmations_expected_payout_date": {
+          "name": "ledger_release_confirmations_expected_payout_date",
+          "value": "strftime('%Y-%m-%d', \"expected_payout_date\") IS \"expected_payout_date\""
+        },
+        "ledger_release_confirmations_payout_after_release": {
+          "name": "ledger_release_confirmations_payout_after_release",
+          "value": "\"expected_payout_date\" > \"release_date\""
+        },
+        "ledger_release_confirmations_previous_release_date": {
+          "name": "ledger_release_confirmations_previous_release_date",
+          "value": "strftime('%Y-%m-%d', \"previous_release_date\") IS \"previous_release_date\""
+        },
+        "ledger_release_confirmations_previous_expected_payout_date": {
+          "name": "ledger_release_confirmations_previous_expected_payout_date",
+          "value": "strftime('%Y-%m-%d', \"previous_expected_payout_date\") IS \"previous_expected_payout_date\""
+        },
+        "ledger_release_confirmations_confirmed_at_utc": {
+          "name": "ledger_release_confirmations_confirmed_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"confirmed_at\") IS \"confirmed_at\""
+        },
+        "ledger_release_confirmations_created_at_utc": {
+          "name": "ledger_release_confirmations_created_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"created_at\") IS \"created_at\""
+        }
+      }
+    },
+    "maintenance_locks": {
+      "name": "maintenance_locks",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "holder": {
+          "name": "holder",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locked_until": {
+          "name": "locked_until",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "acquired_at": {
+          "name": "acquired_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_finished_at": {
+          "name": "last_finished_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_summary": {
+          "name": "last_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "maintenance_locks_name": {
+          "name": "maintenance_locks_name",
+          "value": "\"name\" IN ('payments', 'settlement')"
+        },
+        "maintenance_locks_holder": {
+          "name": "maintenance_locks_holder",
+          "value": "(\"holder\" IS NULL) = (\"locked_until\" IS NULL)"
+        },
+        "maintenance_locks_locked_until_utc": {
+          "name": "maintenance_locks_locked_until_utc",
+          "value": "\"locked_until\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"locked_until\") IS \"locked_until\""
+        },
+        "maintenance_locks_acquired_at_utc": {
+          "name": "maintenance_locks_acquired_at_utc",
+          "value": "\"acquired_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"acquired_at\") IS \"acquired_at\""
+        },
+        "maintenance_locks_last_finished_at_utc": {
+          "name": "maintenance_locks_last_finished_at_utc",
+          "value": "\"last_finished_at\" IS NULL OR strftime('%Y-%m-%dT%H:%M:%fZ', \"last_finished_at\") IS \"last_finished_at\""
+        },
+        "maintenance_locks_last_summary": {
+          "name": "maintenance_locks_last_summary",
+          "value": "\"last_summary\" IS NULL OR length(\"last_summary\") BETWEEN 2 AND 4000"
+        },
+        "maintenance_locks_updated_at_utc": {
+          "name": "maintenance_locks_updated_at_utc",
+          "value": "strftime('%Y-%m-%dT%H:%M:%fZ', \"updated_at\") IS \"updated_at\""
         }
       }
     }

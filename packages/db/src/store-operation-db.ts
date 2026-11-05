@@ -22,6 +22,7 @@ import { type CancelOrderDbInput, cancelOrderWithRefund } from "./refund-db";
 import {
   type DeliveryMode,
   type OrderCancelReasonValue,
+  type OrderSystemCancelReasonValue,
   type OrderPaymentStatus,
   PAINEL_VISIBLE_PAYMENT_SQL,
   type RefundStateValue,
@@ -550,7 +551,10 @@ export type OrderDetailRow = Omit<OrderQueueRow, "neighborhood" | "refundState">
   /** Estado do pagamento online (Ticket 26): base da pré-visualização do cancelamento. */
   paymentStatus: OrderPaymentStatus;
   /** Motivo e instante do cancelamento (Ticket 12); null fora do Cancelado. */
-  cancellation: { reason: OrderCancelReasonValue | null; at: string } | null;
+  cancellation: {
+    reason: OrderCancelReasonValue | OrderSystemCancelReasonValue | null;
+    at: string;
+  } | null;
   /** Estorno mais recente do Pedido (Ticket 12); null = sem Estorno. */
   refund: { state: RefundStateValue; amountCents: number } | null;
   history: Array<{
@@ -805,8 +809,9 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
           .bind(storeId, orderId),
         d1
           .prepare(
-            `SELECT reason, cancelled_at AS at FROM order_cancellations
-             WHERE store_id = ? AND order_id = ?`,
+            // Motivo de sistema fora do CHECK de `reason` (0011): o contrato vê um motivo só.
+            `SELECT COALESCE(system_reason, reason) AS reason, cancelled_at AS at
+             FROM order_cancellations WHERE store_id = ? AND order_id = ?`,
           )
           .bind(storeId, orderId),
         d1
@@ -850,7 +855,11 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
         cancellation:
           (
             cancellation?.results as
-              { reason: OrderCancelReasonValue | null; at: string }[] | undefined
+              | {
+                  reason: OrderCancelReasonValue | OrderSystemCancelReasonValue | null;
+                  at: string;
+                }[]
+              | undefined
           )?.[0] ?? null,
         refund:
           (

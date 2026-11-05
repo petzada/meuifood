@@ -241,6 +241,7 @@ export {
   type ReportUtcRange,
 } from "./report-db";
 export {
+  type AbandonedCard,
   type CancelOrderDbData,
   type CancelOrderDbInput,
   type ExpirablePix,
@@ -248,3 +249,9 @@ export {
   type RefundOps,
   type RefundView,
 } from "./refund-db";
+export {
+  type PayoutDivergences,
+  type PixReconcileCandidate,
+  type ReconciliationOps,
+  type ReleaseCandidate,
+} from "./reconciliation-db";

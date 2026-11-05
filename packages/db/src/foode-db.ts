@@ -35,6 +35,7 @@ import {
 import { createCardPaymentOps } from "./card-payment-db";
 import { createPaymentOps } from "./payment-db";
 import { createOpsPayoutOps, createStorePayoutOps } from "./payout-db";
+import { createReconciliationOps } from "./reconciliation-db";
 import { createRefundOps } from "./refund-db";
 import { createReportOps } from "./report-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
@@ -351,6 +352,13 @@ export function createFoodeDb(d1: D1Database) {
      * sai da obrigação/intenção gravada. O cancelamento pelo Painel é `store(ctx).orders().cancel`.
      */
     refunds: createRefundOps(d1),
+
+    /**
+     * Reconciliação por Cron Trigger (Ticket 15): trava leve por rotina, candidatos a consulta no
+     * provedor, liberação confirmada do Cartão (só a previsão de repasse) e divergências da
+     * obrigação de repasse (contagens para o alerta). Sem StoreContext.
+     */
+    reconciliation: createReconciliationOps(d1),
 
     /** Emissão de contextos: a Loja e o papel saem do banco, nunca do request. */
     access: {
