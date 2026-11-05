@@ -7,6 +7,8 @@ import {
   groupByColumn,
   paymentBadgeLabel,
   tabTitle,
+  cancelToast,
+  REFUND_BADGE,
   transitionToast,
   whatsappMessageFor,
   whatsappUrl,
@@ -72,6 +74,25 @@ describe("rótulos da fila", () => {
   it("toast específico por destino", () => {
     expect(transitionToast(123, "preparing")).toBe("Pedido #123 em preparo.");
     expect(transitionToast(123, "out_for_delivery")).toBe("Pedido #123 saiu para entrega.");
+  });
+
+  it("toast do cancelamento nomeia a consequência (Ticket 12)", () => {
+    expect(cancelToast(123, { kind: "on_delivery" })).toBe("Pedido #123 cancelado.");
+    expect(
+      cancelToast(123, { kind: "refund", refund: { state: "pending", amountCents: 5639 } }),
+    ).toBe("Pedido #123 cancelado. Estorno de R$\u00a056,39 em andamento.");
+    expect(cancelToast(123, { kind: "charge_cancel" })).toBe(
+      "Pedido #123 cancelado. A cobrança foi cancelada.",
+    );
+  });
+
+  it("selo do Estorno: texto do contrato + símbolo + cor (T-03)", () => {
+    expect(REFUND_BADGE.pending.tone).toBe("accent");
+    expect(REFUND_BADGE.succeeded.tone).toBe("success");
+    expect(REFUND_BADGE.failed_retrying).toMatchObject({
+      tone: "error",
+      label: "Estorno falhou — nova tentativa automática",
+    });
   });
 
   it("WhatsApp: texto fixo por status com o link de acompanhamento", () => {

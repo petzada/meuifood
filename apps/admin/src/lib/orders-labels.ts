@@ -2,7 +2,10 @@
 // testes. Estados, transições e rótulos do botão vêm do contrato (`@foode/shared/order`); aqui
 // ficam só o que é apresentação do Painel (selos, tempo decorrido, aba, WhatsApp).
 import { buildWhatsAppMeUrl } from "@foode/shared";
+import { formatBRL } from "@foode/shared/money";
+import type { BadgeTone } from "@foode/ui";
 import {
+  type CancellationConsequence,
   type Fulfillment,
   ONLINE_PAYMENT_METHODS,
   type OrderQueueItem,
@@ -11,6 +14,8 @@ import {
   type QueueColumn,
   type QueueFilter,
   queueColumnOf,
+  REFUND_STATE_LABELS,
+  type RefundState,
 } from "@foode/shared/order";
 
 export const FULFILLMENT_LABEL: Record<Fulfillment, string> = {
@@ -139,6 +144,32 @@ export function transitionToast(code: number, to: OrderStatus): string {
       return `Pedido #${code} recebido.`;
   }
 }
+
+/**
+ * Toast do cancelamento (Ticket 12, CAN-01/CAN-02): nomeia o Pedido e a consequência que a api
+ * produziu. O Estorno segue com selo próprio no card e no detalhe.
+ */
+export function cancelToast(code: number, consequence: CancellationConsequence): string {
+  switch (consequence.kind) {
+    case "on_delivery":
+      return `Pedido #${code} cancelado.`;
+    case "refund":
+      return `Pedido #${code} cancelado. Estorno de ${formatBRL(consequence.refund.amountCents)} em andamento.`;
+    case "charge_cancel":
+      return `Pedido #${code} cancelado. A cobrança foi cancelada.`;
+  }
+}
+
+/**
+ * Selo do Estorno (CAN-02, T-03: texto + símbolo + cor), separado do status do Pedido. O texto
+ * vem do contrato (`REFUND_STATE_LABELS`); aqui só a apresentação.
+ */
+export const REFUND_BADGE: Record<RefundState, { label: string; symbol: string; tone: BadgeTone }> =
+  {
+    pending: { label: REFUND_STATE_LABELS.pending, symbol: "…", tone: "accent" },
+    succeeded: { label: REFUND_STATE_LABELS.succeeded, symbol: "✓", tone: "success" },
+    failed_retrying: { label: REFUND_STATE_LABELS.failed_retrying, symbol: "!", tone: "error" },
+  };
 
 /**
  * Texto fixo por status do "Avisar no WhatsApp" (P-WPP-1, decisão 64). Sempre com o link de

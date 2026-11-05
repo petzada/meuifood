@@ -3,9 +3,17 @@
 // Card do Pedido na fila (PED-02 a PED-04): código grande, tempo decorrido, nome, selos de
 // Fulfillment e pagamento (texto + símbolo), total e UM botão de avanço com o destino. Pedido
 // novo (Recebido, ainda não aberto): borda primary + selo "Novo". Telefone e endereço só no detalhe.
+// Card de Concluídos/Cancelados de hoje: selo do status e, no Cancelado, selo do Estorno separado
+// (CAN-02); nunca um X de cancelar no card (T-12) e nenhuma ação de avanço.
 import { Badge, Button, OutlineContainer } from "@foode/ui";
 import { formatBRL } from "@foode/shared/money";
-import { advanceActionLabelPt, nextAdvanceStatus, type OrderQueueItem } from "@foode/shared/order";
+import {
+  advanceActionLabelPt,
+  nextAdvanceStatus,
+  type OrderQueueItem,
+  orderStatusLabelPt,
+  queueColumnOf,
+} from "@foode/shared/order";
 
 import {
   elapsedMinutes,
@@ -14,6 +22,7 @@ import {
   isPaidOnline,
   LATE_RECEIVED_MINUTES,
   paymentBadgeLabel,
+  REFUND_BADGE,
 } from "../../../../lib/orders-labels";
 
 export function OrderCard({
@@ -31,7 +40,10 @@ export function OrderCard({
   onOpen: (order: OrderQueueItem) => void;
   order: OrderQueueItem;
 }) {
-  const to = nextAdvanceStatus(order.fulfillment, order.status);
+  const closed = queueColumnOf(order.status) === "closed";
+  const to = closed ? null : nextAdvanceStatus(order.fulfillment, order.status);
+  // Mesma regra de `hasRefundBadge` (o card só traz o estado, sem o valor).
+  const refund = order.status === "cancelled" && order.refund ? order.refund : null;
   const late =
     order.status === "received" && elapsedMinutes(order.createdAt, nowMs) >= LATE_RECEIVED_MINUTES;
   const paid = isPaidOnline(order.paymentMethod);
@@ -56,6 +68,11 @@ export function OrderCard({
               #{order.code}
             </span>
             {isNew ? <Badge tone="primary">Novo</Badge> : null}
+            {closed ? (
+              <Badge tone={order.status === "cancelled" ? "error" : "success"}>
+                {orderStatusLabelPt(order.status)}
+              </Badge>
+            ) : null}
           </span>
           <span className="mt-0.5 block truncate text-[var(--color-ink)]">
             {order.customerName}
@@ -88,6 +105,15 @@ export function OrderCard({
           {formatBRL(order.totalCents)}
         </span>
       </div>
+
+      {refund ? (
+        <p className="mt-3 text-sm">
+          <Badge tone={REFUND_BADGE[refund.state].tone}>
+            <span aria-hidden="true">{REFUND_BADGE[refund.state].symbol} </span>
+            {REFUND_BADGE[refund.state].label}
+          </Badge>
+        </p>
+      ) : null}
 
       {to ? (
         <Button
