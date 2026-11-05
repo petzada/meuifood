@@ -78,6 +78,13 @@
       "when": 1793870830153,
       "tag": "0010_cancelamento_estorno",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793873974252,
+      "tag": "0012_lotes_repasse",
+      "breakpoints": true
     }
   ]
 }
