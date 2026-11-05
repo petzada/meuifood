@@ -101,6 +101,7 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_SUPPORT_WIDGET_SRC: ${{ vars.SUPPORT_WIDGET_SRC_WEB || vars.SUPPORT_WIDGET_SRC }}
           NEXT_PUBLIC_SUPPORT_WIDGET_ID: ${{ vars.SUPPORT_WIDGET_ID_WEB || vars.SUPPORT_WIDGET_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN_WEB }}
         run: pnpm --filter @foode/web build:cf
       - name: Build OpenNext (admin)
         env:
@@ -108,6 +109,7 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_SUPPORT_WIDGET_SRC: ${{ vars.SUPPORT_WIDGET_SRC_ADMIN || vars.SUPPORT_WIDGET_SRC }}
           NEXT_PUBLIC_SUPPORT_WIDGET_ID: ${{ vars.SUPPORT_WIDGET_ID_ADMIN || vars.SUPPORT_WIDGET_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN_ADMIN }}
         run: pnpm --filter @foode/admin build:cf
       - name: Tamanho dos Workers (teto 10 MiB gzip)
         run: node scripts/worker-size.mjs apps/api apps/web apps/admin
