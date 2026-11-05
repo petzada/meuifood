@@ -17,11 +17,37 @@ export {
   type StoreMember,
   type StoreSummary,
 } from "./foode-db";
+export { type FoodeDbErrorCode } from "./errors";
 export {
+  ACTIVATION_REQUIRED_CHECKS,
+  type EffectivePaymentFee,
+  ONBOARDING_CHECKS,
+  OPS_AUDIT_ACTIONS,
+  type OpsAuditRow,
+  type OpsCreateStoreData,
+  type OpsOperations,
+  type OpsPaymentFeeData,
+  type OpsPaymentFeeRow,
+  type OpsPlanTierTable,
+  type OpsProviderCostData,
+  type OpsProviderCostRow,
+  type OpsStoreDetailRow,
+  type OpsStoreListRow,
+  type OpsUpdateStoreData,
+  saoPauloMonth,
+} from "./ops-db";
+export {
+  BILLING_CYCLES,
+  CARD_MODES,
+  type CardMode,
+  FEE_PAYMENT_METHODS,
   MEMBERSHIP_ROLES,
   type MembershipRole,
+  PAYMENT_PROVIDERS,
+  PIX_KEY_TYPES,
   PLATFORM_ROLES,
   type PlatformRole,
+  PROVIDER_OPERATIONS,
   STORE_STATUSES,
   type StoreStatus,
 } from "./schema";

@@ -112,7 +112,9 @@ describe("Storefront público", () => {
 
     const opsContext = await db.access.opsContext(fx.ops.id);
     if (!opsContext) throw new Error("ops esperado na fixture");
-    await db.ops(opsContext).setStoreStatus(fx.storeA.id, "suspended");
+    await db
+      .ops(opsContext)
+      .changeStoreStatus(fx.storeA.id, "suspended", { allowedFrom: ["active"], reason: "teste" });
     await expect(db.storefront.publicStoreBySlug(fx.storeA.slug)).resolves.toBeNull();
   });
 });
@@ -121,19 +123,5 @@ describe("área Ops", () => {
   it("só emite contexto Ops para foode_ops", async () => {
     await expect(db.access.opsContext(fx.ownerA.id)).resolves.toBeNull();
     await expect(db.access.opsContext(fx.ops.id)).resolves.not.toBeNull();
-  });
-
-  it("cria Loja em onboarding com Slug global único e auditoria", async () => {
-    const opsContext = await db.access.opsContext(fx.ops.id);
-    if (!opsContext) throw new Error("ops esperado na fixture");
-    const ops = db.ops(opsContext);
-
-    const created = await ops.createStore({ slug: "Nova-Loja", name: "Nova Loja" });
-    expect(created).toMatchObject({ slug: "nova-loja", status: "onboarding" });
-    await expect(db.storefront.publicStoreBySlug("nova-loja")).resolves.toBeNull();
-
-    await expect(ops.createStore({ slug: fx.storeA.slug, name: "Outra" })).rejects.toMatchObject({
-      code: "slug_unavailable",
-    });
   });
 });

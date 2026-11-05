@@ -10,7 +10,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import logo from "../../../../public/images/logo.png";
-import { navFor } from "../lib/access";
+import { isCurrentNav, navFor } from "../lib/access";
 import { SignOutButton } from "./sign-out-button";
 import { StoreSwitcher } from "./store-switcher";
 
@@ -67,8 +67,7 @@ export function PainelShell({
         <nav aria-label="Navegação do Painel" className="mt-4 md:mt-6">
           <ul className="flex gap-1 overflow-x-auto md:grid">
             {nav.map((item) => {
-              const current =
-                item.href === "/" ? currentPath === "/" : currentPath.startsWith(item.href);
+              const current = isCurrentNav(item.href, currentPath);
               return (
                 <li key={item.href} className="shrink-0">
                   <Link
