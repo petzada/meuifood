@@ -36,12 +36,12 @@ export const SEGMENTS: readonly Segment[] = [
     ],
     solutions: [
       {
-        title: "Complementos e adicionais por item",
-        text: "Grupos obrigatórios (ponto da carne, pão) e opcionais (molhos), adicionais com preço, limite de escolhas e “copiar grupos de outro item” para montar o cardápio rápido.",
+        title: "Ponto da carne, pão e extras em cada lanche",
+        text: "Ponto da carne e pão obrigatórios, molhos opcionais, extras com preço e limite de escolhas. Monte uma vez e reaproveite as mesmas opções nos outros lanches.",
       },
       {
-        title: "Fila com som e impressão",
-        text: "Cada pedido novo toca no painel, entra na fila com chip de delivery ou retirada e imprime em 80 mm ao aceitar. Cancelou? O estorno do pagamento online é automático.",
+        title: "Aviso de pedido novo e impressão no balcão",
+        text: "Toca um aviso a cada pedido novo, separado em entrega e retirada, e você imprime na impressora do balcão ao aceitar. Cancelou? O estorno de quem pagou online sai sozinho.",
       },
       {
         title: "Cupom de boas-vindas",
@@ -53,7 +53,7 @@ export const SEGMENTS: readonly Segment[] = [
       {
         question: "Dá para montar combos?",
         answer:
-          "Sim: um item com grupos de complementos (lanche, acompanhamento, bebida) funciona como combo, com preço por opção quando precisar.",
+          "Sim: um item com as opções de lanche, acompanhamento e bebida funciona como combo, com preço por escolha quando precisar.",
       },
       {
         question: "O cliente escolhe o ponto da carne?",
@@ -78,8 +78,8 @@ export const SEGMENTS: readonly Segment[] = [
     ],
     solutions: [
       {
-        title: "Tamanhos, bordas e sabores como complementos",
-        text: "Grupos com mínimo e máximo de escolhas (até dois sabores, uma borda), preço por opção e disponibilidade por item quando acaba um ingrediente.",
+        title: "Tamanhos, bordas e sabores",
+        text: "Até dois sabores, uma borda, preço por escolha e “esgotado” em um toque quando acaba um ingrediente.",
       },
       {
         title: "Entrega por bairro ou taxa fixa",
@@ -128,7 +128,7 @@ export const SEGMENTS: readonly Segment[] = [
       },
       {
         title: "Relatórios por dia da semana",
-        text: "Top itens por dia da semana e funil visita → pedido para planejar quanto preparar na segunda e na sexta.",
+        text: "Itens mais vendidos por dia da semana e quantos abriram o link e pediram, para planejar quanto preparar na segunda e na sexta.",
       },
     ],
     example: { ordersPerMonth: 600, averageTicketCents: 2500 },
@@ -149,22 +149,22 @@ export const SEGMENTS: readonly Segment[] = [
     name: "Açaí e sorvetes",
     title: "Cardápio digital para açaí e sorveteria sem comissão",
     description:
-      "Açaí com tamanhos, caldas e complementos ilimitados no cardápio digital, pedido pelo link e pagamento online. Mensalidade por faixa de pedidos, sem comissão.",
-    h1: "Cardápio digital para açaí, com os complementos do jeito que o cliente quer",
+      "Açaí com tamanhos, caldas e acompanhamentos no cardápio digital, pedido pelo link e pagamento online. Mensalidade por faixa de pedidos, sem comissão.",
+    h1: "Cardápio digital para açaí, com os acompanhamentos do jeito que o cliente quer",
     intro:
       "No açaí o cliente escolhe muito: tamanho, calda, granola, frutas, extras. É o cardápio que mais erra no WhatsApp e o que mais ganha com um link onde ele monta o copo sozinho.",
     pains: [
-      "Lista de complementos enorme e cliente esquecendo de dizer o tamanho.",
+      "Lista de acompanhamentos enorme e cliente esquecendo de dizer o tamanho.",
       "Adicional pago (Nutella, leite ninho) que sai sem cobrar.",
       "Pico no fim de semana à tarde e pedidos repetidos por engano.",
     ],
     solutions: [
       {
-        title: "Grupos com limite de escolhas",
-        text: "Tamanho obrigatório, complementos grátis com máximo de itens e adicionais pagos com preço próprio. O total aparece antes de fechar.",
+        title: "Tamanho, acompanhamentos e extras",
+        text: "Tamanho obrigatório, acompanhamentos grátis com limite de quantos pode escolher e extras pagos com preço próprio. O total aparece antes de fechar.",
       },
       {
-        title: "Checkout em uma tela",
+        title: "Pedido fechado numa tela só",
         text: "Carrinho, endereço pelo CEP, forma de pagamento e “troco para” numa tela só. PIX com QR Code e cartão de crédito online.",
       },
       {
@@ -175,7 +175,7 @@ export const SEGMENTS: readonly Segment[] = [
     example: { ordersPerMonth: 400, averageTicketCents: 3200 },
     faq: [
       {
-        question: "Posso limitar quantos complementos grátis o cliente escolhe?",
+        question: "Posso limitar quantos acompanhamentos grátis o cliente escolhe?",
         answer: "Sim: cada grupo tem mínimo e máximo de escolhas.",
       },
       {
@@ -205,11 +205,11 @@ export const SEGMENTS: readonly Segment[] = [
       },
       {
         title: "Cartão de crédito dentro do pedido",
-        text: "Cartão online com taxa combinada no cadastro, modo Normal ou Rápido (D+1), e estorno automático se você cancelar.",
+        text: "Cartão na hora do pedido, com opção de receber em 1 dia útil, e estorno automático se você cancelar.",
       },
       {
-        title: "Pixel Meta e Google no seu link",
-        text: "Instale o Pixel e acompanhe o funil visita → carrinho → pedido para saber de onde vêm os clientes.",
+        title: "Anúncios do Instagram e Google medindo certo",
+        text: "Ligue o seu link aos anúncios e veja quantos abriram o cardápio, encheram o carrinho e pediram, para saber de onde vêm os clientes.",
       },
     ],
     example: { ordersPerMonth: 200, averageTicketCents: 11000 },
@@ -241,7 +241,7 @@ export const SEGMENTS: readonly Segment[] = [
     solutions: [
       {
         title: "Retirada no balcão ou entrega",
-        text: "O cliente escolhe retirar ou receber; a fila do painel separa com chips de delivery e retirada.",
+        text: "O cliente escolhe retirar ou receber; no balcão, os pedidos aparecem separados em entrega e retirada.",
       },
       {
         title: "Cardápio por categoria com disponibilidade",

@@ -1,5 +1,8 @@
-// Hero (decisão 70): H1/sub/CTA centralizados sobre a foto desfocada; mockups reais logo
-// abaixo, em parallax por camadas (CSS scroll-driven). O CTA nunca anima para fora da dobra.
+// Hero (decisão 70): H1/sub/CTA centralizados sobre a foto desfocada; capturas reais logo
+// abaixo. Parallax de verdade: ao rolar, as telas SOBEM numa camada à frente e cobrem o
+// texto do hero, cada uma numa velocidade (celular mais rápido que o notebook, fundo mais
+// lento), via CSS scroll-driven. Sem suporte ou com reduced-motion: camadas no lugar.
+// O CTA nunca anima para fora da dobra.
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@foode/ui";
 import type { CSSProperties } from "react";
@@ -13,7 +16,7 @@ export function Hero() {
     <section aria-labelledby="hero-title" className="mk-hero">
       <div aria-hidden className="mk-hero__bg" />
       <div className="mk-container mk-hero__content pt-12 md:pt-20">
-        <div className="mx-auto grid max-w-3xl justify-items-center gap-5 text-center">
+        <div className="mk-hero__copy mx-auto grid max-w-3xl justify-items-center gap-5 text-center">
           <p className="mk-eyebrow" data-reveal style={{ "--reveal-i": 0 } as CSSProperties}>
             Cardápio digital e pedidos sem comissão
           </p>
@@ -50,22 +53,28 @@ export function Hero() {
 
         <div className="mk-hero__mockups">
           <div
-            className="mk-parallax-phone w-full max-w-[15rem]"
-            data-reveal="scale"
+            className="mk-hero__panel mk-parallax-panel"
+            data-reveal="right"
             style={{ "--reveal-i": 4 } as CSSProperties}
           >
-            <PhoneFrame>
-              <StorefrontShot alt="Cardápio digital da loja no celular, com destaques, categorias e o botão Ver carrinho" />
-            </PhoneFrame>
+            <LaptopFrame>
+              <PanelQueueShot
+                alt="Fila de pedidos do painel da loja, em colunas: recebidos, em preparo e prontos ou saiu para entrega"
+                priority
+              />
+            </LaptopFrame>
           </div>
           <div
-            className="mk-parallax-panel w-full max-w-[38rem]"
-            data-reveal="right"
+            className="mk-hero__phone mk-parallax-phone"
+            data-reveal="scale"
             style={{ "--reveal-i": 5 } as CSSProperties}
           >
-            <LaptopFrame>
-              <PanelQueueShot alt="Fila de pedidos do painel com três pedidos: novo, em preparo e saiu para entrega" />
-            </LaptopFrame>
+            <PhoneFrame>
+              <StorefrontShot
+                alt="Cardápio digital da loja no celular, com destaques, categorias e o botão Ver carrinho"
+                priority
+              />
+            </PhoneFrame>
           </div>
         </div>
       </div>

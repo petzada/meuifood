@@ -50,7 +50,6 @@ describe("landing Foode", () => {
       "Do link ao pedido em três passos.",
       "Tudo que o delivery precisa. Nada que você não vai usar.",
       "Um plano. O valor acompanha seus pedidos.",
-      "Taxas do pagamento online",
       "Como a Foode se compara.",
       "Uma carta do fundador",
       "O que todo lojista pergunta antes de começar.",
@@ -67,16 +66,21 @@ describe("landing Foode", () => {
       </MarketingLayout>,
     );
     expect(
-      screen.getByRole("img", { name: /Cardápio digital da loja no celular/u }),
+      screen.getAllByRole("img", { name: /Cardápio digital da loja no celular/u })[0],
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: /Fila de pedidos do painel com três pedidos/u }),
+      screen.getAllByRole("img", { name: /Fila de pedidos do painel/u })[0],
     ).toBeInTheDocument();
 
     const faqSection = screen
       .getByRole("heading", { level: 2, name: "O que todo lojista pergunta antes de começar." })
       .closest("section")!;
-    expect(within(faqSection).getAllByRole("group")).toHaveLength(FAQ.length);
+    const faqButtons = within(faqSection).getAllByRole("button", { expanded: false });
+    const faqOpen = within(faqSection).getAllByRole("button", { expanded: true });
+    expect(faqButtons.length + faqOpen.length).toBe(FAQ.length);
+    expect(faqOpen).toHaveLength(1);
+    expect(faqOpen[0]).toHaveTextContent(FAQ[0]!.question);
+    expect(faqOpen[0]).toHaveAttribute("aria-controls");
 
     const footer = screen.getByRole("contentinfo");
     expect(footer).toHaveTextContent(LEGAL.cnpj);

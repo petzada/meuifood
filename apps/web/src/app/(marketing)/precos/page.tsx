@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 
-import { Faq, faqJsonLd } from "../../../components/marketing/faq";
-import { PaymentFees } from "../../../components/marketing/payment-fees";
+import { CardSpeed } from "../../../components/marketing/card-speed";
+import { Comparison } from "../../../components/marketing/comparison";
+import { FaqSection, faqJsonLd } from "../../../components/marketing/faq-section";
 import { Plans } from "../../../components/marketing/plans";
 import { JsonLd, SectionHeading } from "../../../components/marketing/primitives";
 import { FAQ } from "../../../content/faq";
 import { softwareApplicationJsonLd } from "../../../content/json-ld";
 import { FIRST_MONTHLY_TIER, formatBRL } from "../../../content/pricing";
 
-const description = `Mensalidade por faixa de pedidos a partir de ${formatBRL(FIRST_MONTHLY_TIER.priceCents)}, sem comissão. Plano anual com pedidos ilimitados em até 6×. Taxas do pagamento online combinadas no cadastro.`;
+const description = `Mensalidade por faixa de pedidos a partir de ${formatBRL(FIRST_MONTHLY_TIER.priceCents)}, sem comissão. Plano anual com pedidos ilimitados em até 6×. Cartão com modo rápido para receber em 1 dia útil.`;
 
 export const metadata: Metadata = {
   title: "Preços",
@@ -39,20 +40,35 @@ export default function PricingPage() {
             Um plano. O valor acompanha seus pedidos.
           </SectionHeading>
           <Plans />
-          <div className="grid gap-6">
-            <SectionHeading
-              align="left"
-              lead="PIX e cartão têm uma taxa Foode por transação, combinada no cadastro da loja. O pagamento na entrega não tem taxa."
-            >
-              Taxas do pagamento online
-            </SectionHeading>
-            <PaymentFees fees={null} />
-          </div>
-          <div className="grid gap-8">
-            <SectionHeading>Perguntas sobre o plano</SectionHeading>
-            <Faq items={PLAN_FAQ} />
-          </div>
+          <CardSpeed />
         </div>
+      </section>
+      <section
+        aria-labelledby="comparativo-title"
+        className="mk-section border-t border-[var(--color-hairline-soft)]"
+      >
+        <div className="mk-container grid gap-10">
+          <SectionHeading
+            eyebrow="Comparativo"
+            id="comparativo-title"
+            lead="Só o que dá para comparar com dados públicos: mensalidade, pedidos, taxas, prazos e condições."
+          >
+            Como a Foode se compara.
+          </SectionHeading>
+          <Comparison />
+        </div>
+      </section>
+      <section
+        aria-labelledby="faq-title"
+        className="mk-section border-t border-[var(--color-hairline-soft)]"
+      >
+        <FaqSection
+          eyebrow="Perguntas"
+          items={PLAN_FAQ}
+          lead="O que mais perguntam sobre mensalidade, anual e cancelamento."
+        >
+          Perguntas sobre o plano
+        </FaqSection>
       </section>
       <JsonLd data={softwareApplicationJsonLd()} />
       <JsonLd data={faqJsonLd(PLAN_FAQ)} />

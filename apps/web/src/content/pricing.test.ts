@@ -6,8 +6,10 @@ import {
   ANNUAL_INSTALLMENT_CENTS,
   ANNUAL_INSTALLMENT_TOTAL_CENTS,
   ANNUAL_PRICE_CENTS,
+  DEFAULT_FEES,
   estimateSavings,
   formatBRL,
+  formatFee,
   priceInstallmentCents,
   tierLabel,
 } from "./pricing";
@@ -33,6 +35,13 @@ describe("preços da landing (decisões 61 e 71)", () => {
   it("desconto real do Anual contra a faixa sem teto, arredondado para baixo", () => {
     // 1 − 1.019,88 / (254,99 × 12) = 66,67% → 66
     expect(ANNUAL_DISCOUNT_PERCENT).toBe(66);
+  });
+
+  it("taxas padrão da decisão 76 formatadas por transação", () => {
+    expect(formatFee(DEFAULT_FEES.pix)).toBe("1,19%");
+    const nbsp = String.fromCharCode(0xa0);
+    expect(formatFee(DEFAULT_FEES.cardNormal)).toBe(`3,49% + R$${nbsp}0,99`);
+    expect(formatFee(DEFAULT_FEES.cardRapido)).toBe(`5,42% + R$${nbsp}1,59`);
   });
 
   it("rotula as faixas na linguagem do lojista", () => {

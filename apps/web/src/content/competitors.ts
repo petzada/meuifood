@@ -13,7 +13,14 @@
 //
 // TODO(31-dono): confirmar a cor da marca B (provisória) e reconferir as taxas de A antes de
 // publicar.
-import { FIRST_MONTHLY_TIER, formatBRL } from "./pricing";
+import {
+  ANNUAL_INSTALLMENTS,
+  DEFAULT_FEES,
+  FIRST_MONTHLY_TIER,
+  formatBRL,
+  formatFee,
+  RELEASE_TERMS,
+} from "./pricing";
 
 export const REFUND_DAYS = 7;
 
@@ -50,6 +57,8 @@ export type ComparisonRow = {
   foodeWins: boolean;
 };
 
+// Regra de layout (Dono, 2026-11-05): cada linha compara UMA coisa só (prazo OU tarifa OU
+// benefício), com respostas no mesmo formato em todas as colunas, curtas e diretas.
 export const COMPARISON_ROWS: readonly ComparisonRow[] = [
   {
     label: "Mensalidade inicial",
@@ -59,8 +68,8 @@ export const COMPARISON_ROWS: readonly ComparisonRow[] = [
   },
   {
     label: "Pedidos na faixa inicial",
-    foode: `Até ${FIRST_MONTHLY_TIER.maxOrders} pedidos/mês`,
-    others: ["Até 150 pedidos/mês", "Ilimitados (R$ 99,90) · grátis até 30 + R$ 1,39/pedido"],
+    foode: `Até ${FIRST_MONTHLY_TIER.maxOrders}/mês`,
+    others: ["Até 150/mês", "Ilimitados"],
     foodeWins: false,
   },
   {
@@ -70,39 +79,69 @@ export const COMPARISON_ROWS: readonly ComparisonRow[] = [
     foodeWins: false,
   },
   {
-    label: "Taxa do PIX online",
-    foode: "Combinada no cadastro, sem custo escondido",
+    label: "Taxa do PIX",
+    foode: formatFee(DEFAULT_FEES.pix),
     others: ["0,99%", null],
     foodeWins: false,
   },
   {
-    label: "Cartão de crédito: recebimento",
-    foode: "Normal (lote diário) ou Rápido (D+1)",
-    others: ["30 dias úteis a 3,49% ou D+1 a 4,69%", null],
+    label: "Liberação do PIX",
+    foode: RELEASE_TERMS.pix,
+    others: [null, null],
+    foodeWins: false,
+  },
+  {
+    label: "Taxa do cartão (Normal)",
+    foode: formatFee(DEFAULT_FEES.cardNormal),
+    others: ["3,49%", null],
+    foodeWins: false,
+  },
+  {
+    label: "Liberação do cartão (Normal)",
+    foode: RELEASE_TERMS.cardNormal,
+    others: ["30 dias úteis", null],
     foodeWins: true,
   },
   {
+    label: "Taxa do cartão (Rápido)",
+    foode: formatFee(DEFAULT_FEES.cardRapido),
+    others: ["4,69%", null],
+    foodeWins: false,
+  },
+  {
+    label: "Liberação do cartão (Rápido)",
+    foode: RELEASE_TERMS.cardRapido,
+    others: ["1 dia útil (D+1)", null],
+    foodeWins: false,
+  },
+  {
+    label: "Repasse ao lojista",
+    foode: "Lote diário",
+    others: [null, null],
+    foodeWins: false,
+  },
+  {
     label: "Plano anual",
-    foode: "6× no cartão, pedidos ilimitados",
-    others: ["12× R$ 99,99", "12× R$ 59,94 (Básico)"],
+    foode: `${ANNUAL_INSTALLMENTS}× no cartão`,
+    others: ["12× no cartão", "12× no cartão"],
     foodeWins: false,
   },
   {
     label: "Fidelidade",
-    foode: "Sem fidelidade",
-    others: ["Cancela após o fim da vigência do plano", null],
+    foode: "Não",
+    others: ["Sim, até o fim da vigência", null],
     foodeWins: true,
   },
   {
     label: "Arrependimento",
-    foode: `Reembolso integral em até ${REFUND_DAYS} dias`,
+    foode: `Reembolso em até ${REFUND_DAYS} dias`,
     others: ["Teste grátis de 7 dias", "Plano grátis limitado"],
     foodeWins: true,
   },
   {
     label: "Cadastro da loja",
-    foode: "Feito pela equipe Foode, com acompanhamento",
-    others: ["Onboarding acompanhado", null],
+    foode: "Feito pela Foode",
+    others: ["Acompanhado", null],
     foodeWins: false,
   },
 ];

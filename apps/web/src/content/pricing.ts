@@ -96,4 +96,34 @@ export function estimateSavings(input: SavingsInput): SavingsResult {
   };
 }
 
+/**
+ * Taxas padrão da Foode no pagamento online (decisão 76, Dono em 2026-11-05), por transação.
+ * São o padrão publicado na landing; a tabela vigente por Loja vem do `/ops`. Quando a api
+ * expuser as taxas públicas, o valor da api deve bater com estas constantes.
+ */
+export type PublicFee = { percentBps: number; fixedCents: number };
+
+export const DEFAULT_FEES = {
+  pix: { percentBps: 119, fixedCents: 0 },
+  cardNormal: { percentBps: 349, fixedCents: 99 },
+  cardRapido: { percentBps: 542, fixedCents: 159 },
+} as const satisfies Record<string, PublicFee>;
+
+/** "1,19%" ou "3,49% + R$ 0,99". */
+export function formatFee(fee: PublicFee): string {
+  const pct = `${(fee.percentBps / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+  return fee.fixedCents > 0 ? `${pct} + ${formatBRL(fee.fixedCents)}` : pct;
+}
+
+/** Prazos de liberação do provedor (decisão 60); o repasse ao lojista é sempre em lote diário. */
+export const RELEASE_TERMS = {
+  pix: "1 dia útil",
+  cardNormal: "Até 21 dias úteis",
+  cardRapido: "1 dia útil (D+1)",
+  payout: "Lote diário, 1 dia útil após a liberação",
+} as const;
+
 export { formatBRL };

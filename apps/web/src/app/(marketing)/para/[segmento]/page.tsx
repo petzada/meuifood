@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 
 import { Calculator } from "../../../../components/marketing/calculator";
-import { Faq, faqJsonLd } from "../../../../components/marketing/faq";
+import { CardSpeed } from "../../../../components/marketing/card-speed";
+import { Comparison } from "../../../../components/marketing/comparison";
+import { FaqSection, faqJsonLd } from "../../../../components/marketing/faq-section";
 import { LeadForm } from "../../../../components/marketing/lead-form";
 import { Plans } from "../../../../components/marketing/plans";
 import { JsonLd, RefundLine, SectionHeading } from "../../../../components/marketing/primitives";
@@ -156,6 +158,23 @@ export default async function SegmentPage({ params }: { params: Params }) {
             Um plano. O valor acompanha seus pedidos.
           </SectionHeading>
           <Plans ctaHref="#contato" />
+          <CardSpeed />
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="comparativo-title"
+        className="mk-section border-t border-[var(--color-hairline-soft)]"
+      >
+        <div className="mk-container grid gap-10">
+          <SectionHeading
+            eyebrow="Comparativo"
+            id="comparativo-title"
+            lead="Só o que dá para comparar com dados públicos: mensalidade, pedidos, taxas, prazos e condições."
+          >
+            Como a Foode se compara.
+          </SectionHeading>
+          <Comparison />
         </div>
       </section>
 
@@ -163,12 +182,13 @@ export default async function SegmentPage({ params }: { params: Params }) {
         aria-labelledby="faq-title"
         className="mk-section border-t border-[var(--color-hairline-soft)]"
       >
-        <div className="mk-container grid gap-10">
-          <SectionHeading eyebrow="Perguntas" id="faq-title">
-            Dúvidas de quem tem {segment.name.toLowerCase()}.
-          </SectionHeading>
-          <Faq items={segment.faq} />
-        </div>
+        <FaqSection
+          eyebrow="Perguntas"
+          items={segment.faq}
+          lead={`O que donos de ${segment.name.toLowerCase()} perguntam antes de começar.`}
+        >
+          Dúvidas de quem tem {segment.name.toLowerCase()}.
+        </FaqSection>
       </section>
 
       <section
