@@ -1,0 +1,17 @@
+{
+  "data": {
+    "id": "pix_char_TESTE000000000000000001",
+    "amount": 5990,
+    "status": "PENDING",
+    "devMode": true,
+    "brCode": "00020101021226950014br.gov.bcb.pix2573exemplo.invalido/qr/v2/TESTE5204000053039865406059.905802BR5913FOODE TESTE6009SAO PAULO62070503***6304ABCD",
+    "brCodeBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "platformFee": 54,
+    "createdAt": "2026-11-04T15:00:00.000Z",
+    "updatedAt": "2026-11-04T15:00:00.000Z",
+    "expiresAt": "2026-11-04T15:30:00.000Z",
+    "metadata": { "intentId": "intent_teste_001", "pedidoId": "pedido_teste_001" }
+  },
+  "error": null,
+  "success": true
+}

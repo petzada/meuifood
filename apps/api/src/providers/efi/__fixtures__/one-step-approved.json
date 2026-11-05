@@ -1,0 +1,12 @@
+{
+  "code": 200,
+  "data": {
+    "installments": 1,
+    "installment_value": 5990,
+    "charge_id": 900001,
+    "status": "approved",
+    "total": 5990,
+    "payment": "credit_card",
+    "custom_id": "intent_teste_003"
+  }
+}

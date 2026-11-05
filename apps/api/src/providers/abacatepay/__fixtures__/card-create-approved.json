@@ -1,0 +1,18 @@
+{
+  "data": {
+    "id": "card_TESTE000000000000000001",
+    "amount": 5990,
+    "status": "APPROVED",
+    "devMode": true,
+    "brand": "visa",
+    "lastFour": "4242",
+    "installmentCount": 1,
+    "cardToken": "card_token_teste_nao_guardar",
+    "platformFee": 385,
+    "createdAt": "2026-11-04T15:00:00.000Z",
+    "updatedAt": "2026-11-04T15:00:01.000Z",
+    "metadata": { "intentId": "intent_teste_002" }
+  },
+  "error": null,
+  "success": true
+}
