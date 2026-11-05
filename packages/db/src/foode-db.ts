@@ -34,7 +34,9 @@ import {
 } from "./ops-db";
 import { createCardPaymentOps } from "./card-payment-db";
 import { createPaymentOps } from "./payment-db";
+import { createOpsPayoutOps, createStorePayoutOps } from "./payout-db";
 import { createRefundOps } from "./refund-db";
+import { createReportOps } from "./report-db";
 import { createOperationOps, createOrderOps } from "./store-operation-db";
 import { createStorefrontOrderOps } from "./storefront-order-db";
 import {
@@ -460,6 +462,12 @@ export function createFoodeDb(d1: D1Database) {
         /** Cupons e boas-vindas (Ticket 13): só o Dono (`forbidden` para Operador). */
         coupons: () => createCouponOps(d1, context),
 
+        /** Relatórios do Dono (Ticket 14): agregados do período, só leitura, só `owner`. */
+        reports: () => createReportOps(d1, context),
+
+        /** Repasses do Dono (Ticket 14): lançamentos e lotes pagos, só leitura, só `owner`. */
+        payouts: () => createStorePayoutOps(d1, context),
+
         /**
          * Equipe da Loja com a situação de cada membro (EQP-01): `active` se já definiu senha
          * (conta `credential` com senha, a mesma regra do convite); senão `invited`.
@@ -599,6 +607,9 @@ export function createFoodeDb(d1: D1Database) {
 
         /** Leads da landing (Ticket 31): lista e troca de status auditada. */
         ...createOpsLeadOps(d1, context),
+
+        /** Lotes diários de repasse, ajustes auditados e margem (Ticket 14). */
+        ...createOpsPayoutOps(d1, context),
 
         /**
          * Ops convida o Dono de qualquer Loja; null se a Loja não existe (nada é gravado).

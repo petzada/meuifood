@@ -47,6 +47,10 @@
       "types": "./dist/payment/index.d.ts",
       "default": "./dist/payment/index.js"
     },
+    "./finance": {
+      "types": "./dist/finance/index.d.ts",
+      "default": "./dist/finance/index.js"
+    },
     "./zod": {
       "types": "./dist/zod.d.ts",
       "default": "./dist/zod.js"
