@@ -1,6 +1,7 @@
 // Imagens do Cardápio no R2 pelo binding `MEDIA` (decisões 57/59/64): sem credenciais S3 nem URL
 // pré-assinada. Upload: a RPC recebe os bytes e grava aqui; leitura pública: rota `GET /media/*`
-// da api, que só serve chaves do padrão `stores/{store_id}/menu/{uuid}.{ext}`.
+// da api, que só serve chaves do padrão `stores/{store_id}/menu/{uuid}.{ext}` e, do Ticket 28,
+// logo/capa em `stores/{store_id}/brand/{uuid}.{ext}`.
 import {
   isStoreMenuImageKey,
   MENU_IMAGE_EXTENSIONS,
@@ -10,6 +11,7 @@ import {
   menuImageObjectKey,
   publicMenuImageUrl,
 } from "@foode/shared/menu";
+import { brandImageObjectKey, isStoreBrandImageKey } from "@foode/shared/onboarding";
 
 /** Caminho público da rota de leitura (a base pública termina nele). */
 export const MEDIA_ROUTE_PREFIX = "/media";
@@ -90,24 +92,84 @@ export async function deleteMenuImage(
   }
 }
 
-/**
- * Leitura pública `GET /media/stores/{storeId}/menu/{file}`: só chaves do padrão (UUID + extensão
- * permitida), `Content-Type` pela extensão (nunca pelo metadado gravado), `nosniff`, CSP sem
- * nada executável e cache imutável; `If-None-Match` responde 304.
- */
-export async function serveMenuImage(
+/** Pastas públicas por Loja: fotos do Cardápio (Ticket 23) e logo/capa (Ticket 28). */
+export type StoreMediaFolder = "menu" | "brand";
+
+const KEY_CHECK: Record<StoreMediaFolder, (storeId: string, objectKey: string) => boolean> = {
+  menu: isStoreMenuImageKey,
+  brand: isStoreBrandImageKey,
+};
+
+/** Grava logo/capa (já validados pela assinatura dos bytes) numa chave nova da Loja. */
+export async function putBrandImage(
   bucket: R2Bucket,
   storeId: string,
+  contentType: MenuImageContentType,
+  bytes: MenuImageBytes,
+): Promise<string> {
+  const objectKey = brandImageObjectKey(storeId, contentType, crypto.randomUUID());
+  await bucket.put(objectKey, bytes, {
+    httpMetadata: { contentType, cacheControl: MEDIA_CACHE_CONTROL },
+    customMetadata: { storeId },
+  });
+  return objectKey;
+}
+
+/** A chave é de logo/capa desta Loja e o objeto existe no bucket? */
+export async function brandImageExists(
+  bucket: R2Bucket,
+  storeId: string,
+  objectKey: string,
+): Promise<boolean> {
+  if (!isStoreBrandImageKey(storeId, objectKey)) return false;
+  return (await bucket.head(objectKey)) !== null;
+}
+
+/** Apaga logo/capa antigo; nunca fora do prefixo `stores/{storeId}/brand/`. */
+export async function deleteBrandImage(
+  bucket: R2Bucket,
+  storeId: string,
+  objectKey: string,
+): Promise<boolean> {
+  if (!isStoreBrandImageKey(storeId, objectKey)) {
+    console.warn(JSON.stringify({ level: "warn", message: "brand_image_delete_refused" }));
+    return false;
+  }
+  try {
+    await bucket.delete(objectKey);
+    return true;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        level: "error",
+        message: "brand_image_delete_failed",
+        objectKey,
+        cause: error instanceof Error ? error.message : "desconhecido",
+      }),
+    );
+    return false;
+  }
+}
+
+/**
+ * Leitura pública `GET /media/stores/{storeId}/{menu|brand}/{file}`: só chaves do padrão (UUID +
+ * extensão permitida), `Content-Type` pela extensão (nunca pelo metadado gravado), `nosniff`, CSP
+ * sem nada executável e cache imutável; `If-None-Match` responde 304.
+ */
+export async function serveStoreImage(
+  bucket: R2Bucket,
+  storeId: string,
+  folder: StoreMediaFolder,
   file: string,
   request: Request,
 ): Promise<Response> {
-  const objectKey = `stores/${storeId}/menu/${file}`;
+  const objectKey = `stores/${storeId}/${folder}/${file}`;
   const extension = file.slice(file.lastIndexOf(".") + 1);
   const contentType = CONTENT_TYPE_BY_EXTENSION.get(extension);
   if (
     !menuIdSchema.safeParse(storeId).success ||
     !contentType ||
-    !isStoreMenuImageKey(storeId, objectKey)
+    !KEY_CHECK[folder](storeId, objectKey)
   ) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
@@ -124,4 +186,14 @@ export async function serveMenuImage(
   if (!("body" in object) || !object.body) return new Response(null, { status: 304, headers });
   headers.set("content-length", String(object.size));
   return new Response(object.body, { status: 200, headers });
+}
+
+/** Fotos do Cardápio (Ticket 23): `serveStoreImage` na pasta `menu`. */
+export function serveMenuImage(
+  bucket: R2Bucket,
+  storeId: string,
+  file: string,
+  request: Request,
+): Promise<Response> {
+  return serveStoreImage(bucket, storeId, "menu", file, request);
 }

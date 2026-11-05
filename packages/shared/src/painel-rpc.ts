@@ -30,6 +30,20 @@ import type {
   MenuUploadImageInput,
 } from "./menu/admin.js";
 import type {
+  FunnelReport,
+  FunnelReportInput,
+  OwnerOnboardingState,
+  OwnerProfileInput,
+  OwnerStoreSettings,
+  SlugAvailability,
+  StoreContactInput,
+  StorePixelsInput,
+  StoreShowcaseInput,
+  StoreSlugInput,
+  StoreUploadBrandImageInput,
+  StoreUploadedBrandImage,
+} from "./onboarding/index.js";
+import type {
   OpsActivateStoreInput,
   OpsAuditEntry,
   OpsCreatePaymentFeesInput,
@@ -370,4 +384,51 @@ export interface PainelRpc {
     caller: PainelCaller,
     input: StoreSetPrintOnAcceptInput,
   ): Promise<RpcResult<null>>;
+
+  // ---- Onboarding do Dono, dados, vitrine, Slug, Pixel e funil (Ticket 28). Só o Dono da Loja
+  // ATIVA (`can(role, "store.settings")`); Operador e Ops = `forbidden`, sem efeito. Entradas com
+  // `@foode/shared/onboarding` (`invalid_input`). Toda escrita audita (ONBOARDING_AUDIT_ACTIONS).
+  // QR Code: o admin gera no cliente a partir de `storeUrl` (PNG e SVG, LNK-01).
+
+  /** Checklist calculado no servidor (sem ordem forçada; "Plano ativo" não acionável), perfil e link. */
+  onboardingGet(caller: PainelCaller): Promise<RpcResult<OwnerOnboardingState>>;
+
+  /** Duas perguntas de perfil (culinária, objetivo; uso interno da Foode): uma vez, depois `conflict`. */
+  onboardingAnswerProfile(caller: PainelCaller, input: OwnerProfileInput): Promise<RpcResult<null>>;
+
+  /** "Sua Loja está pronta" visto (aparece uma vez). Checklist incompleto = `conflict`. */
+  onboardingAcknowledgeReady(caller: PainelCaller): Promise<RpcResult<null>>;
+
+  /** Dados da Loja (contato, endereço, cadastro do Ops só leitura), vitrine e Pixel. */
+  storeSettingsGet(caller: PainelCaller): Promise<RpcResult<OwnerStoreSettings>>;
+
+  /** Disponibilidade do Slug enquanto digita (não reserva); rate limit = `rate_limited`. */
+  storeCheckSlug(caller: PainelCaller, input: StoreSlugInput): Promise<RpcResult<SlugAvailability>>;
+
+  /**
+   * Troca/confirma o Slug (marca o item "Slug" do checklist). Formato ou reservado =
+   * `invalid_input`; de outra Loja = `conflict`. Links e QR antigos param de funcionar.
+   */
+  storeSetSlug(
+    caller: PainelCaller,
+    input: StoreSlugInput,
+  ): Promise<RpcResult<{ slug: string; storeUrl: string }>>;
+
+  /** WhatsApp, Instagram e endereço (CEP obrigatório como no Ops). Loja sem cadastro = `conflict`. */
+  storeSetContact(caller: PainelCaller, input: StoreContactInput): Promise<RpcResult<null>>;
+
+  /** IDs do Pixel Meta (15–16 dígitos) e Google (`G-`/`AW-`/`GT-`); vazio apaga. */
+  storeSetPixels(caller: PainelCaller, input: StorePixelsInput): Promise<RpcResult<null>>;
+
+  /** Descrição ≤ 160, logo e capa (chaves de `storeUploadBrandImage` desta Loja). */
+  storeSetShowcase(caller: PainelCaller, input: StoreShowcaseInput): Promise<RpcResult<null>>;
+
+  /** Upload do logo/capa pelos bytes (JPEG/PNG/WebP ≤ 5 MiB) para `stores/{id}/brand/`. */
+  storeUploadBrandImage(
+    caller: PainelCaller,
+    input: StoreUploadBrandImageInput,
+  ): Promise<RpcResult<StoreUploadedBrandImage>>;
+
+  /** Funil agregado por dia (visita → item → carrinho → checkout → Pedido); fonte do Ticket 14. */
+  funnelReport(caller: PainelCaller, input: FunnelReportInput): Promise<RpcResult<FunnelReport>>;
 }

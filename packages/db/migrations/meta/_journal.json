@@ -36,6 +36,13 @@
       "when": 1793851858685,
       "tag": "0004_storefront_pedido",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793854839587,
+      "tag": "0005_onboarding_vitrine_funil",
+      "breakpoints": true
     }
   ]
 }

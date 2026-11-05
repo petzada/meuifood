@@ -25,6 +25,12 @@ import {
   phoneLookupResponseSchema,
   type StorefrontStoreState,
 } from "@foode/shared/order";
+import {
+  FUNNEL_EVENT_RATE_LIMIT,
+  funnelDay,
+  funnelEventRequestSchema,
+  type FunnelEvent,
+} from "@foode/shared/onboarding";
 
 import type { TurnstileVerifier } from "./auth/turnstile";
 import {
@@ -34,6 +40,7 @@ import {
   orderAddressOf,
   quoteCheckout,
 } from "./checkout-rules";
+import { toStorefrontShowcase } from "./showcase";
 import {
   canonicalJson,
   ipHash,
@@ -50,6 +57,8 @@ export type StorefrontServiceDeps = {
   /** ORDER_TOKEN_SECRET / PHONE_LOOKUP_IP_SALT do Worker (conferidos só quando usados). */
   orderTokenSecret: string | undefined;
   phoneLookupIpSalt: string | undefined;
+  /** Base pública das imagens (logo/capa da vitrine, Ticket 28); null = sem URL. */
+  mediaBaseUrl?: string | null;
   now?: () => Date;
 };
 
@@ -100,13 +109,62 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     };
   }
 
+  /**
+   * +1 no funil do dia (Ticket 28). Falha não derruba o Pedido nem a request: o funil é métrica
+   * agregada; registra sem dado pessoal.
+   */
+  async function countFunnel(slug: string, event: FunnelEvent): Promise<boolean> {
+    try {
+      return await db.storefront.recordFunnelEvent(slug, event, funnelDay(clock().getTime()));
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          message: "funnel_count_failed",
+          event,
+          cause: error instanceof Error ? error.message : "desconhecido",
+        }),
+      );
+      return false;
+    }
+  }
+
   return {
+    /**
+     * Evento do funil próprio vindo do navegador (visita, item, carrinho, checkout). Corpo só com
+     * o nome do evento; rate limit por hash do IP truncado + Loja (o IP não é gravado em lugar
+     * nenhum além da chave com hash do rate limit, que expira). Slug inexistente/inativo = 404.
+     */
+    async funnel(
+      slug: string,
+      body: unknown,
+      ip: string | null,
+    ): Promise<{ status: 204; body: null } | Reply<{ error: string }>> {
+      const parsed = funnelEventRequestSchema.safeParse(body);
+      if (!parsed.success) return INVALID_INPUT;
+      const salt = requireSecret(deps.phoneLookupIpSalt, "PHONE_LOOKUP_IP_SALT");
+      const allowed = await db.rateLimit.consume(
+        `funnel:${await ipHash(salt, ip)}:${slug}`,
+        FUNNEL_EVENT_RATE_LIMIT,
+      );
+      if (!allowed) return { status: 429, body: { error: "rate_limited" } };
+      const counted = await countFunnel(slug, parsed.data.event);
+      return counted ? { status: 204, body: null } : STORE_NOT_FOUND;
+    },
+
     /** Estado da Loja + "Sobre a Loja". */
     async state(slug: string): Promise<Reply<StorefrontStoreState | { error: string }>> {
       const state = await db.storefront.operationBySlug(slug);
       if (!state) return STORE_NOT_FOUND;
-      const methods = await paymentMethodsOf(state.store.id);
-      return { status: 200, body: buildStoreState(state, clock(), methods) };
+      const [methods, showcase] = await Promise.all([
+        paymentMethodsOf(state.store.id),
+        db.storefront.showcaseOf(state.store.id),
+      ]);
+      const body = buildStoreState(state, clock(), methods);
+      return {
+        status: 200,
+        body: { ...body, showcase: toStorefrontShowcase(showcase, deps.mediaBaseUrl ?? null) },
+      };
     },
 
     /** Cotação: nada gravado; erro de regra = 200 com `ok: false` (mesmo shape da criação). */
@@ -202,8 +260,10 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
           lines: quote.lines,
           itemPrices: quote.itemPrices,
         });
-        if (result.kind === "created")
+        if (result.kind === "created") {
+          await countFunnel(slug, "order");
           return replyCreated(slug, result.orderId, result.code, false);
+        }
         if (result.kind === "existing") return replay(result);
         // Recusado na escrita: o estado mudou entre a leitura e a escrita; recota com o novo.
       }

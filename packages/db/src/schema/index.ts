@@ -6,3 +6,4 @@ export * from "./menu";
 export * from "./ops";
 export * from "./store-operation";
 export * from "./orders";
+export * from "./onboarding";

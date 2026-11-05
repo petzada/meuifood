@@ -16,6 +16,7 @@
 import type { OpsContext } from "./context";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError, isUniqueViolation } from "./errors";
+import { ownerProfileOf, type OwnerProfileRow } from "./onboarding-db";
 import type { BILLING_CYCLES, CardMode, StoreStatus } from "./schema";
 
 type BillingCycle = (typeof BILLING_CYCLES)[number];
@@ -146,6 +147,8 @@ export type OpsStoreDetailRow = OpsStoreListRow & {
   } | null;
   owners: OpsStoreOwner[];
   planHistory: OpsStorePlan[];
+  /** Respostas de perfil do Dono (Ticket 28, P-ONB-4); null = não respondidas. */
+  ownerProfile: OwnerProfileRow | null;
   updatedAt: string;
 };
 
@@ -541,7 +544,10 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
 
   async function storeDetail(storeId: string): Promise<OpsStoreDetailRow> {
     const row = await requireStore(storeId);
-    const data = await lookups([row.id], row.id);
+    const [data, ownerProfile] = await Promise.all([
+      lookups([row.id], row.id),
+      ownerProfileOf(d1, row.id),
+    ]);
     const profile = profileOf(row);
     return {
       ...listItem(row, data),
@@ -568,6 +574,7 @@ export function createOpsOperations(d1: D1Database, context: OpsContext) {
         validFrom,
         validTo,
       })),
+      ownerProfile,
       updatedAt: row.updatedAt,
     };
   }

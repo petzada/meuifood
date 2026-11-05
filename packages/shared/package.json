@@ -27,6 +27,10 @@
       "types": "./dist/order/index.d.ts",
       "default": "./dist/order/index.js"
     },
+    "./onboarding": {
+      "types": "./dist/onboarding/index.d.ts",
+      "default": "./dist/onboarding/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {
