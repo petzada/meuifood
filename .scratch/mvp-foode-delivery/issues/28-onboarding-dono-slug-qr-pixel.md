@@ -20,3 +20,4 @@
 ## Comments
 
 - 2026-11-04 — Cobre as histórias de Slug/link/QR da spec v1 (nunca implementadas) e o Pixel ([62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md)).
+- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) §6 Pixel — `view_item` ao abrir o item (I1), `add_to_cart` ao confirmar "Adicionar" (I7), `purchase` na confirmação. Pendente: P-5.4 (compartilhar Loja/item) em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).

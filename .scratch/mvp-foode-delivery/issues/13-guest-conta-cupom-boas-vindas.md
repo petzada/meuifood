@@ -21,3 +21,4 @@
 ## Comments
 
 - 2026-11-04 — Revisado: Better Auth + MillionSend ([59](../../../docs/decisoes/59-pivo-cloudflare-d1-workers.md)); Cupons promocionais por [62](../../../docs/decisoes/62-escopo-ops-multiloja-funcionalidades.md). Pode correr em paralelo ao 26/27.
+- 2026-11-05 — Referência UX do concorrente (sem mudar critérios): [DIRETRIZES-UX-CLIENTE](../../../docs/referencias/anota-ai/DIRETRIZES-UX-CLIENTE.md) U1–U4 (Cupom inline no checkout, um erro específico por código, desconto fora da taxa de entrega) e §6 criar conta. Não adotar o lookup por telefone do print 17 (P-2.1; diverge da decisão 43). Pendentes: P-3.4 e P-7.1 em [PERGUNTAS-CLIENTE](../../../docs/referencias/anota-ai/PERGUNTAS-CLIENTE.md).
