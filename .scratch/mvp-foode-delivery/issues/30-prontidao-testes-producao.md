@@ -4,7 +4,7 @@
 
 **Blocked by:** 14 — Plano, relatórios, Repasses e lotes; 15 — Reconciliar pagamentos e repasses por Cron Triggers. Antes dele, o passo humano da whatsmiau.dev (decisão [65](../../../docs/decisoes/65-login-consumidor-codigo-whatsapp.md)).
 
-**Status:** ready-for-agent
+**Status:** done (código e automação; resta o bloco humano final)
 
 **Agente:** Opus (geral).
 
@@ -84,3 +84,5 @@
   9. Agente de suporte do agentes.chat + MCP (pós-lançamento; contrato em `docs/integracao-suporte-agentes-chat.md`).
   10. **Débito online: fora** por decisão do Dono em 2026-11-05 — a API de cartão transparente da AbacatePay não distingue débito de crédito e a Efí só oferece crédito. Débito segue só na maquininha (Pagamento na entrega).
   11. Reconciliação (Ticket 15): cobrança com timeout e webhook perdido não é localizável (adapters sem busca por `custom_id`); contagens de divergência varrem tabelas inteiras (limitar por janela quando houver volume).
+
+- 2026-11-05 — Done (código) nos PRs #46, #48, #49 e #50. Smoke E2E de produção (`e2e-producao.yml`, run 42020446804) **9/9 verde** com a Loja sintética `smoke-foode`; `check-config.yml` (run 42020733336) verde: DNS, e-mail, Cron (`*/5`, `0 9`), D1 com 13 migrations, Turnstile e secrets base ok; faltam só os itens do bloco humano (whatsmiau, AbacatePay, Efí, Sentry). Revisão de segurança em `reports/30-seguranca-dados.md`; runbook em `docs/runbook-testes-producao.md`; widget de suporte pronto e desligado. Itens do bloco humano continuam abertos acima.
