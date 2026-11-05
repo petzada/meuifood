@@ -4,7 +4,8 @@
 // comando de Estorno avulso.
 //
 // - Motivo opcional de uma lista curta e fixa (P-OPE-3); cancelar sem motivo continua possível.
-//   O sistema também cancela (PIX vencido sem pagamento): motivo `pix_expired`, nunca escolhível.
+//   O sistema também cancela (PIX vencido sem pagamento: `pix_expired`; Cartão recusado e
+//   abandonado, Ticket 15: `card_abandoned`), com motivo nunca escolhível.
 // - Consequência: `on_delivery` (só o Pedido muda), `refund` (Estorno total — inclui a tarifa de
 //   serviço, decisão 71 — no provedor que cobrou) ou `charge_cancel` (cobrança ainda sem
 //   pagamento é cancelada/expirada; pagamento tardio converge para Estorno total).
@@ -28,7 +29,7 @@ export const cancelReasonSchema = z.enum(CANCEL_REASONS);
 export type CancelReason = z.infer<typeof cancelReasonSchema>;
 
 /** Motivos do sistema (nunca escolhíveis no Painel). */
-export const SYSTEM_CANCEL_REASONS = ["pix_expired"] as const;
+export const SYSTEM_CANCEL_REASONS = ["pix_expired", "card_abandoned"] as const;
 export type SystemCancelReason = (typeof SYSTEM_CANCEL_REASONS)[number];
 
 /** Tudo o que pode estar gravado no Pedido (`orders.cancel_reason`). */
@@ -42,6 +43,7 @@ export const CANCEL_REASON_LABELS: Readonly<Record<OrderCancelReason, string>> =
   customer_request: "Consumidor pediu",
   other: "Outro",
   pix_expired: "PIX não pago no prazo",
+  card_abandoned: "Cartão não pago no prazo",
 };
 
 /**

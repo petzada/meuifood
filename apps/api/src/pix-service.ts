@@ -59,6 +59,17 @@ export const PIX_RECONCILE_INTERVAL_MS = 60_000;
 export const PIX_EXPIRE_PROVIDER_GRACE_MS = 60 * 60_000;
 /** Máximo de PIX vencidos cancelados por rodada da varredura. */
 export const PIX_EXPIRE_BATCH_LIMIT = 50;
+/**
+ * Cron (Ticket 15): PIX aberto sem consulta há 2 min é conferido no provedor (webhook perdido).
+ * A página do Pedido confere a cada 60 s quando aberta; o Cron cobre quem fechou a página.
+ */
+export const PIX_CRON_CHECK_INTERVAL_MS = 2 * 60_000;
+/** Cron: PIX vencido ainda é conferido por 48 h (pagamento tardio converge para Estorno). */
+export const PIX_LATE_PAYMENT_WINDOW_MS = 48 * 60 * 60_000;
+/** Cron: PIX vencido é conferido no máximo a cada 30 min dentro da janela. */
+export const PIX_LATE_CHECK_INTERVAL_MS = 30 * 60_000;
+/** Máximo de PIX conferidos por rodada (cada fase). */
+export const PIX_RECONCILE_BATCH_LIMIT = 50;
 
 /** O que o PIX usa do provedor (o cliente real ou um fake nos testes). */
 export type PixGateway = {
@@ -112,6 +123,19 @@ export type ExpireUnpaidPixSummary = {
   paid: number;
   /** Adiados (provedor fora dentro da carência). */
   skipped: number;
+  /** Itens que falharam (ficam para a próxima rodada). */
+  failed: number;
+};
+
+export type ReconcilePixSummary = {
+  /** Conferidos no provedor nesta rodada. */
+  checked: number;
+  /** Pagos no provedor sem webhook: confirmados (cobrança + Ledger; cancelado = Estorno total). */
+  paid: number;
+  /** Vencidos/cancelados no provedor: Pedido Cancelado (`pix_expired`). */
+  expired: number;
+  /** Provedor fora ou erro: ficam para a próxima rodada. */
+  failed: number;
 };
 
 export type WebhookReply = {
@@ -294,7 +318,7 @@ export function createPixService(deps: PixServiceDeps) {
      * adia por até `PIX_EXPIRE_PROVIDER_GRACE_MS`. Uma falha não interrompe os demais.
      */
     async expireUnpaidPix(now: Date = clock()): Promise<ExpireUnpaidPixSummary> {
-      const summary: ExpireUnpaidPixSummary = { cancelled: 0, paid: 0, skipped: 0 };
+      const summary: ExpireUnpaidPixSummary = { cancelled: 0, paid: 0, skipped: 0, failed: 0 };
       const candidates = await db.refunds.expirablePix(
         now.toISOString(),
         new Date(now.getTime() - PIX_CREATE_GIVE_UP_MS).toISOString(),
@@ -330,7 +354,59 @@ export function createPixService(deps: PixServiceDeps) {
           }
           if (await db.refunds.cancelExpiredPix(candidate)) summary.cancelled += 1;
         } catch (error) {
+          summary.failed += 1;
           warn("pix_expire_failed", { code: errorCode(error) });
+        }
+      }
+      return summary;
+    },
+
+    /**
+     * Cron (Ticket 15), idempotente: consulta autenticada dos PIX que o webhook pode ter perdido,
+     * pelos mesmos fatos do webhook (`confirm` = `db.payments.confirmPayment`). Fase 1: PIX aberto
+     * sem consulta recente — PAID confirma, EXPIRED/CANCELLED cancela o Pedido. Fase 2: PIX vencido
+     * nas últimas 48 h — PAID confirma o pagamento tardio, e o batch da confirmação grava o
+     * Estorno total do Pedido já cancelado (executado já; falha = retentável). Uma falha não
+     * interrompe as demais.
+     */
+    async reconcilePix(now: Date = clock()): Promise<ReconcilePixSummary> {
+      const summary: ReconcilePixSummary = { checked: 0, paid: 0, expired: 0, failed: 0 };
+      if (!provider) return summary;
+      const nowIso = now.toISOString();
+      const open = await db.reconciliation.pixPendingDueForCheck(
+        nowIso,
+        new Date(now.getTime() - PIX_CRON_CHECK_INTERVAL_MS).toISOString(),
+        PIX_RECONCILE_BATCH_LIMIT,
+      );
+      const late = await db.reconciliation.latePixDueForCheck(
+        new Date(now.getTime() - PIX_LATE_PAYMENT_WINDOW_MS).toISOString(),
+        new Date(now.getTime() - PIX_LATE_CHECK_INTERVAL_MS).toISOString(),
+        PIX_RECONCILE_BATCH_LIMIT,
+      );
+      for (const candidate of [...open, ...late]) {
+        try {
+          await db.payments.markChecked(candidate.intentId, nowIso);
+          const { status } = await provider.gateway.checkPixCharge(candidate.providerChargeId);
+          summary.checked += 1;
+          const intent = await db.payments.intentById(candidate.intentId);
+          if (!intent || intent.state !== candidate.state) continue;
+          if (status === "PAID") {
+            const result = await confirm(intent, {
+              providerChargeId: candidate.providerChargeId,
+              amountCents: intent.amountCents,
+              providerFeeCents: null,
+              event: null,
+            });
+            if (result === "applied") summary.paid += 1;
+          } else if (
+            intent.state === "pending" &&
+            (status === "EXPIRED" || status === "CANCELLED")
+          ) {
+            if (await expireAndCancel(intent)) summary.expired += 1;
+          }
+        } catch (error) {
+          summary.failed += 1;
+          warn("pix_reconcile_failed", { code: errorCode(error) });
         }
       }
       return summary;
