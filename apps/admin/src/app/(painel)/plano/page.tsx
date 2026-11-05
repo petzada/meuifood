@@ -6,8 +6,10 @@ import { painelRead } from "../../../lib/painel-rpc";
 import { requirePermission } from "../../../lib/session";
 import { EmptyState, Facts } from "../ops/_components/fields";
 
-// `/plano` (decisão 72; REL-03): só leitura — Plano, ciclo, faixa do mês, contagem de Pedidos e
-// vigência. Cobrança fora do app (decisão 61). O Ticket 14 completa (histórico, Repasses).
+// `/plano` (Ticket 14; decisão 72; REL-03): só leitura — Plano (mensal/anual), faixa vigente,
+// contagem de Pedidos não cancelados do mês civil com a barra até o limite da faixa e o valor da
+// faixa, e vigência. No grupo Financeiro do menu, só o Dono (`store.finance`). Cobrança fora do
+// app (decisão 61): sem "Contratar", sem recorrência, sem bloqueio por faixa.
 export const dynamic = "force-dynamic";
 
 const MONTHS = [
@@ -31,7 +33,7 @@ function monthLabel(month: string): string {
 }
 
 export default async function PlanPage() {
-  await requirePermission("store.settings");
+  await requirePermission("store.finance");
   const view = await painelRead("o Plano", (api, caller) => api.storePlanGet(caller));
   const banner = ownerPlanBanner(view);
 
@@ -75,6 +77,9 @@ export default async function PlanPage() {
             ) : null}
             <p className="mt-2 text-sm text-[var(--color-muted)]">
               Contam os Pedidos não cancelados do mês (horário de Brasília).
+              {view.tier && view.tier.maxOrders !== null && view.plan.cycle === "monthly"
+                ? ` Limite da faixa atual: ${view.tier.maxOrders} Pedidos; passar dele só muda a faixa do mês, nada bloqueia.`
+                : ""}
             </p>
           </div>
           <Facts

@@ -100,4 +100,33 @@ describe("navegação do Painel", () => {
     );
     expect(screen.queryByRole("region", { name: "Seu Plano" })).not.toBeInTheDocument();
   });
+
+  it("menu do Dono tem o grupo Financeiro (Relatórios, Repasses, Plano); o Operador não o vê", () => {
+    const { unmount } = render(
+      <PainelShell currentPath="/" role="owner" session={session("owner")}>
+        <p>conteúdo</p>
+      </PainelShell>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Navegação do Painel" });
+    const finance = within(nav).getByRole("region", { name: "Financeiro" });
+    expect(
+      within(finance)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Relatórios", "Repasses", "Plano"]);
+    expect(within(finance).getByRole("link", { name: "Relatórios" })).toHaveAttribute(
+      "href",
+      "/relatorios",
+    );
+    unmount();
+
+    render(
+      <PainelShell currentPath="/" role="operator" session={session("operator")}>
+        <p>conteúdo</p>
+      </PainelShell>,
+    );
+    expect(screen.queryByRole("link", { name: "Relatórios" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Repasses" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Plano" })).not.toBeInTheDocument();
+  });
 });
