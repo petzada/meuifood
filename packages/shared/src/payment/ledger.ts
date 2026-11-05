@@ -54,6 +54,11 @@ export type PaymentLedgerInput = {
   providerCostCents: number | null;
   /** Instante em que o provedor liberou o saldo (PIX: o próprio pagamento). */
   releasedAt: Date;
+  /**
+   * Data civil da liberação quando difere do instante (Cartão: prazo do provedor ou data
+   * informada, Ticket 27). Ausente = dia civil de `releasedAt` em São Paulo.
+   */
+  releaseDate?: CivilDate;
 };
 
 export type PaymentLedgerSnapshot = {
@@ -77,7 +82,7 @@ export function paymentLedgerSnapshot(input: PaymentLedgerInput): PaymentLedgerS
   assertCents(input.serviceFeeCents, "serviceFeeCents");
   if (input.providerCostCents !== null) assertCents(input.providerCostCents, "providerCostCents");
   const foodeFeeCents = feeCents(input.orderTotalCents, input.foodeFee);
-  const releaseDate = saoPauloDate(input.releasedAt);
+  const releaseDate = input.releaseDate ?? saoPauloDate(input.releasedAt);
   return {
     chargedCents: input.orderTotalCents + input.serviceFeeCents,
     orderTotalCents: input.orderTotalCents,

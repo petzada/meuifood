@@ -115,15 +115,30 @@ export type CreateOrderData = {
   paymentIntent?: CreatePaymentIntent | null;
 };
 
-/** Snapshot da intenção PIX gravado com o Pedido (o `intentId` é a chave de idempotência). */
-export type CreatePaymentIntent = {
-  intentId: string;
-  provider: "abacatepay";
-  method: "pix";
-  /** Valor cobrado = `totalCents + serviceFeeCents`. */
-  amountCents: number;
-  foodeFee: { feeId: string; percentBps: number; fixedCents: number };
-};
+/**
+ * Snapshot da intenção gravado com o Pedido (o `intentId` é a chave de idempotência). PIX
+ * (Ticket 26) ou a 1ª tentativa de Cartão (Ticket 27: provedor do modo da Loja, `card_payments`
+ * com `attempt_key` = `idempotencyKey` do checkout, bandeira/últimos 4 só para exibir).
+ */
+export type CreatePaymentIntent =
+  | {
+      intentId: string;
+      provider: "abacatepay";
+      method: "pix";
+      /** Valor cobrado = `totalCents + serviceFeeCents`. */
+      amountCents: number;
+      foodeFee: { feeId: string; percentBps: number; fixedCents: number };
+    }
+  | {
+      intentId: string;
+      provider: "efi" | "abacatepay";
+      method: "credit";
+      cardMode: "normal" | "rapido";
+      amountCents: number;
+      foodeFee: { feeId: string; percentBps: number; fixedCents: number };
+      brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard" | "diners" | "other" | null;
+      lastFour: string | null;
+    };
 
 export type CreateOrderResult =
   | { kind: "created"; orderId: string; code: number }
@@ -309,6 +324,9 @@ export function createStorefrontOrderOps(d1: D1Database) {
       if (intent && intent.amountCents !== input.totalCents + serviceFeeCents) {
         throw new RangeError("checkout: valor da intenção diferente de total + tarifa de serviço");
       }
+      if (intent && intent.method !== input.paymentMethod) {
+        throw new RangeError("checkout: meio da intenção diferente do meio do Pedido");
+      }
       if (!intent && serviceFeeCents !== 0) {
         throw new RangeError("checkout: tarifa de serviço só com pagamento online");
       }
@@ -320,7 +338,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
                 `INSERT INTO payment_intents (id, store_id, order_id, provider, method, card_mode,
                    custody, amount_cents, service_fee_cents, foode_fee_id, foode_fee_percent_bps,
                    foode_fee_fixed_cents, state, created_at, updated_at)
-                 SELECT ?, store_id, id, ?, ?, NULL, 'pilot_platform', ?, ?, ?, ?, ?, 'creating',
+                 SELECT ?, store_id, id, ?, ?, ?, 'pilot_platform', ?, ?, ?, ?, ?, 'creating',
                    created_at, created_at
                  FROM orders WHERE id = ?`,
               )
@@ -328,6 +346,7 @@ export function createStorefrontOrderOps(d1: D1Database) {
                 intent.intentId,
                 intent.provider,
                 intent.method,
+                intent.method === "credit" ? intent.cardMode : null,
                 intent.amountCents,
                 serviceFeeCents,
                 intent.foodeFee.feeId,
@@ -335,6 +354,23 @@ export function createStorefrontOrderOps(d1: D1Database) {
                 intent.foodeFee.fixedCents,
                 input.orderId,
               ),
+            ...(intent.method === "credit"
+              ? [
+                  d1
+                    .prepare(
+                      `INSERT INTO card_payments (intent_id, store_id, order_id, attempt_key, state,
+                         brand, last_four, created_at, updated_at)
+                       SELECT id, store_id, order_id, ?, 'processing', ?, ?, created_at, created_at
+                       FROM payment_intents WHERE id = ?`,
+                    )
+                    .bind(
+                      input.idempotencyKey.toLowerCase(),
+                      intent.brand,
+                      intent.lastFour,
+                      intent.intentId,
+                    ),
+                ]
+              : []),
           ]
         : [];
 

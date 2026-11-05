@@ -53,13 +53,20 @@ export function isEfiRefundable(status: string): boolean {
 }
 
 /**
- * Política de "Pedido pago" no cartão Normal.
+ * Política de "Pedido pago" no cartão Normal (Ticket 27, decidida e registrada no ticket).
  *
- * TODO(27): decidir se o Pedido é marcado pago em `approved` (emissor aprovou) ou
- * só em `paid` (creditado). Recomendação da pesquisa: aceitar o Pedido em
- * `approved`, lançar o Ledger como "a liberar" e só considerar confirmado em `paid`.
- * O parâmetro é obrigatório de propósito: ninguém herda uma escolha implícita.
+ * A doc de status da API Cobranças diz que `approved` = "aprovado pela operadora do cartão mas
+ * ainda não foi creditado" e `paid` = "pagamento confirmado"; o one-step aprovado já responde
+ * `approved`, e a passagem para `paid` acompanha o crédito na conta Efí (que no Normal leva até a
+ * liberação). Esperar `paid` deixaria o Pedido fora da cozinha por horas/dias. Escolha: o Pedido
+ * é pago em `approved` (ou `paid`/`settled`), mas SÓ por fonte canônica — a resposta autenticada
+ * do one-step ou `GET /v1/notification/:token` / `GET /v1/charge/:id` com credenciais, nunca o
+ * navegador. É o mesmo ponto do Rápido (AbacatePay `APPROVED` libera o Pedido). Reversão depois
+ * de aprovado (`unpaid`/`canceled`/`refunded`/`contested`) não regride o Pedido: fica registrada
+ * para o Estorno/Contestação (Ticket 12).
  */
+export const EFI_CARD_PAID_POLICY: EfiPaidPolicy = "approved";
+
 export type EfiPaidPolicy = "approved" | "paid";
 
 export function isEfiPaidForOrder(status: string, policy: EfiPaidPolicy): boolean {

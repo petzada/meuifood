@@ -116,6 +116,9 @@ jobs:
           ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
           ABACATEPAY_WEBHOOK_SECRET: ${{ secrets.ABACATEPAY_WEBHOOK_SECRET }}
           ABACATEPAY_SIGNING_KEY: ${{ secrets.ABACATEPAY_SIGNING_KEY }}
+          EFI_CLIENT_ID: ${{ secrets.EFI_CLIENT_ID }}
+          EFI_CLIENT_SECRET: ${{ secrets.EFI_CLIENT_SECRET }}
+          EFI_NOTIFICATION_SECRET: ${{ secrets.EFI_NOTIFICATION_SECRET }}
           SALES_WHATSAPP: ${{ secrets.SALES_WHATSAPP }}
         run: |
           umask 077
@@ -131,12 +134,16 @@ jobs:
           # Login do Consumidor (Ticket 13, decisão 65): whatsmiau OPCIONAL. Vazio = omitido e o
           # login responde "indisponível no momento" (o Dono conecta o número no fim).
           # PIX AbacatePay (Ticket 26): chaves OPCIONAIS. Sem as três, PIX fica fora do checkout.
+          # Cartão Normal (Ticket 27): credenciais da aplicação Efí e o segredo da notification_url
+          # OPCIONAIS. Sem elas (ou sem EFI_PAYEE_CODE), o Crédito some das Lojas no Normal.
           jq -n '{SENTRY_DSN: env.SENTRY_DSN_API, MILLIONSEND_API_KEY: env.MILLIONSEND_API_KEY,
                   BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY,
                   ORDER_TOKEN_SECRET: env.ORDER_TOKEN_SECRET, PHONE_LOOKUP_IP_SALT: env.PHONE_LOOKUP_IP_SALT,
                   WHATSMIAU_API_KEY: env.WHATSMIAU_API_KEY, WHATSMIAU_INSTANCE_ID: env.WHATSMIAU_INSTANCE_ID,
                   ABACATEPAY_API_KEY: env.ABACATEPAY_API_KEY, ABACATEPAY_WEBHOOK_SECRET: env.ABACATEPAY_WEBHOOK_SECRET,
-                  ABACATEPAY_SIGNING_KEY: env.ABACATEPAY_SIGNING_KEY}
+                  ABACATEPAY_SIGNING_KEY: env.ABACATEPAY_SIGNING_KEY,
+                  EFI_CLIENT_ID: env.EFI_CLIENT_ID, EFI_CLIENT_SECRET: env.EFI_CLIENT_SECRET,
+                  EFI_NOTIFICATION_SECRET: env.EFI_NOTIFICATION_SECRET}
             | with_entries(select(.value != null and .value != ""))' > "$dir/api.json"
           # Ticket 31 (decisão 70): WhatsApp de vendas só no Worker do web (`/falar` redireciona no
           # servidor). OPCIONAL: sem ele, `/falar` leva ao formulário de contato da landing.
@@ -153,11 +160,19 @@ jobs:
           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           WHATSMIAU_API_URL: ${{ vars.WHATSMIAU_API_URL }}
+          # Cartão (Ticket 27): identificadores PÚBLICOS (vão ao navegador no tokenizador), como
+          # GitHub variables opcionais; vazias = Crédito do modo indisponível.
+          ABACATEPAY_PUBLIC_KEY: ${{ vars.ABACATEPAY_PUBLIC_KEY }}
+          EFI_PAYEE_CODE: ${{ vars.EFI_PAYEE_CODE }}
+          EFI_ENVIRONMENT: ${{ vars.EFI_ENVIRONMENT }}
         run: |
           args=(--secrets-file "$SECRETS_DIR/api.json")
           if [ -n "$BETTER_AUTH_URL" ]; then args+=(--var "BETTER_AUTH_URL:$BETTER_AUTH_URL"); fi
           if [ -n "$EMAIL_FROM" ]; then args+=(--var "EMAIL_FROM:$EMAIL_FROM"); fi
           if [ -n "$WHATSMIAU_API_URL" ]; then args+=(--var "WHATSMIAU_API_URL:$WHATSMIAU_API_URL"); fi
+          if [ -n "$ABACATEPAY_PUBLIC_KEY" ]; then args+=(--var "ABACATEPAY_PUBLIC_KEY:$ABACATEPAY_PUBLIC_KEY"); fi
+          if [ -n "$EFI_PAYEE_CODE" ]; then args+=(--var "EFI_PAYEE_CODE:$EFI_PAYEE_CODE"); fi
+          if [ -n "$EFI_ENVIRONMENT" ]; then args+=(--var "EFI_ENVIRONMENT:$EFI_ENVIRONMENT"); fi
           pnpm exec wrangler deploy "${args[@]}"
       - name: Deploy web
         working-directory: apps/web

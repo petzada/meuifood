@@ -28,7 +28,14 @@ import {
   phoneLookupResponseSchema,
   type StorefrontStoreState,
 } from "@foode/shared/order";
-import { serviceFeeCentsFor } from "@foode/shared/payment";
+import {
+  type CardPaymentInput,
+  type CardTokenizer,
+  orderPixSwitchRequestSchema,
+  type OrderPixSwitchResponse,
+  resolvePayerCpf,
+  serviceFeeCentsFor,
+} from "@foode/shared/payment";
 import {
   FUNNEL_EVENT_RATE_LIMIT,
   funnelDay,
@@ -37,6 +44,7 @@ import {
 } from "@foode/shared/onboarding";
 
 import type { TurnstileVerifier } from "./auth/turnstile";
+import type { CardService } from "./card-service";
 import {
   availablePaymentMethods,
   buildStoreState,
@@ -69,6 +77,8 @@ export type StorefrontServiceDeps = {
   customerSessionOf?: (cookie: string | null) => Promise<CustomerSession | null>;
   /** PIX AbacatePay (Ticket 26); ausente ou sem chaves = PIX indisponível. */
   pix?: PixService | null;
+  /** Cartão (Ticket 27); ausente ou sem as chaves do modo da Loja = Crédito indisponível. */
+  card?: CardService | null;
   now?: () => Date;
 };
 
@@ -100,15 +110,59 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     return (await deps.customerSessionOf(cookie))?.account ?? null;
   }
 
-  const live = deps.pix?.available() ? (["pix"] as const) : [];
+  const pixLive = deps.pix?.available() ?? false;
 
+  /**
+   * Meios disponíveis da Loja agora: online só com taxa Foode vigente E integração pronta (PIX com
+   * as chaves; Crédito com as chaves do provedor do modo da Loja — a taxa vigente do Crédito já
+   * vem no modo da Loja). `tokenizer` = SDK que o Storefront carrega (null sem Crédito).
+   */
   async function paymentOptionsOf(storeId: string) {
     const fees = await db.checkout.effectivePaymentFees(storeId);
-    return { fees, methods: availablePaymentMethods(fees, live) };
+    const creditFee = fees.find((fee) => fee.method === "credit") ?? null;
+    const tokenizer = deps.card?.tokenizerFor(creditFee?.cardMode ?? null) ?? null;
+    const live = [
+      ...(pixLive ? (["pix"] as const) : []),
+      ...(tokenizer ? (["credit"] as const) : []),
+    ];
+    const methods = availablePaymentMethods(fees, live);
+    return { fees, methods, creditFee, tokenizer: methods.includes("credit") ? tokenizer : null };
   }
+
+  type PaymentOptions = Awaited<ReturnType<typeof paymentOptionsOf>>;
 
   async function paymentMethodsOf(storeId: string) {
     return (await paymentOptionsOf(storeId)).methods;
+  }
+
+  /** 1ª tentativa de Cartão: provedor e taxa do modo ATUAL da Loja; valor = total + tarifa. */
+  function cardIntentOf(options: PaymentOptions, totalCents: number, card: CardPaymentInput) {
+    const { creditFee: fee, tokenizer } = options;
+    if (!fee?.cardMode || !tokenizer || tokenizer.sdk !== card.sdk) return null;
+    return {
+      intentId: crypto.randomUUID(),
+      provider: tokenizer.sdk,
+      method: "credit" as const,
+      cardMode: fee.cardMode,
+      amountCents: totalCents + serviceFeeCentsFor("credit"),
+      foodeFee: { feeId: fee.feeId, percentBps: fee.percentBps, fixedCents: fee.fixedCents },
+      brand: card.brand,
+      lastFour: card.lastFour,
+    };
+  }
+
+  /** Bloco do Cartão com as ações do recusado conforme o que a Loja oferece AGORA. */
+  async function cardViewOf(slug: string, orderId: string) {
+    if (!deps.card) return null;
+    const state = await db.storefront.operationBySlug(slug);
+    let tokenizer: CardTokenizer | null = null;
+    let pixAvailable = false;
+    if (state) {
+      const payment = await paymentOptionsOf(state.store.id);
+      tokenizer = payment.tokenizer;
+      pixAvailable = payment.methods.includes("pix");
+    }
+    return deps.card.viewForOrder(orderId, { tokenizer, pixAvailable });
   }
 
   /** Snapshot da intenção PIX (taxa Foode vigente e valor = total + tarifa de serviço). */
@@ -191,14 +245,18 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
     async state(slug: string): Promise<Reply<StorefrontStoreState | { error: string }>> {
       const state = await db.storefront.operationBySlug(slug);
       if (!state) return STORE_NOT_FOUND;
-      const [methods, showcase] = await Promise.all([
-        paymentMethodsOf(state.store.id),
+      const [payment, showcase] = await Promise.all([
+        paymentOptionsOf(state.store.id),
         db.storefront.showcaseOf(state.store.id),
       ]);
-      const body = buildStoreState(state, clock(), methods);
+      const body = buildStoreState(state, clock(), payment.methods);
       return {
         status: 200,
-        body: { ...body, showcase: toStorefrontShowcase(showcase, deps.mediaBaseUrl ?? null) },
+        body: {
+          ...body,
+          cardTokenizer: payment.tokenizer,
+          showcase: toStorefrontShowcase(showcase, deps.mediaBaseUrl ?? null),
+        },
       };
     },
 
@@ -263,8 +321,23 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
         if (request.payment.method === "pix") {
           await deps.pix?.ensureChargeForOrder(existing.orderId);
         }
+        // Cartão: só cobra se a tentativa nunca foi enviada (o token é de uso único e a reserva
+        // nunca reabre), ex.: a 1ª chamada caiu entre gravar o Pedido e chamar o provedor.
+        if (request.payment.card && payerCpf) {
+          await deps.card?.chargeForOrder(existing.orderId, request.payment.card, payerCpf);
+        }
         return replyCreated(slug, existing.orderId, existing.code, true);
       };
+
+      const account = await accountOf(cookie);
+      // CPF do pagador (só Cartão): digitado ou o da conta autenticada (nunca volta ao navegador).
+      const payerCpf = request.payment.card
+        ? resolvePayerCpf(request.payment.card.payer, account?.cpf ?? null)
+        : null;
+      if (request.payment.card && !payerCpf) {
+        // `useAccountCpf` sem sessão de Consumidor com CPF: o formulário pede o CPF digitado.
+        return { status: 422, body: { error: "account_cpf_unavailable" } };
+      }
 
       const previous = await db.storefront.findByIdempotencyKey(slug, idempotencyKey);
       if (previous) return replay(previous);
@@ -272,7 +345,6 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
       const secret = requireSecret(deps.orderTokenSecret, "ORDER_TOKEN_SECRET");
       const orderId = crypto.randomUUID();
       const accessTokenHash = await sha256Hex(await orderAccessToken(secret, orderId));
-      const account = await accountOf(cookie);
 
       for (let attempt = 0; attempt < CREATE_ATTEMPTS; attempt += 1) {
         const snapshot = await db.storefront.checkoutSnapshot(slug);
@@ -292,9 +364,15 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
         const payment = await paymentOptionsOf(snapshot.store.id);
         const paymentError = checkPayment(quote, request.payment, payment.methods);
         if (paymentError) return checkoutFailure(paymentError);
+        const card = request.payment.card;
         const paymentIntent =
-          request.payment.method === "pix" ? pixIntentOf(payment.fees, quote.totalCents) : null;
-        if (request.payment.method === "pix" && !paymentIntent) {
+          request.payment.method === "pix"
+            ? pixIntentOf(payment.fees, quote.totalCents)
+            : card
+              ? cardIntentOf(payment, quote.totalCents, card)
+              : null;
+        if (request.payment.method !== "on_delivery" && !paymentIntent) {
+          // Sem taxa/chaves, ou o SDK do navegador não é o do modo atual da Loja.
           return checkoutFailure({ code: "payment_method_unavailable" });
         }
 
@@ -330,8 +408,9 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
         });
         if (result.kind === "created") {
           await countFunnel(slug, "order");
-          // Cobrança PIX logo depois de gravar (falha não desfaz o Pedido: a página tenta de novo).
-          if (paymentIntent) await deps.pix?.ensureChargeForOrder(result.orderId);
+          // Cobrança logo depois de gravar (falha não desfaz o Pedido: a página mostra o estado).
+          if (paymentIntent?.method === "pix") await deps.pix?.ensureChargeForOrder(result.orderId);
+          if (card && payerCpf) await deps.card?.chargeForOrder(result.orderId, card, payerCpf);
           return replyCreated(slug, result.orderId, result.code, false);
         }
         if (result.kind === "existing") return replay(result);
@@ -376,10 +455,55 @@ export function createStorefrontService(deps: StorefrontServiceDeps) {
             order.paymentMethod === "pix" && deps.pix
               ? await deps.pix.viewForOrder(order.id)
               : null,
+          card: order.paymentMethod === "credit" ? await cardViewOf(slug, order.id) : null,
           note: order.note,
           address,
         }),
       } as const;
+    },
+
+    /**
+     * "Pagar com PIX" depois do Cartão recusado (Ticket 27): corpo `orderPixSwitchRequestSchema`
+     * (vazio), resposta `orderPixSwitchResponseSchema`. Pedido `credit` sem Cartão vivo e com
+     * tentativa recusada passa a PIX com o mesmo total e a mesma tarifa de serviço, e a cobrança
+     * PIX segue o fluxo do Ticket 26 (bloco `pix` da página do Pedido). Idempotente: 201 trocou,
+     * 200 replay. 422 `payment_method_unavailable` sem PIX na Loja agora; 409 `attempt_active` /
+     * `order_not_payable`; 404 `order_not_found`.
+     */
+    async payWithPix(
+      slug: string,
+      token: string,
+      body: unknown,
+    ): Promise<{
+      status: 200 | 201 | 400 | 404 | 409 | 422;
+      body: OrderPixSwitchResponse;
+    }> {
+      if (!orderPixSwitchRequestSchema.safeParse(body ?? {}).success) {
+        return { status: 400, body: { error: "invalid_input" } };
+      }
+      const notFound = { status: 404, body: { error: "order_not_found" } } as const;
+      if (!orderAccessTokenSchema.safeParse(token).success) return notFound;
+      const found = await db.storefront.orderByTokenHash(slug, await sha256Hex(token));
+      if (!found) return notFound;
+      const trackingPath = orderTrackingPath(found.store.slug, token);
+      const state = await db.storefront.operationBySlug(slug);
+      if (!state) return notFound;
+      const payment = await paymentOptionsOf(state.store.id);
+      const fee = payment.fees.find((candidate) => candidate.method === "pix");
+      if (!fee || !payment.methods.includes("pix")) {
+        return { status: 422, body: { error: "payment_method_unavailable" } };
+      }
+      const switched = await db.cardPayments.switchToPix({
+        orderId: found.order.id,
+        foodeFee: { feeId: fee.feeId, percentBps: fee.percentBps, fixedCents: fee.fixedCents },
+      });
+      if (!switched.ok) return { status: 409, body: { error: switched.error } };
+      // Cobrança pelo fluxo do 26 (lease + cobrança única; falha não desfaz a troca).
+      await deps.pix?.ensureChargeForOrder(found.order.id);
+      return {
+        status: switched.replayed ? 200 : 201,
+        body: { ok: true, replayed: switched.replayed, trackingPath },
+      };
     },
 
     /**

@@ -12,6 +12,8 @@
 
 const API = "https://api.abacatepay.com/v2";
 const NAME = "foode-api";
+// Os eventos `transparent.*` cobrem PIX E cartão (Ticket 27, Rápido): o mesmo webhook recebe os
+// dois, e a api separa pelo `method`/prefixo do id (`pix_char_` / `card_`). Nada a cadastrar a mais.
 const EVENTS = [
   "transparent.completed",
   "transparent.refunded",

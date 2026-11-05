@@ -3,5 +3,6 @@
 // calendário de dias úteis do repasse D+1 (decisão 60). Consumido pela `api` e pelo Storefront.
 export * from "./pix.js";
 export * from "./card.js";
+export * from "./card-settlement.js";
 export * from "./ledger.js";
 export * from "../business-days.js";

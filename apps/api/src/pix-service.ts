@@ -21,6 +21,7 @@ import {
   safePixQrDataUrl,
 } from "@foode/shared/payment";
 
+import type { CardService } from "./card-service";
 import type { Env } from "./env";
 import {
   type AbacatePayPixCharge,
@@ -78,6 +79,11 @@ export function abacatePayFromEnv(
 export type PixServiceDeps = {
   db: FoodeDb;
   provider: { gateway: PixGateway; webhook: AbacatePayWebhookConfig } | null;
+  /**
+   * Cartão Rápido (Ticket 27): eventos `method: "CARD"` do mesmo webhook vão para cá. Ausente =
+   * registrados como `deferred`, sem efeito no dinheiro.
+   */
+  card?: Pick<CardService, "handleAbacatePayCardEvent"> | null;
   now?: () => Date;
 };
 
@@ -327,6 +333,10 @@ export function createPixService(deps: PixServiceDeps) {
         return { status: 200, body: { ok: true, outcome: "duplicate" } };
       }
       const { charge } = event;
+      // Cartão Rápido (Ticket 27): mesmo webhook, idempotente pelo `log_…` (já conferido acima).
+      if (charge.method === "CARD" && deps.card) {
+        return deps.card.handleAbacatePayCardEvent(event);
+      }
       const base = {
         provider: "abacatepay" as const,
         eventId: event.eventId,
@@ -334,7 +344,7 @@ export function createPixService(deps: PixServiceDeps) {
         devMode: event.devMode,
         providerChargeId: charge.id,
       };
-      // Cartão (Ticket 27), estorno/disputa (Ticket 12) e PIX "completed" sem status PAID:
+      // Cartão sem serviço, estorno/disputa (Ticket 12) e PIX "completed" sem status PAID:
       // registrados, sem efeito no dinheiro aqui.
       if (
         event.type !== "transparent.completed" ||

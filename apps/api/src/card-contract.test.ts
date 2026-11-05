@@ -1,6 +1,6 @@
 // Contrato do Ticket 27 sem banco: enums do D1 = os de @foode/shared/payment; o tokenizador sai
 // do modo da Loja e só com as chaves do provedor; os clientes reais cumprem as interfaces dos
-// adapters; as rotas novas existem (501 até a implementação) e nunca devolvem 404.
+// adapters; as rotas novas existem e nunca devolvem 404.
 import {
   CARD_DECLINE_REASONS,
   CARD_PAYMENT_BRANDS,
@@ -122,7 +122,8 @@ describe("rotas do Cartão (contrato)", () => {
       { method: "POST", body: "{}", headers: { "content-type": "application/json" } },
       env,
     );
-    expect(retry.status).toBe(501);
+    // Corpo inválido é recusado antes de qualquer leitura (número/CVV nunca passam do schema).
+    expect(retry.status).toBe(400);
     expect(retry.headers.get("cache-control")).toBe("no-store");
     const efi = await app.request(
       "/webhooks/efi?secret=x",
@@ -133,6 +134,7 @@ describe("rotas do Cartão (contrato)", () => {
       },
       env,
     );
-    expect(efi.status).toBe(501);
+    // Sem as chaves da Efí: indisponível (nada é lido nem consultado).
+    expect(efi.status).toBe(503);
   });
 });
