@@ -1,9 +1,10 @@
 "use client";
 
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import { PASSWORD_MIN_LENGTH, type SetPasswordInput } from "@foode/shared/auth";
 import { useRef, useState, type FormEvent } from "react";
 
+import { useFocusFirstError } from "../../../components/action-form";
 import { Field, Notice } from "../../../components/form";
 import { Turnstile, type TurnstileHandle } from "../../../components/turnstile";
 import { AUTH_FAILURE_MESSAGES, resetPassword } from "../../../lib/auth-client";
@@ -12,6 +13,9 @@ import { parseSetPasswordForm, type FieldErrors } from "../../../lib/auth-forms"
 export function SetPasswordForm({ siteKey, token }: { siteKey: string; token: string }) {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors<SetPasswordInput>>({});
+  const toast = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusFirstError(formRef, errors);
   const [pending, setPending] = useState(false);
   const turnstile = useRef<TurnstileHandle>(null);
 
@@ -36,12 +40,13 @@ export function SetPasswordForm({ siteKey, token }: { siteKey: string; token: st
       return;
     }
     setPending(false);
-    setErrors({ form: AUTH_FAILURE_MESSAGES[outcome.error] });
+    setErrors({});
+    toast.error(AUTH_FAILURE_MESSAGES[outcome.error]);
     turnstile.current?.reset();
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="space-y-5">
       <Field
         id="newPassword"
         label="Nova senha"
@@ -65,7 +70,6 @@ export function SetPasswordForm({ siteKey, token }: { siteKey: string; token: st
       <Turnstile ref={turnstile} siteKey={siteKey} onToken={setTurnstileToken} />
       {errors.turnstileToken ? <Notice tone="error">{errors.turnstileToken}</Notice> : null}
       {errors.token ? <Notice tone="error">{errors.token}</Notice> : null}
-      {errors.form ? <Notice tone="error">{errors.form}</Notice> : null}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Salvando..." : "Salvar senha"}
       </Button>

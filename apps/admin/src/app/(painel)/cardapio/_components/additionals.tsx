@@ -15,6 +15,7 @@ import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
 import type { MenuAction } from "../actions";
 import { AvailabilitySwitch, ConfirmDialogForm, ReorderButtons } from "./quick-actions";
+import { ActionForm } from "../../../../components/action-form";
 
 export type AdditionalActions = {
   createAdditional: MenuAction;
@@ -40,9 +41,10 @@ function AdditionalRow({
   const id = useId();
   return (
     <li className="rounded-2xl border border-[var(--color-hairline)] p-4">
-      <form
-        ref={ref}
+      <ActionForm
+        formRef={ref}
         action={formAction}
+        state={state}
         onChange={onChange}
         className="grid gap-3 md:grid-cols-[1fr_9rem_auto] md:items-end"
       >
@@ -61,7 +63,8 @@ function AdditionalRow({
           name="priceCents"
           label="Preço (R$)"
           defaultValue={centsToInput(additional.priceCents)}
-          inputMode="decimal"
+          inputMode="numeric"
+          data-money=""
           autoComplete="off"
           error={state.errors.priceCents}
         />
@@ -76,7 +79,7 @@ function AdditionalRow({
         <div className="md:col-span-3">
           <ActionNotice state={state} />
         </div>
-      </form>
+      </ActionForm>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-[var(--color-hairline-soft)] pt-3">
         <AvailabilitySwitch
           action={actions.setAdditionalAvailable}
@@ -116,9 +119,10 @@ function NewAdditionalForm({ action, itemId }: { action: MenuAction; itemId: str
   const [state, formAction] = useActionState(action, IDLE_FORM);
   const id = useId();
   return (
-    <form
+    <ActionForm
       key={state.status === "success" ? state.message : "form"}
       action={formAction}
+      state={state}
       className="grid gap-3 rounded-2xl border border-dashed border-[var(--color-hairline)] p-4 md:grid-cols-[1fr_9rem_auto] md:items-end"
     >
       <input type="hidden" name="itemId" value={itemId} />
@@ -135,8 +139,9 @@ function NewAdditionalForm({ action, itemId }: { action: MenuAction; itemId: str
         id={`${id}-price`}
         name="priceCents"
         label="Preço (R$)"
-        placeholder="4,00"
-        inputMode="decimal"
+        placeholder="R$ 4,00"
+        inputMode="numeric"
+        data-money=""
         autoComplete="off"
         error={state.errors.priceCents}
       />
@@ -146,7 +151,7 @@ function NewAdditionalForm({ action, itemId }: { action: MenuAction; itemId: str
       <div className="md:col-span-3">
         <ActionNotice state={state} />
       </div>
-    </form>
+    </ActionForm>
   );
 }
 

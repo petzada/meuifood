@@ -22,7 +22,7 @@ describe("dinheiro e percentual", () => {
   it("formata centavos e basis points em PT-BR", () => {
     expect(formatCents(8499).replace(/\s/g, " ")).toBe("R$ 84,99");
     expect(formatBps(349)).toBe("3,49%");
-    expect(centsToInput(101988)).toBe("1019,88");
+    expect(centsToInput(101988)).toBe("R$ 1.019,88");
     expect(bpsToInput(0)).toBe("0,00");
   });
 

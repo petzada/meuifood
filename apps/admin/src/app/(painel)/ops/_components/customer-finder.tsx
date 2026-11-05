@@ -13,6 +13,7 @@ import { formatDateTimeSp, maskCpf, maskPhoneBr } from "../../../../lib/ops-form
 import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, Facts, SectionHeading } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 export type CustomerFindState = FormState & { customer: OpsCustomerView | null };
 export const IDLE_CUSTOMER_FIND: CustomerFindState = { status: "idle", errors: {}, customer: null };
@@ -50,7 +51,7 @@ export function CustomerFinder({
         >
           Buscar conta
         </SectionHeading>
-        <form action={findAction} noValidate className="mt-5 space-y-4">
+        <ActionForm action={findAction} state={state} noValidate className="mt-5 space-y-4">
           <fieldset>
             <legend className="text-sm font-bold text-[var(--color-ink)]">Buscar por</legend>
             <div className="mt-2 flex gap-4">
@@ -104,7 +105,7 @@ export function CustomerFinder({
               </div>
             ) : null}
           </div>
-        </form>
+        </ActionForm>
       </OutlineContainer>
 
       {state.customer ? (
@@ -153,7 +154,13 @@ function CustomerCard({
         ]}
       />
 
-      <form action={action} noValidate onSubmit={onSubmit} className="space-y-4">
+      <ActionForm
+        action={action}
+        state={state}
+        noValidate
+        onSubmit={onSubmit}
+        className="space-y-4"
+      >
         <input type="hidden" name="accountId" value={customer.accountId} />
         <Field
           id="new-phone"
@@ -202,7 +209,7 @@ function CustomerCard({
             </div>
           </div>
         )}
-      </form>
+      </ActionForm>
     </OutlineContainer>
   );
 }

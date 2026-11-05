@@ -45,6 +45,7 @@ import {
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
 import { BrandImageField } from "./brand-image-field";
+import { ActionForm } from "../../../../components/action-form";
 
 export type SettingsAction = (prev: FormState, formData: FormData) => Promise<FormState>;
 export type SlugCheck = (slug: string) => Promise<SlugAvailability | null>;
@@ -86,7 +87,14 @@ export function EditSection({
       id={id}
       className="scroll-mt-8 p-5 md:p-7"
     >
-      <form ref={ref} action={formAction} onChange={onChange} noValidate className="space-y-5">
+      <ActionForm
+        formRef={ref}
+        action={formAction}
+        state={state}
+        onChange={onChange}
+        noValidate
+        className="space-y-5"
+      >
         <SectionHeading id={headingId} description={description}>
           {title}
         </SectionHeading>
@@ -102,7 +110,7 @@ export function EditSection({
             <ActionNotice state={dirty && state.status === "success" ? IDLE_FORM : state} />
           </div>
         </div>
-      </form>
+      </ActionForm>
     </OutlineContainer>
   );
 }

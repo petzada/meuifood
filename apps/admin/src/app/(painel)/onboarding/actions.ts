@@ -14,7 +14,7 @@ export type OnboardingAction = (prev: FormState, formData: FormData) => Promise<
 
 export const answerProfile: OnboardingAction = async (_prev, formData) => {
   const parsed = parseAnswerProfile(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira as respostas destacadas.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.onboardingAnswerProfile(caller, parsed.data));
   if (!result.ok) {
     if (result.error === "unauthenticated") redirect("/entrar");

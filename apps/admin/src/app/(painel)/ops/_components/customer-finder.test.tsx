@@ -1,7 +1,9 @@
 // Componente (decisão 67): busca da conta do Consumidor no Ops e troca de telefone em duas
 // etapas com a consequência nomeada (Ticket 13, decisão 65). Actions falsas reproduzem a
 // validação da server action com os parsers do contrato; a RPC é mocada.
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

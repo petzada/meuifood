@@ -8,19 +8,28 @@ import type { StoreContext } from "./context";
 import { assertIssued } from "./context";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError, isUniqueViolation } from "./errors";
+import { monthOrderCounts, saoPauloMonth } from "./month-orders";
 import type { FunnelEventName } from "./schema";
 
 const SLUG_PATTERN = /^(?=.{3,63}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type OnboardingChecklistFacts = {
   hasWhatsapp: boolean;
-  slugConfirmed: boolean;
   openingPeriods: number;
   pickupEnabled: boolean;
   deliveryConfigured: boolean;
   availableMenuItems: number;
   planActive: boolean;
   readyAcknowledged: boolean;
+};
+
+/** Plano vigente, faixa do mês e contagem de Pedidos da Loja (banner e `/plano` do Dono). */
+export type OwnerPlanSummaryRow = {
+  month: string;
+  orderCount: number;
+  plan: { cycle: "monthly" | "annual"; validFrom: string; validTo: string | null } | null;
+  /** Faixas vigentes do ciclo do Plano (mensal: todas; anual: a única, ilimitada). */
+  tiers: { minOrders: number; maxOrders: number | null; priceCents: number }[];
 };
 
 export type OwnerProfileData = {
@@ -224,7 +233,6 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
         .prepare(
           `SELECT
              (SELECT whatsapp FROM store_profiles WHERE store_id = ?1) AS whatsapp,
-             (SELECT slug_confirmed_at FROM store_onboarding WHERE store_id = ?1) AS slugConfirmedAt,
              (SELECT ready_acknowledged_at FROM store_onboarding WHERE store_id = ?1) AS readyAt,
              (SELECT count(*) FROM store_opening_periods WHERE store_id = ?1) AS periods,
              (SELECT pickup_enabled FROM store_operation_settings WHERE store_id = ?1) AS pickup,
@@ -241,7 +249,6 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
         .bind(storeId, at)
         .first<{
           whatsapp: string | null;
-          slugConfirmedAt: string | null;
           readyAt: string | null;
           periods: number;
           pickup: number | null;
@@ -251,7 +258,6 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
         }>();
       return {
         hasWhatsapp: Boolean(row?.whatsapp),
-        slugConfirmed: Boolean(row?.slugConfirmedAt),
         openingPeriods: row?.periods ?? 0,
         pickupEnabled: row?.pickup === 1,
         deliveryConfigured: row?.delivery === 1,
@@ -259,6 +265,38 @@ export function createOnboardingOps(d1: D1Database, context: StoreContext) {
         planActive: row?.plan === 1,
         readyAcknowledged: Boolean(row?.readyAt),
       };
+    },
+
+    /**
+     * Plano vigente em `at`, faixas vigentes do ciclo dele e Pedidos do mês civil de São Paulo
+     * (não cancelados). Só leitura; Dono e Operador da Loja podem ler (a api restringe ao Dono).
+     */
+    async planSummary(at = utcNow()): Promise<OwnerPlanSummaryRow> {
+      const month = saoPauloMonth(at);
+      const plan = await d1
+        .prepare(
+          `SELECT cycle, valid_from AS validFrom, valid_to AS validTo FROM store_plans
+           WHERE store_id = ? AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)
+           ORDER BY valid_from DESC LIMIT 1`,
+        )
+        .bind(storeId, at, at)
+        .first<{ cycle: "monthly" | "annual"; validFrom: string; validTo: string | null }>();
+      const [tiers, counts] = await Promise.all([
+        plan
+          ? d1
+              .prepare(
+                `SELECT min_orders AS minOrders, max_orders AS maxOrders, price_cents AS priceCents
+                 FROM plan_price_tiers
+                 WHERE cycle = ? AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)
+                 ORDER BY min_orders`,
+              )
+              .bind(plan.cycle, at, at)
+              .all<{ minOrders: number; maxOrders: number | null; priceCents: number }>()
+              .then((result) => result.results)
+          : Promise.resolve([]),
+        monthOrderCounts(d1, [storeId], month),
+      ]);
+      return { month, orderCount: counts.get(storeId) ?? 0, plan: plan ?? null, tiers };
     },
 
     /** Respostas de perfil desta Loja; null = ainda não respondidas. */

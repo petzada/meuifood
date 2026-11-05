@@ -70,7 +70,7 @@ export const saveContact: SettingsAction = async (_prev, formData) => {
 
 export const saveAddress: SettingsAction = async (_prev, formData) => {
   const parsed = parseSetAddress(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira o endereço.");
+  if (!parsed.ok) return formError(parsed.errors);
   const result = await painelRpc((api, caller) => api.storeSetContact(caller, parsed.data));
   if (!result.ok) return rpcFailure(result.error);
   revalidateStore();

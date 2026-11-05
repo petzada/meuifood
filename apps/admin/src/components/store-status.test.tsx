@@ -1,7 +1,9 @@
 // Componente: selo de status da Loja e Pausa a um clique (NAV-04, CFG-02, P-OPE-4). Ligar pede
 // confirmação curta; a faixa persistente diz quem ativou; sem `store.pause` o selo é só leitura.
 import type { PauseState } from "@foode/shared/order";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { render } from "../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 

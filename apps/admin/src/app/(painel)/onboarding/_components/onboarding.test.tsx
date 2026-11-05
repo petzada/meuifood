@@ -2,7 +2,9 @@
 // de uso interno) e checklist do Dono (contagem, Feito/Pendente, "Plano ativo" sem ação,
 // mensagem "Loja pronta" com Copiar link e QR Code).
 import { buildOwnerChecklist, type OwnerChecklistFacts } from "@foode/shared/onboarding";
-import { render, screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+
+import { render } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -15,7 +17,7 @@ const answered: Array<{ cuisine: unknown; goal: unknown }> = [];
 /** Igual à server action: valida com o parser do contrato. */
 async function answerAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseAnswerProfile(formData);
-  if (!parsed.ok) return formError(parsed.errors, "Confira as respostas destacadas.");
+  if (!parsed.ok) return formError(parsed.errors);
   answered.push(parsed.data);
   return formSuccess("Obrigado!");
 }
@@ -25,6 +27,10 @@ describe("ProfileQuestions", () => {
     const user = userEvent.setup();
     render(<ProfileQuestions action={answerAction} storeName="Lanchonete do Zé" />);
     expect(screen.getByText(/uso interno da Foode/u)).toBeVisible();
+    // Abre como diálogo sobre o Painel (mesmo estilo do tour), não como tela.
+    expect(
+      screen.getByRole("dialog", { name: "Antes de começar, duas perguntas" }),
+    ).toHaveAttribute("aria-modal", "true");
 
     await user.click(screen.getByRole("radio", { name: "Pizzaria" }));
     await user.click(
@@ -34,8 +40,13 @@ describe("ProfileQuestions", () => {
     );
     expect(screen.getByLabelText("Conte para a gente")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Confira as respostas");
-    expect(screen.getByLabelText("Conte para a gente")).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() =>
+      expect(screen.getByLabelText("Conte para a gente")).toHaveAttribute("aria-invalid", "true"),
+    );
+    expect(screen.getByLabelText("Conte para a gente")).toHaveFocus();
+    expect(screen.queryByText(/Confira as respostas/u)).not.toBeInTheDocument();
+    // As escolhas continuam marcadas depois do erro.
+    expect(screen.getByRole("radio", { name: "Pizzaria" })).toBeChecked();
     expect(answered).toHaveLength(0);
 
     await user.type(screen.getByLabelText("Conte para a gente"), "Vender no bairro");
@@ -52,7 +63,6 @@ describe("ProfileQuestions", () => {
 
 const facts: OwnerChecklistFacts = {
   hasWhatsapp: true,
-  slugConfirmed: false,
   openingPeriods: 0,
   pickupEnabled: true,
   deliveryConfigured: false,
@@ -70,14 +80,12 @@ describe("OwnerChecklistCard", () => {
         storeUrl="https://foodedelivery.com.br/loja/ze"
       />,
     );
-    expect(screen.getByRole("heading", { name: /Faltam 3 passos/u })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Faltam 2 passos/u })).toBeVisible();
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(5);
+    expect(screen.queryByText("Link personalizado")).not.toBeInTheDocument();
     const configure = screen.getAllByRole("link", { name: /^Configurar/u });
-    expect(configure.map((link) => link.getAttribute("href"))).toEqual([
-      "/configuracoes/loja#link",
-      "/configuracoes/horarios",
-    ]);
+    expect(configure.map((link) => link.getAttribute("href"))).toEqual(["/configuracoes/horarios"]);
     const plan = items.find((item) => within(item).queryByText("Plano ativo"))!;
     expect(within(plan).getByText("Pendente")).toBeVisible();
     expect(within(plan).queryByRole("link")).not.toBeInTheDocument();
@@ -90,7 +98,6 @@ describe("OwnerChecklistCard", () => {
     const ack = vi.fn(async () => {});
     const ready = buildOwnerChecklist({
       ...facts,
-      slugConfirmed: true,
       openingPeriods: 1,
       planActive: true,
     });
@@ -113,7 +120,6 @@ describe("OwnerChecklistCard", () => {
       <OwnerChecklistCard
         checklist={buildOwnerChecklist({
           ...facts,
-          slugConfirmed: true,
           openingPeriods: 1,
           planActive: true,
           readyAcknowledged: true,

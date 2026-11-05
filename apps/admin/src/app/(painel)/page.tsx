@@ -9,9 +9,10 @@ import { ProfileQuestions } from "./onboarding/_components/profile-questions";
 import { cancelOrder, transitionOrder } from "./pedidos/actions";
 import { QueueApp } from "./pedidos/_components/queue-app";
 
-// Home do Painel: fila de Pedidos (Ticket 24b) para Dono e Operador. Para o Dono, antes vêm as
-// duas perguntas de perfil (1º acesso, Ticket 28) e, no topo, o checklist enquanto a Loja não
-// estiver pronta (ONB-01). A lista chega por polling pelo route handler `/api/pedidos`.
+// Home do Painel: fila de Pedidos (Ticket 24b) para Dono e Operador. Para o Dono, as duas
+// perguntas de perfil do 1º acesso (Ticket 28) abrem num diálogo sobre o Painel desfocado
+// (feedback do Dono, item 6) e o checklist fica no topo enquanto a Loja não estiver pronta
+// (ONB-01). A lista chega por polling pelo route handler `/api/pedidos`.
 export const dynamic = "force-dynamic";
 
 export default async function PedidosPage() {
@@ -20,14 +21,12 @@ export default async function PedidosPage() {
   if (!store || session.role === "foode_ops") return null;
 
   // Operador não vê onboarding; falha da RPC não derruba a fila (segue sem o checklist).
+  // Exceção da RPC (api fora, binding) também não derruba a fila (item 8: nunca tela de erro
+  // inteira por causa do checklist).
   const onboarding = can(session.role, "store.settings")
-    ? await painelRpc((api, caller) => api.onboardingGet(caller))
+    ? await painelRpc((api, caller) => api.onboardingGet(caller)).catch(() => null)
     : null;
   const state = onboarding?.ok ? onboarding.data : null;
-
-  if (state && !state.profileAnswered) {
-    return <ProfileQuestions action={answerProfile} storeName={store.name} />;
-  }
 
   return (
     <section className="mx-auto max-w-7xl">
@@ -49,6 +48,9 @@ export default async function PedidosPage() {
           />
         </div>
       ) : null}
+      {state && !state.profileAnswered ? (
+        <ProfileQuestions action={answerProfile} storeName={store.name} />
+      ) : null}
       <div className="mt-6">
         <QueueApp
           cancel={cancelOrder}
@@ -56,6 +58,7 @@ export default async function PedidosPage() {
           storefrontOrigin={storefrontOrigin()}
           storeName={store.name}
           storeSlug={store.slug}
+          tourEnabled={!state || state.profileAnswered}
           transition={transitionOrder}
           userId={session.user.id}
         />

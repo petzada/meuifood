@@ -10,11 +10,6 @@ export const OWNER_CHECKLIST_LABEL: Record<OwnerChecklistItem, ChecklistLabel> =
     why: "O WhatsApp da Loja aparece para o cliente falar com você.",
     href: "/configuracoes/loja#contato",
   },
-  slug: {
-    title: "Link personalizado",
-    why: "O endereço que você divulga e imprime no QR Code.",
-    href: "/configuracoes/loja#link",
-  },
   hours: {
     title: "Horários",
     why: "Sem horário, o Cardápio aparece sempre fechado.",

@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from "@foode/ui";
+import { Button, useToast } from "@foode/ui";
 import type { RequestPasswordResetInput } from "@foode/shared/auth";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 
+import { useFocusFirstError } from "../../../components/action-form";
 import { Field, Notice } from "../../../components/form";
 import { Turnstile, type TurnstileHandle } from "../../../components/turnstile";
 import { AUTH_FAILURE_MESSAGES, requestPasswordReset } from "../../../lib/auth-client";
@@ -13,6 +14,9 @@ import { parsePasswordResetRequest, type FieldErrors } from "../../../lib/auth-f
 export function ForgotPasswordForm({ siteKey }: { siteKey: string }) {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors<RequestPasswordResetInput>>({});
+  const toast = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusFirstError(formRef, errors);
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
   const turnstile = useRef<TurnstileHandle>(null);
@@ -36,7 +40,8 @@ export function ForgotPasswordForm({ siteKey }: { siteKey: string }) {
       setSent(true);
       return;
     }
-    setErrors({ form: AUTH_FAILURE_MESSAGES[outcome.error] });
+    setErrors({});
+    toast.error(AUTH_FAILURE_MESSAGES[outcome.error]);
     turnstile.current?.reset();
   }
 
@@ -55,7 +60,7 @@ export function ForgotPasswordForm({ siteKey }: { siteKey: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="space-y-5">
       <Field
         id="email"
         label="E-mail"
@@ -68,7 +73,6 @@ export function ForgotPasswordForm({ siteKey }: { siteKey: string }) {
       />
       <Turnstile ref={turnstile} siteKey={siteKey} onToken={setTurnstileToken} />
       {errors.turnstileToken ? <Notice tone="error">{errors.turnstileToken}</Notice> : null}
-      {errors.form ? <Notice tone="error">{errors.form}</Notice> : null}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Enviando..." : "Enviar link"}
       </Button>

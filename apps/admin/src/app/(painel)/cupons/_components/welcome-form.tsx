@@ -16,6 +16,7 @@ import { ActionNotice, SectionHeading } from "../../ops/_components/fields";
 import { SubmitButton } from "../../ops/_components/submit-button";
 import { useDirtyForm } from "../../ops/_components/use-dirty-form";
 import type { CouponFormAction } from "./coupon-form";
+import { ActionForm } from "../../../../components/action-form";
 
 function moneyValue(raw: string): number | null {
   const cents = parseMoneyToCents(raw);
@@ -62,7 +63,14 @@ export function WelcomeCouponForm({
 
   return (
     <OutlineContainer as="section" aria-labelledby={headingId} className="p-5 md:p-7">
-      <form ref={ref} action={formAction} noValidate onChange={onChange} className="space-y-5">
+      <ActionForm
+        formRef={ref}
+        action={formAction}
+        state={state}
+        noValidate
+        onChange={onChange}
+        className="space-y-5"
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <SectionHeading
             id={headingId}
@@ -135,12 +143,13 @@ export function WelcomeCouponForm({
                 id="welcome-max"
                 name="maxDiscountCents"
                 label="Teto em R$ (opcional)"
-                inputMode="decimal"
+                inputMode="numeric"
+                data-money=""
                 defaultValue={maxDiscountCents === null ? "" : centsToInput(maxDiscountCents)}
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setMax(moneyValue(event.currentTarget.value))
                 }
-                placeholder="20,00"
+                placeholder="R$ 20,00"
                 error={errors.maxDiscountCents}
               />
             </>
@@ -149,12 +158,13 @@ export function WelcomeCouponForm({
               id="welcome-amount"
               name="amountCents"
               label="Desconto em R$"
-              inputMode="decimal"
+              inputMode="numeric"
+              data-money=""
               defaultValue={amountCents === null ? "" : centsToInput(amountCents)}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setAmount(moneyValue(event.currentTarget.value))
               }
-              placeholder="10,00"
+              placeholder="R$ 10,00"
               error={errors.amountCents}
             />
           )}
@@ -162,12 +172,13 @@ export function WelcomeCouponForm({
             id="welcome-min"
             name="minOrderCents"
             label="Pedido mínimo em R$ (opcional)"
-            inputMode="decimal"
+            inputMode="numeric"
+            data-money=""
             defaultValue={minOrderCents === null ? "" : centsToInput(minOrderCents)}
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               setMin(moneyValue(event.currentTarget.value))
             }
-            placeholder="30,00"
+            placeholder="R$ 30,00"
             error={errors.minOrderCents}
           />
         </div>
@@ -195,7 +206,7 @@ export function WelcomeCouponForm({
             <ActionNotice state={dirty && state.status === "success" ? IDLE_FORM : state} />
           </div>
         </div>
-      </form>
+      </ActionForm>
     </OutlineContainer>
   );
 }

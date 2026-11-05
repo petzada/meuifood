@@ -10,6 +10,7 @@ import { Turnstile, type TurnstileHandle } from "../../../../components/turnstil
 import { IDLE_FORM, type FormState } from "../../../../lib/ops-forms";
 import { ActionNotice, EmptyState, SectionHeading } from "./fields";
 import { SubmitButton } from "./submit-button";
+import { ActionForm } from "../../../../components/action-form";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -90,7 +91,13 @@ export function OwnerInviteForm({
         </ul>
       )}
 
-      <form action={formAction} noValidate className="space-y-5" key={prefill?.email ?? "novo"}>
+      <ActionForm
+        action={formAction}
+        state={state}
+        noValidate
+        className="space-y-5"
+        key={prefill?.email ?? "novo"}
+      >
         <input type="hidden" name="storeId" value={storeId} />
         <input type="hidden" name="turnstileToken" value={token ?? ""} />
         <div className="grid gap-5 md:grid-cols-2">
@@ -120,7 +127,7 @@ export function OwnerInviteForm({
         <SubmitButton variant="secondary" pendingLabel="Enviando...">
           {prefill ? "Reenviar convite" : "Convidar Dono"}
         </SubmitButton>
-      </form>
+      </ActionForm>
     </section>
   );
 }
