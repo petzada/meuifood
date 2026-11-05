@@ -15,7 +15,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import logo from "../../../../public/images/logo.png";
-import { navFor } from "../lib/access";
+import { navFor, navSectionsFor } from "../lib/access";
 import { PainelNav } from "./painel-nav";
 import { PlanBanner } from "./plan-banner";
 import { SignOutButton } from "./sign-out-button";
@@ -52,6 +52,7 @@ export function PainelShell({
   switchStore?: ((formData: FormData) => Promise<void>) | undefined;
 }) {
   const nav = navFor(role);
+  const sections = navSectionsFor(role);
   const showStores = role !== "foode_ops" && session.stores.length > 1;
   const canPause = can(role, "store.pause");
   const compact = role !== "foode_ops" && nav.length <= 1;
@@ -130,7 +131,7 @@ export function PainelShell({
           {status}
         </div>
 
-        <PainelNav initialPath={currentPath} items={nav} />
+        <PainelNav initialPath={currentPath} items={nav} sections={sections} />
 
         {role === "owner" && plan ? (
           <div className="mt-6 md:mt-auto md:pt-6">
