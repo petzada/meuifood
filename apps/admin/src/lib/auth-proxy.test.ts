@@ -1,3 +1,6 @@
+// @vitest-environment node
+// Código de servidor: Request/Headers do Node (o happy-dom não expõe Set-Cookie nem
+// cabeçalhos proibidos ao navegador).
 import { describe, expect, it, vi } from "vitest";
 
 import { proxyAuthRequest } from "./auth-proxy";
