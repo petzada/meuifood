@@ -1,7 +1,7 @@
 // Envio de e-mail transacional pela MillionSend (decisão 59; pesquisa-integracoes §2).
 // - `POST https://api.millionsend.com/emails` com `Authorization: Bearer MILLIONSEND_API_KEY`
 //   (wire-compatível com Resend; `fetch` puro, sem SDK, para não pesar o Worker);
-// - `from` = `EMAIL_FROM` (`Foode <no-reply@foodedelivery.com.br>` quando o domínio estiver
+// - `from` = `EMAIL_FROM` (`Foode <nao-responda@foodedelivery.com.br>` quando o domínio estiver
 //   verificado, Ticket 25). Enquanto não estiver, a MillionSend recusa (4xx) e o erro sai
 //   como `EmailSendError` com o status — o chamador loga e segue (falha controlada);
 // - HTML renderizado na api (email/templates.ts) — `template` dá 422;

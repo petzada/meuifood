@@ -2,8 +2,8 @@
 // Smoke pós-deploy (deploy.yml) e `pnpm e2e`: /health da api, Storefront, login do
 // Painel e os dois service bindings (web → api fetch, admin → api RPC).
 // URLs: SMOKE_API_URL / SMOKE_WEB_URL / SMOKE_ADMIN_URL (GitHub variables). Sem elas, usa
-// os workers.dev da conta (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN). Quando a zona
-// foodedelivery.com.br ficar ativa (Ticket 25), basta apontar as variables para os domínios.
+// os workers.dev da conta (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN). O deploy.yml roda
+// primeiro nos domínios próprios (Ticket 25) e depois no workers.dev (fallback).
 
 const WORKERS = { api: "foode-api", web: "foode-web", admin: "foode-admin" };
 const ATTEMPTS = Number(process.env.SMOKE_ATTEMPTS ?? 6);
