@@ -14,6 +14,27 @@ import type {
   SessionCtx,
   SwitchActiveStoreInput,
 } from "@foode/shared/auth";
+import type {
+  OpsActivateStoreInput,
+  OpsAuditEntry,
+  OpsCreatePaymentFeesInput,
+  OpsCreateProviderCostInput,
+  OpsCreateStoreInput,
+  OpsEndPaymentFeeInput,
+  OpsEndProviderCostInput,
+  OpsListPaymentFeesInput,
+  OpsPublishPlanTiersInput,
+  OpsSetCardModeInput,
+  OpsSetStorePlanInput,
+  OpsStoreDetail,
+  OpsStoreListItem,
+  OpsStoreRefInput,
+  OpsSuspendStoreInput,
+  OpsUpdateStoreInput,
+  PaymentFeeView,
+  PlanTierTableView,
+  ProviderCostView,
+} from "@foode/shared/ops";
 import * as Sentry from "@sentry/cloudflare";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
@@ -22,6 +43,7 @@ import { AUTH_BASE_PATH, createAuth, panelUrlOf } from "./auth/auth";
 import { createTurnstileVerifier } from "./auth/turnstile";
 import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
+import { createOpsService, type OpsService } from "./ops-service";
 import { createPainelService, type PainelService } from "./painel-service";
 
 export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
@@ -41,6 +63,12 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
       turnstile: createTurnstileVerifier(this.env),
       panelUrl: panelUrlOf(this.env),
     });
+  }
+
+  /** Área Ops (Ticket 29): só `foode_ops`; regras em ops-service.ts. */
+  private ops(): OpsService {
+    const { auth } = this.deps();
+    return createOpsService({ db: createFoodeDb(this.env.DB), auth });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */
@@ -105,5 +133,109 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
 
   async removeMember(caller: PainelCaller, input: RemoveMemberInput): Promise<RpcResult<null>> {
     return this.run("removeMember", () => this.service().removeMember(caller, input));
+  }
+
+  async opsListStores(caller: PainelCaller): Promise<RpcResult<OpsStoreListItem[]>> {
+    return this.run("opsListStores", () => this.ops().opsListStores(caller));
+  }
+
+  async opsGetStore(
+    caller: PainelCaller,
+    input: OpsStoreRefInput,
+  ): Promise<RpcResult<OpsStoreDetail>> {
+    return this.run("opsGetStore", () => this.ops().opsGetStore(caller, input));
+  }
+
+  async opsCreateStore(
+    caller: PainelCaller,
+    input: OpsCreateStoreInput,
+  ): Promise<RpcResult<{ storeId: string }>> {
+    return this.run("opsCreateStore", () => this.ops().opsCreateStore(caller, input));
+  }
+
+  async opsUpdateStore(caller: PainelCaller, input: OpsUpdateStoreInput): Promise<RpcResult<null>> {
+    return this.run("opsUpdateStore", () => this.ops().opsUpdateStore(caller, input));
+  }
+
+  async opsActivateStore(
+    caller: PainelCaller,
+    input: OpsActivateStoreInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsActivateStore", () => this.ops().opsActivateStore(caller, input));
+  }
+
+  async opsSuspendStore(
+    caller: PainelCaller,
+    input: OpsSuspendStoreInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsSuspendStore", () => this.ops().opsSuspendStore(caller, input));
+  }
+
+  async opsSetCardMode(caller: PainelCaller, input: OpsSetCardModeInput): Promise<RpcResult<null>> {
+    return this.run("opsSetCardMode", () => this.ops().opsSetCardMode(caller, input));
+  }
+
+  async opsSetStorePlan(
+    caller: PainelCaller,
+    input: OpsSetStorePlanInput,
+  ): Promise<RpcResult<{ planId: string }>> {
+    return this.run("opsSetStorePlan", () => this.ops().opsSetStorePlan(caller, input));
+  }
+
+  async opsListPlanTiers(caller: PainelCaller): Promise<RpcResult<PlanTierTableView[]>> {
+    return this.run("opsListPlanTiers", () => this.ops().opsListPlanTiers(caller));
+  }
+
+  async opsPublishPlanTiers(
+    caller: PainelCaller,
+    input: OpsPublishPlanTiersInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsPublishPlanTiers", () => this.ops().opsPublishPlanTiers(caller, input));
+  }
+
+  async opsListPaymentFees(
+    caller: PainelCaller,
+    input: OpsListPaymentFeesInput,
+  ): Promise<RpcResult<PaymentFeeView[]>> {
+    return this.run("opsListPaymentFees", () => this.ops().opsListPaymentFees(caller, input));
+  }
+
+  async opsCreatePaymentFees(
+    caller: PainelCaller,
+    input: OpsCreatePaymentFeesInput,
+  ): Promise<RpcResult<{ feeIds: string[] }>> {
+    return this.run("opsCreatePaymentFees", () => this.ops().opsCreatePaymentFees(caller, input));
+  }
+
+  async opsEndPaymentFee(
+    caller: PainelCaller,
+    input: OpsEndPaymentFeeInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsEndPaymentFee", () => this.ops().opsEndPaymentFee(caller, input));
+  }
+
+  async opsListProviderCosts(caller: PainelCaller): Promise<RpcResult<ProviderCostView[]>> {
+    return this.run("opsListProviderCosts", () => this.ops().opsListProviderCosts(caller));
+  }
+
+  async opsCreateProviderCost(
+    caller: PainelCaller,
+    input: OpsCreateProviderCostInput,
+  ): Promise<RpcResult<{ costId: string }>> {
+    return this.run("opsCreateProviderCost", () => this.ops().opsCreateProviderCost(caller, input));
+  }
+
+  async opsEndProviderCost(
+    caller: PainelCaller,
+    input: OpsEndProviderCostInput,
+  ): Promise<RpcResult<null>> {
+    return this.run("opsEndProviderCost", () => this.ops().opsEndProviderCost(caller, input));
+  }
+
+  async opsListStoreAudit(
+    caller: PainelCaller,
+    input: OpsStoreRefInput,
+  ): Promise<RpcResult<OpsAuditEntry[]>> {
+    return this.run("opsListStoreAudit", () => this.ops().opsListStoreAudit(caller, input));
   }
 }

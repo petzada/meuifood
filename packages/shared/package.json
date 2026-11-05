@@ -11,6 +11,10 @@
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"
     },
+    "./ops": {
+      "types": "./dist/ops/index.d.ts",
+      "default": "./dist/ops/index.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {
