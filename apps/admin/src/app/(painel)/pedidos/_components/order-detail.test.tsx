@@ -1,7 +1,8 @@
 // Componente: detalhe do Pedido (PED-07): itens com escolhas, observação, troco, endereço,
-// "Avisar no WhatsApp" com texto por status e link de acompanhamento, Imprimir e Cancelar com
-// confirmação que nomeia o Pedido e a consequência (T-12).
-import type { OrderDetail } from "@foode/shared/order";
+// "Avisar no WhatsApp" com texto por status e link de acompanhamento, Imprimir e Cancelar pelo
+// diálogo que nomeia o Pedido e a consequência (T-12, CAN-01). Pedido cancelado: motivo, selo do
+// Estorno separado do status (CAN-02) e nenhuma ação de avanço.
+import type { CancelReason, OrderDetail } from "@foode/shared/order";
 import { screen } from "@testing-library/react";
 
 import { render } from "../../../../test/render";
@@ -44,13 +45,16 @@ const ORDER: OrderDetail = {
   eta: { minMinutes: 30, maxMinutes: 45 },
   next: ["out_for_delivery"],
   cancellable: true,
+  cancelPreview: { kind: "on_delivery", text: "O Pedido será cancelado." },
   history: [],
   trackingPath: "/loja/pizza/pedido/tok",
 };
 
 function setup(order: OrderDetail = ORDER) {
   const user = userEvent.setup();
-  const onCancel = vi.fn(async () => undefined);
+  const onCancel = vi.fn<(order: OrderDetail, reason: CancelReason | undefined) => Promise<void>>(
+    async () => undefined,
+  );
   const onAdvance = vi.fn(async () => undefined);
   const onPrint = vi.fn();
   const onClose = vi.fn();
@@ -100,11 +104,11 @@ describe("OrderDetailPanel", () => {
     expect(onPrint).toHaveBeenCalledWith(ORDER);
   });
 
-  it("cancelar pede confirmação que nomeia o Pedido e a consequência", async () => {
+  it("cancelar abre o diálogo que nomeia o Pedido e a consequência", async () => {
     const { onCancel, user } = setup();
     await user.click(await screen.findByRole("button", { name: "Cancelar Pedido" }));
     const dialog = screen.getByRole("dialog", { name: "Cancelar o Pedido #42?" });
-    expect(dialog).toHaveTextContent("Nada foi cobrado do Consumidor.");
+    expect(dialog).toHaveTextContent("O Pedido será cancelado.");
     expect(onCancel).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Voltar" }));
@@ -113,20 +117,68 @@ describe("OrderDetailPanel", () => {
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancelar Pedido" }));
-    await user.click(screen.getByRole("button", { name: "Confirmar cancelamento" }));
-    expect(onCancel).toHaveBeenCalledWith(ORDER);
+    await user.click(screen.getByRole("radio", { name: "Consumidor pediu" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar o Pedido" }));
+    expect(onCancel).toHaveBeenCalledWith(ORDER, "customer_request");
   });
 
-  it("pago online: a confirmação diz o valor a devolver; Esc fecha o painel", async () => {
+  it("pago online: o diálogo usa a pré-visualização da api; Esc no diálogo só volta", async () => {
     const { onClose, user } = setup({
       ...ORDER,
       payment: { method: "pix", changeForCents: null },
+      serviceFeeCents: 149,
+      cancelPreview: {
+        kind: "refund",
+        amountCents: 5639,
+        text: "R$ 56,39 serão estornados automaticamente ao Consumidor.",
+      },
     });
     await user.click(await screen.findByRole("button", { name: "Cancelar Pedido" }));
     expect(screen.getByRole("dialog", { name: "Cancelar o Pedido #42?" })).toHaveTextContent(
-      /valor pago online \(R\$\s?54,90\)/u,
+      "R$ 56,39 serão estornados automaticamente ao Consumidor.",
     );
     await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "Cancelar o Pedido #42?" }),
+    ).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Pedido cancelado: motivo, selo do Estorno separado do status e nenhuma ação de avanço", async () => {
+    setup({
+      ...ORDER,
+      status: "cancelled",
+      payment: { method: "pix", changeForCents: null },
+      next: [],
+      cancellable: false,
+      cancelPreview: null,
+      cancellation: { reason: "item_unavailable", at: "2026-11-05T18:10:00.000Z" },
+      refund: { state: "failed_retrying", amountCents: 5639 },
+    });
+    expect(await screen.findByRole("dialog", { name: "Pedido #42" })).toBeInTheDocument();
+    const section = screen.getByRole("region", { name: "Cancelamento" });
+    expect(section).toHaveTextContent("Pedido cancelado às 15:10");
+    expect(section).toHaveTextContent("Motivo: Item em falta");
+    expect(section).toHaveTextContent("Estorno falhou — nova tentativa automática");
+    expect(section).toHaveTextContent("R$ 56,39");
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Marcar como|Começar/u })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar Pedido" })).not.toBeInTheDocument();
+  });
+
+  it("Pedido cancelado sem motivo e sem Estorno: 'não informado' e nenhum selo", async () => {
+    setup({
+      ...ORDER,
+      status: "cancelled",
+      next: [],
+      cancellable: false,
+      cancellation: { reason: null, at: "2026-11-05T18:10:00.000Z" },
+      refund: null,
+    });
+    const section = await screen.findByRole("region", { name: "Cancelamento" });
+    expect(section).toHaveTextContent("Motivo: não informado");
+    expect(section).not.toHaveTextContent("Estorno");
   });
 });

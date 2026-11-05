@@ -30,6 +30,7 @@ import {
   abacatePayFromEnv,
   createPixService,
 } from "./pix-service";
+import { createRefundService, refundGatewaysFromEnv } from "./refund-service";
 import { toPublicMenu } from "./public-menu";
 import { createStorefrontService } from "./storefront-service";
 import { createWhatsMiauSender } from "./whatsapp/whatsmiau";
@@ -211,16 +212,25 @@ export function createApp() {
       ipSalt: c.env.PHONE_LOOKUP_IP_SALT,
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
     });
+  // Estorno (Ticket 12): tardio/órfão depois de uma confirmação e conclusão pelos webhooks.
+  const refunds = (c: Context<AppEnv>) =>
+    createRefundService({ db: c.var.db, gateways: refundGatewaysFromEnv(c.env) });
   const card = (c: Context<AppEnv>) =>
     createCardService({
       db: c.var.db,
       efi: efiCardFromEnv(c.env),
       abacatePay: abacatePayCardFromEnv(c.env),
+      refunds: refunds(c),
       accountCpfOf: async (cookie) =>
         cookie ? ((await customer(c).currentSession(cookie))?.session?.account?.cpf ?? null) : null,
     });
   const pix = (c: Context<AppEnv>) =>
-    createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env), card: card(c) });
+    createPixService({
+      db: c.var.db,
+      provider: abacatePayFromEnv(c.env),
+      card: card(c),
+      refunds: refunds(c),
+    });
   const service = (c: Context<AppEnv>) =>
     createStorefrontService({
       pix: pix(c),

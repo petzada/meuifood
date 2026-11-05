@@ -18,7 +18,14 @@
 import { assertIssued, type StoreContext } from "./context";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError } from "./errors";
-import { type DeliveryMode, PAINEL_VISIBLE_PAYMENT_SQL } from "./schema";
+import { type CancelOrderDbInput, cancelOrderWithRefund } from "./refund-db";
+import {
+  type DeliveryMode,
+  type OrderCancelReasonValue,
+  type OrderPaymentStatus,
+  PAINEL_VISIBLE_PAYMENT_SQL,
+  type RefundStateValue,
+} from "./schema";
 
 // ---- Máquina de estados (igual a @foode/shared/order/status.ts) ----
 
@@ -524,9 +531,11 @@ export type OrderQueueRow = {
   neighborhood: string | null;
   paymentMethod: OrderPaymentMethod;
   totalCents: number;
+  /** Estado gravado do Estorno mais recente (Ticket 12); null = sem Estorno. */
+  refundState: RefundStateValue | null;
 };
 
-export type OrderDetailRow = Omit<OrderQueueRow, "neighborhood"> & {
+export type OrderDetailRow = Omit<OrderQueueRow, "neighborhood" | "refundState"> & {
   customerPhone: string;
   address: OrderAddressData | null;
   lines: OrderLineData[];
@@ -538,6 +547,12 @@ export type OrderDetailRow = Omit<OrderQueueRow, "neighborhood"> & {
   changeForCents: number | null;
   note: string | null;
   eta: OperationEta | null;
+  /** Estado do pagamento online (Ticket 26): base da pré-visualização do cancelamento. */
+  paymentStatus: OrderPaymentStatus;
+  /** Motivo e instante do cancelamento (Ticket 12); null fora do Cancelado. */
+  cancellation: { reason: OrderCancelReasonValue | null; at: string } | null;
+  /** Estorno mais recente do Pedido (Ticket 12); null = sem Estorno. */
+  refund: { state: RefundStateValue; amountCents: number } | null;
   history: Array<{
     from: OrderStatus | null;
     to: OrderStatus;
@@ -595,7 +610,7 @@ export const SELECT_ORDER_COLUMNS = `o.id AS id, o.code AS code, o.status AS sta
   o.delivery_fee_cents AS deliveryFeeCents, o.discount_cents AS discountCents,
   o.total_cents AS totalCents, o.change_for_cents AS changeForCents, o.note AS note,
   o.eta_min_minutes AS etaMin, o.eta_max_minutes AS etaMax,
-  o.service_fee_cents AS serviceFeeCents`;
+  o.service_fee_cents AS serviceFeeCents, o.payment_status AS paymentStatus`;
 
 export const SELECT_ORDER_LINES = `SELECT item_name AS itemName, quantity,
   unit_price_cents AS unitPriceCents, line_total_cents AS totalCents, complements, additionals
@@ -731,7 +746,9 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
       const fulfillmentFilter = input.filter === "all" ? null : input.filter;
       const base = `SELECT id, code, status, fulfillment, created_at AS createdAt,
         customer_name AS customerName, delivery_neighborhood AS neighborhood,
-        payment_method AS paymentMethod, total_cents AS totalCents
+        payment_method AS paymentMethod, total_cents AS totalCents,
+        (SELECT r.state FROM refunds r WHERE r.store_id = orders.store_id
+          AND r.order_id = orders.id ORDER BY r.created_at DESC, r.rowid DESC LIMIT 1) AS refundState
         FROM orders WHERE store_id = ? AND ${PAINEL_VISIBLE_PAYMENT_SQL}
           AND (? IS NULL OR fulfillment = ?)`;
       const listStatement =
@@ -770,7 +787,7 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
 
     /** Detalhe com linhas e histórico (quem e papel); null = de outra Loja ou inexistente. */
     async get(orderId: string): Promise<OrderDetailRow | null> {
-      const [order, lines, events] = await d1.batch([
+      const [order, lines, events, cancellation, refund] = await d1.batch([
         d1
           .prepare(
             `SELECT ${SELECT_ORDER_COLUMNS} FROM orders o
@@ -786,8 +803,22 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
              WHERE e.store_id = ? AND e.order_id = ? ORDER BY e.rowid`,
           )
           .bind(storeId, orderId),
+        d1
+          .prepare(
+            `SELECT reason, cancelled_at AS at FROM order_cancellations
+             WHERE store_id = ? AND order_id = ?`,
+          )
+          .bind(storeId, orderId),
+        d1
+          .prepare(
+            `SELECT state, amount_cents AS amountCents FROM refunds
+             WHERE store_id = ? AND order_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1`,
+          )
+          .bind(storeId, orderId),
       ]);
-      const row = (order?.results as OrderRowFull[] | undefined)?.[0];
+      const row = (
+        order?.results as (OrderRowFull & { paymentStatus: OrderPaymentStatus })[] | undefined
+      )?.[0];
       if (!row) return null;
       type EventRow = {
         from: OrderStatus | null;
@@ -815,6 +846,16 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
         changeForCents: row.changeForCents,
         note: row.note,
         eta: eta(row.etaMin, row.etaMax),
+        paymentStatus: row.paymentStatus,
+        cancellation:
+          (
+            cancellation?.results as
+              { reason: OrderCancelReasonValue | null; at: string }[] | undefined
+          )?.[0] ?? null,
+        refund:
+          (
+            refund?.results as { state: RefundStateValue; amountCents: number }[] | undefined
+          )?.[0] ?? null,
         history: ((events?.results ?? []) as EventRow[]).map((event) => ({
           from: event.from,
           to: event.to,
@@ -838,9 +879,12 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
       return transition(orderId, from, to);
     },
 
-    /** Cancela sem Estorno (o Estorno automático de PIX/Cartão pago é do Ticket 12). */
-    cancel(orderId: string, from: OrderStatus) {
-      return transition(orderId, from, "cancelled");
+    /**
+     * Cancela (Ticket 12): Pedido, histórico, motivo, obrigação de Estorno de cada cobrança paga e
+     * reversão do Ledger num único batch (refund-db.ts). Já final ou ≠ `from` = `conflict`.
+     */
+    cancel(input: CancelOrderDbInput) {
+      return cancelOrderWithRefund(d1, context, input);
     },
   };
 }

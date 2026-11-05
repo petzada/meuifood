@@ -14,6 +14,7 @@
 // Nada aqui guarda token do cartão, CPF, e-mail ou nascimento, nem registra log.
 import { newId, utcNow } from "./conventions";
 import type { ConfirmPaymentResult, LedgerSnapshotInput, WebhookEventInput } from "./payment-db";
+import { lateRefundStatements } from "./refund-db";
 import type {
   CardDeclineReason,
   CardPaymentState,
@@ -437,7 +438,8 @@ export function createCardPaymentOps(d1: D1Database) {
      * Confirmação canônica num único `batch`: evento (identidade única) → intenção `paid` (de
      * creating/pending; de `failed` só se não houver outra tentativa viva) → cartão `approved` com
      * a liberação prevista → Pedido `paid` (entra na fila do Painel) → lançamento único no Ledger
-     * → retenções. Evento repetido ou intenção já paga = nada muda.
+     * → retenções → (Pedido já cancelado) obrigação de Estorno total + reversão (Ticket 12).
+     * Evento repetido ou intenção já paga = nada muda.
      */
     async confirm(input: ConfirmCardPaymentInput): Promise<ConfirmPaymentResult> {
       const now = utcNow();
@@ -568,6 +570,13 @@ export function createCardPaymentOps(d1: D1Database) {
               ledgerId,
             ),
         ),
+        // Ticket 12: Pedido já cancelado → Estorno total no mesmo batch.
+        ...lateRefundStatements(d1, {
+          intentId: input.intentId,
+          paidAt: input.approvedAt,
+          now,
+          compensationPayoutDate: input.ledger.expectedPayoutDate,
+        }),
         d1
           .prepare(
             `SELECT (SELECT COUNT(*) FROM ledger_entries WHERE id = ?) AS applied,
@@ -655,6 +664,29 @@ export function createCardPaymentOps(d1: D1Database) {
         ok: false,
         error: state?.payable === 1 && state.live === 1 ? "attempt_active" : "order_not_payable",
       };
+    },
+
+    /**
+     * Tentativas sem desfecho para a varredura do Cron (Ticket 12/15): `creating` cuja chamada
+     * começou (ou nasceu) antes de `processingBefore` e `pending` sem consulta desde
+     * `checkedBefore`. Mais antigas primeiro.
+     */
+    async staleAttempts(
+      processingBefore: string,
+      checkedBefore: string,
+      limit: number,
+    ): Promise<CardIntentView[]> {
+      const { results } = await d1
+        .prepare(
+          `${CARD_SELECT}
+           WHERE i.method = 'credit' AND (
+             (i.state = 'creating' AND COALESCE(i.attempt_started_at, i.created_at) < ?)
+             OR (i.state = 'pending' AND COALESCE(i.checked_at, i.created_at) < ?))
+           ORDER BY i.created_at LIMIT ?`,
+        )
+        .bind(processingBefore, checkedBefore, limit)
+        .all<CardRow>();
+      return results.map((row) => toView(row)!);
     },
 
     /** Retenções do lançamento da intenção (conferência e testes). */

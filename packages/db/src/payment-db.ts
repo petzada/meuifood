@@ -5,6 +5,7 @@
 // confirmação do pagamento é UM `batch` (transação do D1): evento + intenção + Pedido + Ledger.
 // Nada aqui registra log nem guarda corpo de webhook ou dado do pagador.
 import { newId, utcNow } from "./conventions";
+import { lateRefundStatements } from "./refund-db";
 import type { PaymentIntentState, WebhookEventOutcome } from "./schema";
 
 export type PaymentProviderName = "abacatepay" | "efi";
@@ -258,7 +259,8 @@ export function createPaymentOps(d1: D1Database) {
     /**
      * Confirma o pagamento num único `batch`: evento (identidade única) → intenção `paid` (de
      * creating/pending/expired/failed, nunca de volta) → Pedido `paid` (entra na fila do Painel)
-     * → lançamento único no Ledger. Evento repetido ou intenção já paga = nada muda.
+     * → lançamento único no Ledger → (Pedido já cancelado) obrigação de Estorno total + reversão
+     * (Ticket 12). Evento repetido ou intenção já paga = nada muda.
      */
     async confirmPayment(input: ConfirmPaymentInput): Promise<ConfirmPaymentResult> {
       const now = utcNow();
@@ -349,6 +351,13 @@ export function createPaymentOps(d1: D1Database) {
             input.ledger.chargedCents,
             input.ledger.serviceFeeCents,
           ),
+        // Ticket 12: Pedido já cancelado (ex.: PIX vencido) → Estorno total no mesmo batch.
+        ...lateRefundStatements(d1, {
+          intentId: input.intentId,
+          paidAt: input.paidAt,
+          now,
+          compensationPayoutDate: input.ledger.expectedPayoutDate,
+        }),
         d1
           .prepare(
             `SELECT (SELECT COUNT(*) FROM ledger_entries WHERE id = ?) AS applied,

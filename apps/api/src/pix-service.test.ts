@@ -348,3 +348,100 @@ describe("webhook", () => {
     );
   });
 });
+
+describe("Ticket 12: Estorno e PIX vencido", () => {
+  function withRefunds(payments: Payments) {
+    const refunds = {
+      afterPayment: vi.fn(async () => undefined),
+      confirmFromWebhook: vi.fn(async () => "applied" as const),
+    };
+    const dbRefunds = {
+      cancelExpiredPix: vi.fn(async () => true),
+      expirablePix: vi.fn(async () => []),
+    };
+    const pix = createPixService({
+      db: { payments, refunds: dbRefunds } as unknown as FoodeDb,
+      provider: abacatePayFromEnv(ENV, async () =>
+        Response.json({ data: { status: "EXPIRED" }, error: null, success: true }),
+      ),
+      refunds,
+      now: () => NOW,
+    });
+    return { pix, refunds, dbRefunds };
+  }
+
+  it("`transparent.refunded` conclui o Estorno pela cobrança, sem tocar o pagamento", async () => {
+    const payments = fakePayments();
+    const { pix, refunds } = withRefunds(payments);
+    await expect(pix.handleWebhook(await signed(refunded))).resolves.toEqual({
+      status: 200,
+      body: { ok: true, outcome: "applied" },
+    });
+    expect(refunds.confirmFromWebhook).toHaveBeenCalledWith({
+      providerChargeId: "pix_char_TESTE000000000000000001",
+      event: {
+        provider: "abacatepay",
+        eventId: "log_TESTE000000000000000003",
+        eventType: "transparent.refunded",
+        devMode: true,
+      },
+    });
+    expect(payments.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  it("pagamento confirmado dispara o Estorno tardio (se o Pedido já estiver cancelado)", async () => {
+    const payments = fakePayments();
+    const { pix, refunds } = withRefunds(payments);
+    await pix.handleWebhook(await signed(completedPix));
+    expect(refunds.afterPayment).toHaveBeenCalledWith("intent_teste_001");
+  });
+
+  it("QR vencido na página: expira e cancela o Pedido (`pix_expired`)", async () => {
+    const payments = fakePayments(intent({ expiresAt: "2026-11-06T14:59:59.000Z" }));
+    const { pix, dbRefunds } = withRefunds(payments);
+    await pix.viewForOrder("order-a");
+    expect(dbRefunds.cancelExpiredPix).toHaveBeenCalledWith({
+      intentId: "intent_teste_001",
+      orderId: "order-a",
+      storeId: "store-a",
+    });
+  });
+
+  it("varredura: pago de fato confirma; vencido cancela; provedor fora adia na carência", async () => {
+    const base = { storeId: "store-a", orderId: "order-a", expiresAt: "2026-11-06T14:50:00.000Z" };
+    const candidates = [
+      { ...base, intentId: "i-paid", state: "pending", providerChargeId: "pix_char_PAGO" },
+      { ...base, intentId: "i-exp", state: "pending", providerChargeId: "pix_char_VENCIDO" },
+      { ...base, intentId: "i-down", state: "pending", providerChargeId: "pix_char_FORA" },
+      { ...base, intentId: "i-fail", state: "failed", providerChargeId: null },
+    ];
+    const payments = fakePayments();
+    const dbRefunds = {
+      expirablePix: vi.fn(async () => candidates),
+      cancelExpiredPix: vi.fn<(target: { intentId: string }) => Promise<boolean>>(async () => true),
+    };
+    const pix = createPixService({
+      db: { payments, refunds: dbRefunds } as unknown as FoodeDb,
+      provider: abacatePayFromEnv(ENV, async (url) => {
+        if (url.includes("pix_char_FORA")) return new Response("x", { status: 503 });
+        const status = url.includes("pix_char_PAGO") ? "PAID" : "EXPIRED";
+        return Response.json({ data: { status }, error: null, success: true });
+      }),
+      now: () => NOW,
+    });
+    await expect(pix.expireUnpaidPix(NOW)).resolves.toEqual({ cancelled: 2, paid: 1, skipped: 1 });
+    expect(payments.confirmPayment).toHaveBeenCalledTimes(1);
+    expect(dbRefunds.cancelExpiredPix.mock.calls.map((call) => call[0].intentId)).toEqual([
+      "i-exp",
+      "i-fail",
+    ]);
+    // Depois da carência, provedor fora não segura mais o cancelamento.
+    dbRefunds.expirablePix.mockResolvedValueOnce([candidates[2]!]);
+    const later = new Date(NOW.getTime() + 60 * 60_000);
+    await expect(pix.expireUnpaidPix(later)).resolves.toEqual({
+      cancelled: 1,
+      paid: 0,
+      skipped: 0,
+    });
+  });
+});

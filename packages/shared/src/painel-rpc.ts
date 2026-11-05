@@ -82,6 +82,7 @@ import type {
   ProviderCostView,
 } from "./ops/index.js";
 import type {
+  CancelOrderResult,
   OrderCancelInput,
   OrderDetail,
   OrderRefInput,
@@ -383,11 +384,16 @@ export interface PainelRpc {
     input: OrderTransitionInput,
   ): Promise<RpcResult<OrderTransitionResult>>;
 
-  /** Cancela (Dono ou Operador): só status + histórico; Estorno automático no Ticket 12. */
+  /**
+   * Cancela o Pedido (Dono ou Operador da própria Loja; Ticket 12) com motivo opcional e produz a
+   * consequência financeira: `on_delivery` (só o Pedido), `refund` (Estorno total automático no
+   * provedor que cobrou, inclusive a tarifa de serviço) ou `charge_cancel`. Já cancelado/concluído
+   * ou ≠ `from` = `conflict`. Não existe comando de Estorno avulso: o Estorno só nasce aqui.
+   */
   ordersCancel(
     caller: PainelCaller,
     input: OrderCancelInput,
-  ): Promise<RpcResult<OrderTransitionResult>>;
+  ): Promise<RpcResult<CancelOrderResult>>;
 
   /** Configuração operacional da Loja ativa (Dono e Operador leem). */
   storeOperationGet(caller: PainelCaller): Promise<RpcResult<StoreOperationSettings>>;
