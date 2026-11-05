@@ -666,6 +666,29 @@ export function createCardPaymentOps(d1: D1Database) {
       };
     },
 
+    /**
+     * Tentativas sem desfecho para a varredura do Cron (Ticket 12/15): `creating` cuja chamada
+     * começou (ou nasceu) antes de `processingBefore` e `pending` sem consulta desde
+     * `checkedBefore`. Mais antigas primeiro.
+     */
+    async staleAttempts(
+      processingBefore: string,
+      checkedBefore: string,
+      limit: number,
+    ): Promise<CardIntentView[]> {
+      const { results } = await d1
+        .prepare(
+          `${CARD_SELECT}
+           WHERE i.method = 'credit' AND (
+             (i.state = 'creating' AND COALESCE(i.attempt_started_at, i.created_at) < ?)
+             OR (i.state = 'pending' AND COALESCE(i.checked_at, i.created_at) < ?))
+           ORDER BY i.created_at LIMIT ?`,
+        )
+        .bind(processingBefore, checkedBefore, limit)
+        .all<CardRow>();
+      return results.map((row) => toView(row)!);
+    },
+
     /** Retenções do lançamento da intenção (conferência e testes). */
     async retentionsOfIntent(intentId: string) {
       const { results } = await d1

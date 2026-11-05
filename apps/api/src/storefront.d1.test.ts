@@ -518,7 +518,14 @@ describe("RPCs do Painel com sessão real", () => {
       orders.ordersCancel(operator, { orderId: pickup!.id, from: "received" }),
     ).resolves.toEqual({
       ok: true,
-      data: { status: "cancelled", next: [], print: false },
+      // Ticket 12: Pagamento na entrega só muda o Pedido.
+      data: {
+        status: "cancelled",
+        next: [],
+        print: false,
+        reason: null,
+        consequence: { kind: "on_delivery" },
+      },
     });
     await expect(
       orders.ordersCancel(operator, { orderId: pickup!.id, from: "cancelled" }),
