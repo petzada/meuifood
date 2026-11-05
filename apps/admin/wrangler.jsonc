@@ -1,0 +1,28 @@
+// Worker `foode-admin` (Painel, Next via OpenNext). Decisão 59.
+// Build: `pnpm build:cf` (opennextjs-cloudflare build). Deploy só pelo CI (deploy.yml).
+// Sem routes/custom domains até a zona foodedelivery.com.br ficar ativa (Ticket 25).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "foode-admin",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "vars": {
+    "SENTRY_ENVIRONMENT": "production",
+  },
+  // API: entrypoint RPC `PainelApi` da api — o único caminho do Painel até os dados.
+  // O navegador nunca fala com a api. A api precisa estar publicada antes (deploy.yml).
+  // WORKER_SELF_REFERENCE: revalidação do OpenNext.
+  "services": [
+    { "binding": "API", "service": "foode-api", "entrypoint": "PainelApi" },
+    { "binding": "WORKER_SELF_REFERENCE", "service": "foode-admin" },
+  ],
+  "images": { "binding": "IMAGES" },
+}

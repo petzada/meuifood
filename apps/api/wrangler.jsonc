@@ -1,0 +1,30 @@
+// Worker `foode-api` (Hono). Decisão 59 / ADR 0006.
+// - fetch público: /health, /storefront/*, /webhooks/* (src/app.ts);
+// - entrypoint RPC `PainelApi` (src/painel.ts): só por service binding (admin).
+// Deploy só pelo CI (.github/workflows/deploy.yml). Sem routes/custom domains até a zona
+// foodedelivery.com.br ficar ativa (Ticket 25): publica em workers.dev.
+// Segredos (SENTRY_DSN, MILLIONSEND_API_KEY) via `wrangler secret bulk` no deploy.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "foode-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "ENVIRONMENT": "production",
+  },
+  // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
+  // aplicadas só pelo workflow db-migrate (confirmar=aplicar).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "foode-prod",
+      "database_id": "08fc0f44-ebb6-4712-b857-a566a82beead",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "foode-media" }],
+}
