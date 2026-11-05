@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Calculator } from "../../components/marketing/calculator";
+import { CardSpeed } from "../../components/marketing/card-speed";
 import { Comparison } from "../../components/marketing/comparison";
 import { CtaFinal } from "../../components/marketing/cta-final";
-import { Faq, faqJsonLd } from "../../components/marketing/faq";
+import { FaqSection, faqJsonLd } from "../../components/marketing/faq-section";
 import { Features } from "../../components/marketing/features";
 import { Founder } from "../../components/marketing/founder";
 import { Hero } from "../../components/marketing/hero";
 import { HowItWorks } from "../../components/marketing/how-it-works";
 import { PainSection } from "../../components/marketing/pain";
-import { PaymentFees } from "../../components/marketing/payment-fees";
 import { Plans } from "../../components/marketing/plans";
 import { JsonLd, SectionHeading } from "../../components/marketing/primitives";
 import { FAQ } from "../../content/faq";
@@ -127,17 +127,7 @@ export default function Home() {
             Um plano. O valor acompanha seus pedidos.
           </SectionHeading>
           <Plans />
-          <div className="grid gap-6">
-            <SectionHeading
-              align="left"
-              id="taxas-title"
-              lead="PIX e cartão têm uma taxa Foode por transação, combinada no cadastro da loja. O pagamento na entrega não tem taxa."
-            >
-              Taxas do pagamento online
-            </SectionHeading>
-            {/* TODO(31-taxas): passar a tabela padrão do /ops quando a api expuser. */}
-            <PaymentFees fees={null} />
-          </div>
+          <CardSpeed />
         </div>
       </section>
 
@@ -171,12 +161,7 @@ export default function Home() {
         className="mk-section border-t border-[var(--color-hairline-soft)]"
         id="faq"
       >
-        <div className="mk-container grid gap-10">
-          <SectionHeading eyebrow="Perguntas frequentes" id="faq-title">
-            O que todo lojista pergunta antes de começar.
-          </SectionHeading>
-          <Faq items={FAQ} />
-        </div>
+        <FaqSection items={FAQ}>O que todo lojista pergunta antes de começar.</FaqSection>
       </section>
 
       <CtaFinal />

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Faq, faqJsonLd } from "../../../../components/marketing/faq";
+import { Faq } from "../../../../components/marketing/faq";
+import { faqJsonLd } from "../../../../components/marketing/faq-section";
 import { JsonLd } from "../../../../components/marketing/primitives";
 import { findPost, POSTS, type PostBlock } from "../../../../content/posts";
 import { LEGAL, SITE_NAME, SITE_URL } from "../../../../content/site";

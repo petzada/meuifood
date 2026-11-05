@@ -1,5 +1,6 @@
-// Comparativo (decisão 70): "Outra plataforma" ×2 com as cores das marcas nos títulos e
-// conteúdo apagado; coluna Foode com borda unificada de ponta a ponta. Dados e fontes em
+// Comparativo (decisão 70 + Dono 2026-11-05): cabeçalhos em chips (Foode preenchido em
+// primary-strong com texto branco, AA; as outras só contorno na cor da marca); a borda da
+// coluna Foode começa na 1ª linha de dados e vai até o fim; uma coisa por linha. Dados e fontes em
 // `content/competitors.ts`; dado não verificado aparece como "—".
 import { COMPARISON_ROWS, COMPETITORS } from "../../content/competitors";
 
@@ -19,8 +20,8 @@ export function Comparison() {
               <th scope="col">
                 <span className="sr-only">Critério</span>
               </th>
-              <th className="is-foode" scope="col">
-                Foode
+              <th className="is-foode-head" scope="col">
+                <span className="mk-compare__brand mk-compare__brand--foode">Foode</span>
               </th>
               {COMPETITORS.map((competitor) => (
                 <th key={competitor.key} className="is-other" scope="col">
@@ -32,8 +33,8 @@ export function Comparison() {
             </tr>
           </thead>
           <tbody>
-            {COMPARISON_ROWS.map((row) => (
-              <tr key={row.label}>
+            {COMPARISON_ROWS.map((row, index) => (
+              <tr key={row.label} className={index === 0 ? "is-first" : ""}>
                 <th className="font-bold text-[var(--color-body)]" scope="row">
                   {row.label}
                 </th>

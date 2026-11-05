@@ -1,9 +1,10 @@
-// Planos (decisões 61, 70, 71): dois cards do mesmo tamanho, linhas alinhadas por subgrid.
-// Mensal com as 3 faixas e o selo "Você começa aqui"; Anual com borda primary, badge com a
-// % real de desconto, benefícios exclusivos em negrito, "6× de R$ 188,20" em destaque e o
-// total à vista abaixo, sem destaque. Reembolso sob cada botão. Tudo lido de `content/pricing`.
+// Planos (decisões 61, 70, 71 + ajustes do Dono em 2026-11-05): dois cards do mesmo tamanho,
+// linhas alinhadas por subgrid. "Você começa aqui" fica ACIMA do card Mensal, fora do
+// destaque, para faixas e valores alinharem entre os cards. Anual com borda primary, badge
+// amarela com a % real de desconto por cima da borda, "6×" numa linha e a parcela em peso
+// maior na linha de baixo, total à vista sem destaque. Tudo lido de `content/pricing`.
 import { Check } from "@phosphor-icons/react/dist/ssr";
-import { Badge, Button } from "@foode/ui";
+import { Button } from "@foode/ui";
 
 import {
   ANNUAL_DISCOUNT_PERCENT,
@@ -18,11 +19,11 @@ import {
 import { RefundLine } from "./primitives";
 
 const INCLUDED = [
-  "Cardápio digital com complementos e adicionais",
+  "Cardápio digital com fotos, tamanhos e extras",
   "Link personalizado e QR Code",
-  "Checkout com PIX, cartão e pagamento na entrega",
-  "Fila de pedidos com som e impressão 80 mm",
-  "Cupons, relatórios e funil",
+  "PIX, cartão e pagamento na entrega",
+  "Aviso de pedido novo e impressão no balcão",
+  "Cupons e relatórios de vendas",
   "Cadastro feito pela equipe Foode",
 ] as const;
 
@@ -31,6 +32,11 @@ const ANNUAL_ONLY = ["Pedidos ilimitados o ano inteiro", "Preço travado por 12 
 export function Plans({ ctaHref = "/#contato" }: { ctaHref?: string }) {
   return (
     <div className="mk-plans" data-testid="plans">
+      <div className="mk-plan__above">
+        <span className="mk-plan__start">Você começa aqui</span>
+      </div>
+      <div className="mk-plan__above mk-plan__above--annual" aria-hidden />
+
       <article aria-labelledby="plan-monthly" className="mk-plan" data-reveal="left">
         <header className="grid gap-1 pb-5">
           <h3 className="mk-h3" id="plan-monthly">
@@ -40,7 +46,7 @@ export function Plans({ ctaHref = "/#contato" }: { ctaHref?: string }) {
             O valor acompanha os pedidos do mês. Sem fidelidade.
           </p>
         </header>
-        <div className="grid gap-1 pb-5">
+        <div className="grid content-start gap-1 pb-5">
           {MONTHLY_TIERS.map((tier) => {
             const start = tier.minOrders === FIRST_MONTHLY_TIER.minOrders;
             return (
@@ -48,15 +54,8 @@ export function Plans({ ctaHref = "/#contato" }: { ctaHref?: string }) {
                 key={tier.minOrders}
                 className={["mk-tier", start ? "mk-tier--start" : ""].join(" ")}
               >
-                <span className="grid gap-0.5">
-                  {start ? (
-                    <span className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--color-primary-strong)]">
-                      Você começa aqui
-                    </span>
-                  ) : null}
-                  <span className="text-sm font-bold text-[var(--color-ink)]">
-                    {tierLabel(tier)}/mês
-                  </span>
+                <span className="text-sm font-bold text-[var(--color-ink)]">
+                  {tierLabel(tier)}/mês
                 </span>
                 <span className="text-lg font-bold tracking-[-0.02em] text-[var(--color-ink)]">
                   {formatBRL(tier.priceCents)}
@@ -65,7 +64,6 @@ export function Plans({ ctaHref = "/#contato" }: { ctaHref?: string }) {
               </div>
             );
           })}
-          <p className="mt-2 text-xs text-[var(--color-muted)]">+ taxas de pagamento online</p>
         </div>
         <ul className="grid gap-2 border-t border-[var(--color-hairline-soft)] py-5 text-sm text-[var(--color-body)]">
           {INCLUDED.map((item) => (
@@ -90,30 +88,26 @@ export function Plans({ ctaHref = "/#contato" }: { ctaHref?: string }) {
         className="mk-plan mk-plan--annual"
         data-reveal="right"
       >
-        <Badge className="mk-plan__badge" tone="accent">
+        <span className="mk-plan__badge" data-testid="annual-badge">
           {ANNUAL_DISCOUNT_PERCENT}% de desconto
-        </Badge>
+        </span>
         <header className="grid gap-1 pb-5">
           <h3 className="mk-h3" id="plan-annual">
             Anual
           </h3>
-          <p className="text-sm text-[var(--color-body)]">
-            Pedidos ilimitados por um valor fixo. Pago uma vez, fora do app.
-          </p>
+          <p className="text-sm text-[var(--color-body)]">Pedidos ilimitados por um valor fixo.</p>
         </header>
-        <div className="grid gap-1 pb-5">
-          <p
-            className="text-3xl font-bold tracking-[-0.03em] text-[var(--color-ink)]"
-            data-testid="annual-installment"
-          >
-            {ANNUAL_INSTALLMENTS}× de {formatBRL(ANNUAL_INSTALLMENT_CENTS)}
+        <div className="grid content-start gap-1 pb-5">
+          <p className="grid text-[var(--color-ink)]" data-testid="annual-installment">
+            <span className="text-lg font-bold leading-none tracking-[-0.02em]">
+              {ANNUAL_INSTALLMENTS}×
+            </span>
+            <span className="mt-1 text-[2.25rem] font-bold leading-none tracking-[-0.03em]">
+              {formatBRL(ANNUAL_INSTALLMENT_CENTS)}
+            </span>
           </p>
-          <p className="text-sm text-[var(--color-muted)]" data-testid="annual-total">
-            ou {formatBRL(ANNUAL_PRICE_CENTS)}/ano à vista
-          </p>
-          <p className="mt-2 text-xs text-[var(--color-muted)]">
-            {ANNUAL_DISCOUNT_PERCENT}% em relação a 12 mensalidades da faixa acima de 250 pedidos ·
-            + taxas de pagamento online
+          <p className="mt-2 text-sm text-[var(--color-muted)]" data-testid="annual-total">
+            ou {formatBRL(ANNUAL_PRICE_CENTS)} à vista
           </p>
         </div>
         <ul className="grid gap-2 border-t border-[var(--color-hairline-soft)] py-5 text-sm text-[var(--color-body)]">

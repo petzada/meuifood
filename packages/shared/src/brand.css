@@ -7,6 +7,9 @@
   --color-primary-strong: #d63a3a;
   --color-primary-strong-active: #b92f2f;
   --color-accent: #ffb800;
+  /* Fill de destaque com texto branco: #b07c00 × branco = 3,67:1 (AA só em texto grande e
+     negrito, >= 19px); em texto menor use ink sobre --color-accent. */
+  --color-accent-strong: #b07c00;
   --color-on-primary: #ffffff;
   --color-canvas: #ffffff;
   --color-ink: #222222;
