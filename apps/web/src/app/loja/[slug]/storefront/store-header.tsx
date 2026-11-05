@@ -3,7 +3,7 @@
 // Cabeçalho compacto da Loja (C1): logo (ou iniciais), nome, linha de estado (aberta até /
 // fechada com próximo horário / Pausa — decisão 41) com link "Sobre a Loja", e
 // "Compartilhar" (P-5.4). Logo, capa e descrição só aparecem se o contrato trouxer (Ticket 28).
-import { Clock, Pause, ShareNetwork } from "@phosphor-icons/react";
+import { Clock, Pause, ShareNetwork, UserCircle } from "@phosphor-icons/react";
 
 import type { StoreAvailabilityView } from "./store-status";
 
@@ -20,13 +20,20 @@ function initials(name: string): string {
 }
 
 export function StoreHeader({
+  account,
+  accountHref,
   availability,
   branding,
   description = null,
   name,
   onAbout,
   onShare,
+  onSignIn,
 }: {
+  /** Conta do Consumidor (Ticket 13): null = anônimo, mostra "Entrar"; ausente = sem conta. */
+  account?: { name: string } | null;
+  /** Página "Minha conta" desta Loja. */
+  accountHref?: string;
   /** Sem estado (api indisponível): só nome e Compartilhar. */
   availability?: StoreAvailabilityView | null;
   branding?: StoreBranding;
@@ -35,6 +42,7 @@ export function StoreHeader({
   name: string;
   onAbout?: () => void;
   onShare: () => void;
+  onSignIn?: () => void;
 }) {
   const cover = branding?.coverUrl ?? null;
   const logo = branding?.logoUrl ?? null;
@@ -107,14 +115,35 @@ export function StoreHeader({
             </p>
           ) : null}
         </div>
-        <button
-          aria-label={`Compartilhar ${name}`}
-          className="foode-icon-button"
-          onClick={onShare}
-          type="button"
-        >
-          <ShareNetwork aria-hidden size={20} weight="bold" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {account && accountHref ? (
+            <a
+              aria-label={`Minha conta: ${account.name}`}
+              className="foode-icon-button"
+              href={accountHref}
+              title="Minha conta"
+            >
+              <UserCircle aria-hidden size={22} weight="fill" />
+            </a>
+          ) : account === null && onSignIn ? (
+            <button
+              className="inline-flex min-h-10 items-center gap-1 rounded-full border border-[var(--color-hairline)] px-3 text-sm font-bold text-[var(--color-primary-strong)] hover:border-[var(--color-primary)]"
+              onClick={onSignIn}
+              type="button"
+            >
+              <UserCircle aria-hidden size={18} weight="bold" />
+              Entrar
+            </button>
+          ) : null}
+          <button
+            aria-label={`Compartilhar ${name}`}
+            className="foode-icon-button"
+            onClick={onShare}
+            type="button"
+          >
+            <ShareNetwork aria-hidden size={20} weight="bold" />
+          </button>
+        </div>
       </div>
     </header>
   );

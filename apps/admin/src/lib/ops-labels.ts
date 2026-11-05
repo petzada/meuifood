@@ -92,6 +92,13 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "provider_cost.ended": "Custo de provedor encerrado",
   "membership.invited": "Convite enviado",
   "session.active_store_switched": "Loja ativa trocada",
+  "coupon.created": "Cupom criado",
+  "coupon.updated": "Cupom alterado",
+  "coupon.activated": "Cupom ativado",
+  "coupon.deactivated": "Cupom desativado",
+  "coupon.deleted": "Cupom excluído",
+  "coupon.welcome_updated": "Cupom de boas-vindas alterado",
+  "customer.phone_changed": "Telefone do Consumidor trocado",
 };
 
 export function auditActionLabel(action: string): string {

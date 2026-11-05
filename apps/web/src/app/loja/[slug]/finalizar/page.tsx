@@ -2,6 +2,7 @@ import { movedStorePath } from "@foode/shared/onboarding";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
+import { getCustomerSession } from "../../../../lib/customer-session";
 import { searchString } from "../../../../lib/slug-moved";
 import { getPublicMenu, getStoreState } from "../../../../lib/storefront";
 import { PixelScripts } from "../storefront/pixel-scripts";
@@ -47,11 +48,18 @@ export default async function CheckoutPage({
   }
   if (menu.kind !== "ok") throw new Error(`storefront_unavailable:${describe(menu)}`);
   if (state.kind !== "ok") throw new Error(`checkout_unavailable:${describe(state)}`);
+  // Conta do Consumidor (Ticket 13): logado preenche com a conta; falha = Guest.
+  const session = await getCustomerSession();
 
   return (
     <>
       <PixelScripts pixels={state.data.showcase?.pixels} />
-      <Checkout menu={menu.menu} siteKey={turnstileSiteKey()} state={state.data} />
+      <Checkout
+        menu={menu.menu}
+        session={session}
+        siteKey={turnstileSiteKey()}
+        state={state.data}
+      />
     </>
   );
 }

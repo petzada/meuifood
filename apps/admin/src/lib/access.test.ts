@@ -106,10 +106,12 @@ describe("resolveRole e navegação", () => {
       "/ops/faixas",
       "/ops/taxas",
       "/ops/custos",
+      "/ops/clientes",
     ]);
     expect(navFor("owner").map((item) => item.label)).toEqual([
       "Pedidos",
       "Cardápio",
+      "Cupons",
       "Configurações",
       "Equipe",
     ]);

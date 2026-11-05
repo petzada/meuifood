@@ -19,6 +19,8 @@ export type RouteRule = {
 export const ROUTES: readonly RouteRule[] = [
   { prefix: "/", permission: "orders.view", label: "Pedidos" },
   { prefix: "/cardapio", permission: "store.menu", label: "Cardápio" },
+  // Cupons (Ticket 13, NAV-01): só o Dono, sob `store.settings`.
+  { prefix: "/cupons", permission: "store.settings", label: "Cupons" },
   { prefix: "/configuracoes", permission: "store.settings", label: "Configurações" },
   { prefix: "/equipe", permission: "store.members", label: "Equipe" },
   // Área Ops (OPS-01): menu próprio, uma linha por área, todas sob `ops.area`.
@@ -26,6 +28,7 @@ export const ROUTES: readonly RouteRule[] = [
   { prefix: "/ops/faixas", permission: "ops.area", label: "Faixas" },
   { prefix: "/ops/taxas", permission: "ops.area", label: "Taxas Foode" },
   { prefix: "/ops/custos", permission: "ops.area", label: "Custos dos provedores" },
+  { prefix: "/ops/clientes", permission: "ops.area", label: "Consumidores" },
   { prefix: "/selecionar-loja", permission: null },
 ];
 

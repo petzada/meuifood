@@ -60,7 +60,7 @@ export type CheckoutApi = {
   >;
   quote(
     storeSlug: string,
-    body: Pick<CheckoutCreateRequestInput, "address" | "fulfillment" | "lines">,
+    body: Pick<CheckoutCreateRequestInput, "address" | "couponCode" | "fulfillment" | "lines">,
   ): Promise<CheckoutQuoteResponse | null>;
 };
 

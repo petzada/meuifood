@@ -40,6 +40,8 @@ export type CheckoutForm = {
   address: CheckoutAddress;
   /** "Troco para" em reais digitados ("50" ou "50,00"); vazio = sem troco. */
   changeFor: string;
+  /** Cupom promocional aplicado pelo Consumidor (Ticket 13); vazio = nenhum. */
+  couponCode: string;
   fulfillment: Fulfillment | null;
   name: string;
   note: string;
@@ -81,6 +83,7 @@ export function createCheckoutForm(
       ? applyAddress(emptyAddress, remembered.address, state)
       : emptyAddress,
     changeFor: "",
+    couponCode: "",
     fulfillment: fulfillments.length === 1 ? fulfillments[0]! : null,
     name: remembered?.name ?? "",
     note: "",
@@ -110,6 +113,25 @@ export function applyAddress(
     postalCode: address.postalCode ? formatPostalCode(address.postalCode) : "",
     reference: address.reference ?? "",
     street: address.street,
+  };
+}
+
+/**
+ * Preenche o checkout com a conta do Consumidor (Ticket 13, decisão 68): nome, telefone e o
+ * último endereço de Delivery da conta (vale em qualquer Loja). Não mexe no que não vem da conta.
+ */
+export function applyAccount(
+  form: CheckoutForm,
+  account: { lastAddress: OrderAddressView | null; name: string; phone: string },
+  state: Pick<StorefrontStoreState, "delivery">,
+): CheckoutForm {
+  return {
+    ...form,
+    address: account.lastAddress
+      ? applyAddress(form.address, account.lastAddress, state)
+      : form.address,
+    name: account.name,
+    phone: formatPhoneBr(account.phone),
   };
 }
 
@@ -322,16 +344,26 @@ export function checkoutCtaLabel(
 
 // ---- Corpo do contrato (só ids, quantidades e dados do Consumidor; preço nunca vai).
 
+export type CartBody = {
+  address: CheckoutCreateRequestInput["address"];
+  /** Cupom promocional digitado (Ticket 13); null = só o boas-vindas automático, se elegível. */
+  couponCode: string | null;
+  fulfillment: Fulfillment;
+  lines: CartLine[];
+};
+
 export function buildCartBody(
-  form: Pick<CheckoutForm, "address" | "fulfillment">,
+  form: Pick<CheckoutForm, "address" | "couponCode" | "fulfillment">,
   lines: CartLine[],
   state: Pick<StorefrontStoreState, "delivery">,
-): { address: CheckoutCreateRequestInput["address"]; fulfillment: Fulfillment; lines: CartLine[] } {
+): CartBody {
   const fulfillment = form.fulfillment ?? "pickup";
-  if (fulfillment !== "delivery") return { address: null, fulfillment, lines };
+  const couponCode = form.couponCode.trim() || null;
+  if (fulfillment !== "delivery") return { address: null, couponCode, fulfillment, lines };
   const a = form.address;
   const byNeighborhood = state.delivery?.mode === "neighborhood";
   return {
+    couponCode,
     address: {
       complement: a.complement.trim() || null,
       neighborhoodId: byNeighborhood ? a.neighborhoodId || null : null,

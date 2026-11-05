@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cartStorageKey } from "../storefront/cart-store";
 import { ids, neighborhoodIds, publicMenu, storeState } from "../storefront/fixtures";
+import type { AccountApi } from "../conta/account-api";
 import { Checkout } from "./checkout";
 import type { CheckoutApi } from "./checkout-api";
 import { rememberedCustomerKey } from "./checkout-state";
@@ -53,21 +54,81 @@ function fakeApi(overrides: Partial<CheckoutApi> = {}): CheckoutApi {
   };
 }
 
-function setup(options: { api?: CheckoutApi; siteKey?: string; state?: typeof storeState } = {}) {
+const account = {
+  cpfMasked: "***.456.789-**",
+  lastAddress: {
+    complement: null,
+    neighborhood: "Centro",
+    number: "10",
+    postalCode: null,
+    reference: null,
+    street: "Rua da Conta",
+  },
+  name: "Ana Lima",
+  phone: "5511987654321",
+};
+
+function fakeAccountApi(overrides: Partial<AccountApi> = {}): AccountApi {
+  return {
+    orders: vi.fn(async () => ({ kind: "ok" as const, data: { orders: [] } })),
+    requestCode: vi.fn(async () => ({
+      kind: "ok" as const,
+      data: { expiresInSeconds: 300, ok: true as const, resendAfterSeconds: 30 },
+    })),
+    session: vi.fn(async () => ({
+      kind: "ok" as const,
+      data: { account, state: "signed_in" as const },
+    })),
+    signOut: vi.fn(async () => ({ kind: "ok" as const, data: null })),
+    signup: vi.fn(async () => ({
+      kind: "ok" as const,
+      data: { account, state: "signed_in" as const },
+    })),
+    verifyCode: vi.fn(async () => ({
+      kind: "ok" as const,
+      data: { ok: true as const, status: "signed_in" as const },
+    })),
+    ...overrides,
+  };
+}
+
+function setup(
+  options: {
+    accountApi?: AccountApi;
+    api?: CheckoutApi;
+    session?: Parameters<typeof Checkout>[0]["session"];
+    siteKey?: string;
+    state?: typeof storeState;
+  } = {},
+) {
   const api = options.api ?? fakeApi();
+  const accountApi = options.accountApi ?? fakeAccountApi();
   const user = userEvent.setup();
   render(
     <Checkout
+      accountApi={accountApi}
       api={api}
       cepLookup={async () => null}
       menu={publicMenu}
       now={Date.parse("2026-11-05T23:00:00.000Z")}
+      {...(options.session ? { session: options.session } : {})}
       siteKey={options.siteKey ?? ""}
       state={options.state ?? storeState}
     />,
   );
-  return { api, user };
+  return { accountApi, api, user };
 }
+
+const okQuote = {
+  deliveryFeeCents: 0,
+  discountCents: 0,
+  eta: null,
+  minimumOrder: null,
+  ok: true as const,
+  paymentMethods: ["on_delivery" as const],
+  subtotalCents: 2400,
+  totalCents: 2400,
+};
 
 const cta = () =>
   screen.getByRole("button", {
@@ -396,5 +457,192 @@ describe("Checkout", () => {
       "/privacidade",
     );
     expect(screen.getByText("Ambiente seguro")).toBeInTheDocument();
+  });
+
+  // ---- Ticket 13: Cupom inline (U1–U4) e conta do Consumidor (decisão 68).
+
+  it("'Tem um cupom?' expande o campo, aplica em maiúsculas e mostra o desconto na própria tela (U1/U2)", async () => {
+    seedCart();
+    const quote = vi.fn(async (_slug: string, body: { couponCode?: string | null | undefined }) =>
+      body.couponCode === "GANHE5"
+        ? {
+            ...okQuote,
+            coupon: { code: "GANHE5", discountCents: 500, source: "promo" as const },
+            discountCents: 500,
+            totalCents: 1900,
+          }
+        : okQuote,
+    );
+    const { user } = setup({ api: fakeApi({ quote }) });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await waitFor(() => expect(quote).toHaveBeenCalled());
+    expect(screen.queryByLabelText("Código do cupom")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    await user.type(screen.getByLabelText("Código do cupom"), "ganhe 5");
+    expect(screen.getByLabelText("Código do cupom")).toHaveValue("GANHE5");
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+    await waitFor(() =>
+      expect(quote).toHaveBeenLastCalledWith(
+        "lanchonete-do-ze",
+        expect.objectContaining({ couponCode: "GANHE5" }),
+      ),
+    );
+    const chip = await screen.findByRole("group", { name: "Cupom" });
+    expect(chip).toHaveTextContent("GANHE5 aplicado · −R$ 5,00");
+    expect(screen.getByText("Cupom GANHE5").nextElementSibling).toHaveTextContent("−R$ 5,00");
+    expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 19,00");
+
+    await user.click(within(chip).getByRole("button", { name: "Remover" }));
+    await waitFor(() =>
+      expect(quote).toHaveBeenLastCalledWith(
+        "lanchonete-do-ze",
+        expect.objectContaining({ couponCode: null }),
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 24,00"),
+    );
+  });
+
+  it("Cupom recusado mostra o motivo do servidor inline, mantém o código e os totais sem ele (U2)", async () => {
+    seedCart();
+    const quote = vi.fn(async (_slug: string, body: { couponCode?: string | null | undefined }) =>
+      body.couponCode
+        ? {
+            error: { code: "coupon_invalid" as const, reason: "expired" as const },
+            ok: false as const,
+          }
+        : okQuote,
+    );
+    const { user } = setup({ api: fakeApi({ quote }) });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await user.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    await user.type(screen.getByLabelText("Código do cupom"), "VELHO{Enter}");
+    expect(await screen.findByText("Este cupom expirou.")).toHaveAttribute("role", "alert");
+    expect(screen.getByLabelText("Código do cupom")).toHaveValue("VELHO");
+    expect(screen.getByLabelText("Código do cupom")).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() =>
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 24,00"),
+    );
+  });
+
+  it("boas-vindas entra sozinho quando elegível, com explicação e sem 'Remover' (decisão 66)", async () => {
+    seedCart();
+    const quote = vi.fn(async () => ({
+      ...okQuote,
+      coupon: { code: null, discountCents: 300, source: "welcome" as const },
+      discountCents: 300,
+      totalCents: 2100,
+    }));
+    const { user } = setup({ api: fakeApi({ quote }), session: { account, state: "signed_in" } });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+    const chip = await screen.findByRole("group", { name: "Cupom" });
+    expect(chip).toHaveTextContent("Cupom de boas-vindas aplicado · −R$ 3,00");
+    expect(chip).toHaveTextContent("primeira compra nesta Loja");
+    expect(chip).toHaveTextContent("O desconto não vale para a taxa de entrega.");
+    expect(within(chip).queryByRole("button", { name: "Remover" })).not.toBeInTheDocument();
+  });
+
+  it("Cupom que perdeu a validade no envio sai do Pedido e pede nova confirmação (U4)", async () => {
+    seedCart();
+    const createOrder = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: { code: "coupon_invalid" as const, reason: "exhausted" as const },
+        ok: false as const,
+      })
+      .mockResolvedValueOnce({
+        accessToken: "a".repeat(40),
+        ok: true as const,
+        orderCode: 13,
+        replayed: false,
+        trackingPath: "/loja/lanchonete-do-ze/pedido/aaaa",
+      });
+    const quote = vi.fn(async (_slug: string, body: { couponCode?: string | null | undefined }) =>
+      body.couponCode
+        ? {
+            ...okQuote,
+            coupon: { code: "ULTIMO", discountCents: 500, source: "promo" as const },
+            discountCents: 500,
+            totalCents: 1900,
+          }
+        : okQuote,
+    );
+    const { api, user } = setup({ api: fakeApi({ createOrder, quote }) });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await fillBasics(user);
+    await user.click(screen.getByRole("radio", { name: /Retirada na Loja/u }));
+    await user.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    await user.type(screen.getByLabelText("Código do cupom"), "ULTIMO{Enter}");
+    await screen.findByRole("group", { name: "Cupom" });
+    await user.click(cta());
+    const alert = await screen.findByText(/Este cupom esgotou\. Confira o novo total/u);
+    expect(alert).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("R$ 24,00"),
+    );
+    expect(screen.getByLabelText("Código do cupom")).toHaveValue("ULTIMO");
+    await user.click(cta());
+    const calls = vi.mocked(api.createOrder).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.[1].couponCode).toBeNull();
+    expect(calls[1]?.[1].idempotencyKey).not.toBe(calls[0]?.[1].idempotencyKey);
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith("/loja/lanchonete-do-ze/pedido/aaaa"),
+    );
+  });
+
+  it("telefone com conta Foode oferece 'Entrar com WhatsApp' e, com o código, preenche com a conta (decisão 68)", async () => {
+    seedCart();
+    const api = fakeApi({
+      lookupPhone: vi.fn(async () => ({ found: false as const, hasAccount: true })),
+    });
+    const accountApi = fakeAccountApi();
+    const { user } = setup({ accountApi, api, siteKey: "site-key" });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    await user.type(screen.getByLabelText("WhatsApp"), "11987654321");
+    await user.click(screen.getByRole("button", { name: "Verificação de segurança" }));
+    await user.click(screen.getByRole("button", { name: "Buscar meus dados" }));
+    const offer = await screen.findByRole("group", { name: "Conta Foode encontrada" });
+    // Nada da conta aparece antes do código (nem mascarado).
+    expect(offer).not.toHaveTextContent("Ana");
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("");
+
+    await user.click(within(offer).getByRole("button", { name: "Entrar com WhatsApp" }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getByLabelText("WhatsApp")).toHaveValue("(11) 98765-4321");
+    await user.click(within(sheet).getByRole("button", { name: "Verificação de segurança" }));
+    await user.click(within(sheet).getByRole("button", { name: "Receber código" }));
+    await user.type(await within(sheet).findByLabelText("Código"), "1234");
+    await user.click(within(sheet).getByRole("button", { name: "Verificação de segurança" }));
+    await user.click(within(sheet).getByRole("button", { name: "Confirmar código" }));
+    expect(accountApi.verifyCode).toHaveBeenCalledWith({
+      code: "1234",
+      phone: "(11) 98765-4321",
+      turnstileToken: "turnstile-token",
+    });
+
+    const signedIn = await screen.findByRole("group", { name: "Conta Foode" });
+    expect(signedIn).toHaveTextContent("Ana Lima");
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("Ana Lima");
+    await user.click(screen.getByRole("radio", { name: /Delivery/u }));
+    expect(screen.getByLabelText("Rua")).toHaveValue("Rua da Conta");
+    expect(screen.getByLabelText("Bairro")).toHaveValue(neighborhoodIds.centro);
+  });
+
+  it("sessão aberta já preenche com a conta; 'Sair' mantém o formulário e segue como Guest", async () => {
+    seedCart();
+    const { accountApi, user } = setup({ session: { account, state: "signed_in" } });
+    await screen.findByText("Refrigerante lata", { exact: false });
+    expect(await screen.findByDisplayValue("Ana Lima")).toBeInTheDocument();
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("(11) 98765-4321");
+    await user.click(screen.getByRole("button", { name: "Sair" }));
+    await waitFor(() => expect(accountApi.signOut).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Entrar com WhatsApp" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome e sobrenome")).toHaveValue("Ana Lima");
   });
 });
