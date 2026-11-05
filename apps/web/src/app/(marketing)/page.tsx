@@ -10,7 +10,7 @@ import { Founder } from "../../components/marketing/founder";
 import { Hero } from "../../components/marketing/hero";
 import { HowItWorks } from "../../components/marketing/how-it-works";
 import { PainSection } from "../../components/marketing/pain";
-import { PaymentFees } from "../../components/marketing/payment-fees";
+import { LivePaymentFees } from "../../components/marketing/live-payment-fees";
 import { Plans } from "../../components/marketing/plans";
 import { JsonLd, SectionHeading } from "../../components/marketing/primitives";
 import { FAQ } from "../../content/faq";
@@ -135,8 +135,7 @@ export default function Home() {
             >
               Taxas do pagamento online
             </SectionHeading>
-            {/* TODO(31-taxas): passar a tabela padrão do /ops quando a api expuser. */}
-            <PaymentFees fees={null} />
+            <LivePaymentFees />
           </div>
         </div>
       </section>

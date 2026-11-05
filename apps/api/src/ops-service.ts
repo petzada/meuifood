@@ -38,6 +38,12 @@ import {
   type ProviderCostView,
 } from "@foode/shared/ops";
 
+import {
+  type LeadView,
+  opsListLeadsInputSchema,
+  opsSetLeadStatusInputSchema,
+} from "@foode/shared/lead";
+
 import type { FoodeAuth } from "./auth/auth";
 import { authorizeSession, resolveSessionCtx, rolesWith } from "./auth/guard";
 import { callerHeaders } from "./painel-service";
@@ -215,6 +221,19 @@ export function createOpsService(deps: OpsServiceDeps) {
         input,
         async (ops, { storeId }): Promise<OpsAuditEntry[]> => ops.storeAudit(storeId),
       ),
+
+    // ---- Leads da landing (Ticket 31, decisão 70).
+
+    opsListLeads: (caller: PainelCaller, input: unknown) =>
+      asOps(caller, opsListLeadsInputSchema, input, async (ops, { status }): Promise<LeadView[]> =>
+        ops.listLeads({ status }),
+      ),
+
+    opsSetLeadStatus: (caller: PainelCaller, input: unknown) =>
+      asOps(caller, opsSetLeadStatusInputSchema, input, async (ops, { leadId, status }) => {
+        await ops.setLeadStatus(leadId, status);
+        return null;
+      }),
   };
 }
 

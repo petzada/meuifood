@@ -1,5 +1,6 @@
 // CTA final (PROPOSTA-LANDING §2.12): o único bloco com fill forte (primary-strong, texto
 // branco AA). Entra com clip-path ao chegar na viewport; formulário ao lado.
+import { turnstileSiteKey } from "../../lib/turnstile";
 import { LeadForm } from "./lead-form";
 
 export function CtaFinal() {
@@ -22,7 +23,7 @@ export function CtaFinal() {
             </p>
           </div>
           <div className="rounded-[var(--radius-container)] bg-[var(--color-canvas)] text-[var(--color-ink)]">
-            <LeadForm source="cta-final" />
+            <LeadForm source="cta-final" turnstileSiteKey={turnstileSiteKey()} />
           </div>
         </div>
       </div>

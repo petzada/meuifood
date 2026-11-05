@@ -35,6 +35,10 @@
       "types": "./dist/customer/index.d.ts",
       "default": "./dist/customer/index.js"
     },
+    "./lead": {
+      "types": "./dist/lead/index.d.ts",
+      "default": "./dist/lead/index.js"
+    },
     "./coupon": {
       "types": "./dist/coupon/index.d.ts",
       "default": "./dist/coupon/index.js"
