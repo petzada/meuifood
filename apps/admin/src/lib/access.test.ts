@@ -1,7 +1,7 @@
 import type { SessionCtx } from "@foode/shared/auth";
 import { describe, expect, it } from "vitest";
 
-import { decideAccess, navFor, resolveRole, safeNext } from "./access";
+import { decideAccess, isCurrentNav, navFor, resolveRole, safeNext } from "./access";
 
 const store = (role: "owner" | "operator", id = "loja-1"): SessionCtx["stores"][number] => ({
   id,
@@ -91,9 +91,22 @@ describe("resolveRole e navegação", () => {
     expect(resolveRole(session({}))).toBeNull();
   });
 
+  it("item atual do menu Ops é o prefixo mais longo que casa", () => {
+    expect(isCurrentNav("/ops", "/ops")).toBe(true);
+    expect(isCurrentNav("/ops", "/ops/lojas/abc")).toBe(true);
+    expect(isCurrentNav("/ops", "/ops/taxas")).toBe(false);
+    expect(isCurrentNav("/ops/taxas", "/ops/taxas")).toBe(true);
+    expect(isCurrentNav("/", "/cardapio")).toBe(false);
+  });
+
   it("navegação segue a política de cada papel", () => {
     expect(navFor("operator").map((item) => item.label)).toEqual(["Pedidos"]);
-    expect(navFor("foode_ops").map((item) => item.href)).toEqual(["/ops"]);
+    expect(navFor("foode_ops").map((item) => item.href)).toEqual([
+      "/ops",
+      "/ops/faixas",
+      "/ops/taxas",
+      "/ops/custos",
+    ]);
     expect(navFor("owner").map((item) => item.label)).toEqual([
       "Pedidos",
       "Cardápio",
