@@ -18,7 +18,7 @@
 import { assertIssued, type StoreContext } from "./context";
 import { newId, utcNow } from "./conventions";
 import { FoodeDbError } from "./errors";
-import type { DeliveryMode } from "./schema";
+import { type DeliveryMode, PAINEL_VISIBLE_PAYMENT_SQL } from "./schema";
 
 // ---- Máquina de estados (igual a @foode/shared/order/status.ts) ----
 
@@ -497,6 +497,8 @@ export type OrderDetailRow = Omit<OrderQueueRow, "neighborhood"> & {
   subtotalCents: number;
   deliveryFeeCents: number;
   discountCents: number;
+  /** Tarifa de serviço do pagamento online (decisão 71): item da Foode, fora do total. */
+  serviceFeeCents: number;
   changeForCents: number | null;
   note: string | null;
   eta: OperationEta | null;
@@ -533,6 +535,7 @@ type OrderRowFull = {
   deliveryFeeCents: number;
   discountCents: number;
   totalCents: number;
+  serviceFeeCents: number;
   changeForCents: number | null;
   note: string | null;
   etaMin: number | null;
@@ -555,7 +558,8 @@ export const SELECT_ORDER_COLUMNS = `o.id AS id, o.code AS code, o.status AS sta
   o.delivery_neighborhood AS neighborhood, o.items_subtotal_cents AS subtotalCents,
   o.delivery_fee_cents AS deliveryFeeCents, o.discount_cents AS discountCents,
   o.total_cents AS totalCents, o.change_for_cents AS changeForCents, o.note AS note,
-  o.eta_min_minutes AS etaMin, o.eta_max_minutes AS etaMax`;
+  o.eta_min_minutes AS etaMin, o.eta_max_minutes AS etaMax,
+  o.service_fee_cents AS serviceFeeCents`;
 
 export const SELECT_ORDER_LINES = `SELECT item_name AS itemName, quantity,
   unit_price_cents AS unitPriceCents, line_total_cents AS totalCents, complements, additionals
@@ -620,7 +624,9 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
     if (fulfillments.length === 0) {
       // Pode ser estado final (nada sai dele) ou destino inválido: confere se o Pedido existe.
       const row = await d1
-        .prepare("SELECT status FROM orders WHERE id = ? AND store_id = ?")
+        .prepare(
+          `SELECT status FROM orders WHERE id = ? AND store_id = ? AND ${PAINEL_VISIBLE_PAYMENT_SQL}`,
+        )
         .bind(orderId, storeId)
         .first<{ status: OrderStatus }>();
       if (!row) return { ok: false, error: "not_found" };
@@ -632,7 +638,7 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
       d1
         .prepare(
           `UPDATE orders SET status = ?, updated_at = ?
-           WHERE id = ? AND store_id = ? AND status = ?
+           WHERE id = ? AND store_id = ? AND status = ? AND ${PAINEL_VISIBLE_PAYMENT_SQL}
              AND fulfillment IN (SELECT value FROM json_each(?))`,
         )
         .bind(to, now, orderId, storeId, from, JSON.stringify(fulfillments)),
@@ -646,7 +652,9 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
     ]);
     if (!changed(update)) {
       const row = await d1
-        .prepare("SELECT status FROM orders WHERE id = ? AND store_id = ?")
+        .prepare(
+          `SELECT status FROM orders WHERE id = ? AND store_id = ? AND ${PAINEL_VISIBLE_PAYMENT_SQL}`,
+        )
         .bind(orderId, storeId)
         .first<{ status: OrderStatus }>();
       if (!row) return { ok: false, error: "not_found" };
@@ -688,7 +696,8 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
       const base = `SELECT id, code, status, fulfillment, created_at AS createdAt,
         customer_name AS customerName, delivery_neighborhood AS neighborhood,
         payment_method AS paymentMethod, total_cents AS totalCents
-        FROM orders WHERE store_id = ? AND (? IS NULL OR fulfillment = ?)`;
+        FROM orders WHERE store_id = ? AND ${PAINEL_VISIBLE_PAYMENT_SQL}
+          AND (? IS NULL OR fulfillment = ?)`;
       const listStatement =
         input.scope === "active"
           ? d1
@@ -709,6 +718,7 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
             `SELECT COALESCE(SUM(status = 'completed'), 0) AS completed,
                     COALESCE(SUM(status = 'cancelled'), 0) AS cancelled
              FROM orders WHERE store_id = ? AND status IN ('completed', 'cancelled')
+               AND ${PAINEL_VISIBLE_PAYMENT_SQL}
                AND updated_at >= ? AND (? IS NULL OR fulfillment = ?)`,
           )
           .bind(storeId, input.closedSince, fulfillmentFilter, fulfillmentFilter),
@@ -726,7 +736,10 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
     async get(orderId: string): Promise<OrderDetailRow | null> {
       const [order, lines, events] = await d1.batch([
         d1
-          .prepare(`SELECT ${SELECT_ORDER_COLUMNS} FROM orders o WHERE o.id = ? AND o.store_id = ?`)
+          .prepare(
+            `SELECT ${SELECT_ORDER_COLUMNS} FROM orders o
+             WHERE o.id = ? AND o.store_id = ? AND o.${PAINEL_VISIBLE_PAYMENT_SQL}`,
+          )
           .bind(orderId, storeId),
         d1.prepare(SELECT_ORDER_LINES).bind(storeId, orderId),
         d1
@@ -762,6 +775,7 @@ export function createOrderOps(d1: D1Database, context: StoreContext) {
         subtotalCents: row.subtotalCents,
         deliveryFeeCents: row.deliveryFeeCents,
         discountCents: row.discountCents,
+        serviceFeeCents: row.serviceFeeCents,
         changeForCents: row.changeForCents,
         note: row.note,
         eta: eta(row.etaMin, row.etaMax),

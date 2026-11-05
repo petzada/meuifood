@@ -212,6 +212,7 @@ export function createOrderService(deps: OrderServiceDeps) {
               deliveryFeeCents: order.deliveryFeeCents,
               discountCents: order.discountCents,
               totalCents: order.totalCents,
+              serviceFeeCents: order.serviceFeeCents,
               payment: { method: order.paymentMethod, changeForCents: order.changeForCents },
               note: order.note,
               eta: order.eta,

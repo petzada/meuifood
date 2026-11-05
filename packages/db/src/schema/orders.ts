@@ -52,6 +52,17 @@ export type OrderStatusValue = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_FULFILLMENTS = ["delivery", "pickup"] as const;
 export const ORDER_PAYMENT_METHODS = ["pix", "credit", "on_delivery"] as const;
+/** Estado do pagamento no Pedido (Ticket 26). Fila do Painel = `not_required` ou `paid`. */
+export const ORDER_PAYMENT_STATUSES = [
+  "not_required",
+  "awaiting",
+  "paid",
+  "expired",
+  "failed",
+] as const;
+export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUSES)[number];
+/** Pedidos que o Painel enxerga (fila, detalhe, avanço): pagos ou sem pagamento online. */
+export const PAINEL_VISIBLE_PAYMENT_SQL = `payment_status IN ('not_required', 'paid')`;
 export const PHONE_LOOKUP_RESULTS = [
   "found",
   "not_found",
@@ -119,6 +130,22 @@ export const orders = sqliteTable(
     updatedAt: text("updated_at").notNull().default(utcNowDefault),
     /** Conta do Consumidor (Ticket 13, migration 0006): Pedido autenticado ou Guest vinculado. */
     customerAccountId: text("customer_account_id").references(() => customerAccounts.id),
+    /**
+     * Estado do pagamento online (Ticket 26, migration 0007, expand): coluna própria em vez de um
+     * status novo (que exigiria recriar `orders`). `not_required` = Pagamento na entrega (default
+     * das linhas antigas); PIX nasce `awaiting` e só entra na fila do Painel em `paid`. Domínio
+     * em ORDER_PAYMENT_STATUSES, conferido pela api e pelas escritas de @foode/db (ADD COLUMN com
+     * CHECK de tabela obrigaria recriar a tabela).
+     */
+    paymentStatus: text("payment_status", { enum: ORDER_PAYMENT_STATUSES })
+      .notNull()
+      .default("not_required"),
+    /**
+     * Tarifa de serviço do pagamento online (decisão 71), FORA de `total_cents` (o CHECK
+     * `orders_total_sum` segue valendo para o total do lojista). O Consumidor paga
+     * `total_cents + service_fee_cents`; 0 no Pagamento na entrega.
+     */
+    serviceFeeCents: integer("service_fee_cents").notNull().default(0),
   },
   (table) => [
     index("orders_store_account_created_idx").on(

@@ -13,6 +13,12 @@ import { createTurnstileVerifier } from "./auth/turnstile";
 import { type CustomerReply, createCustomerService } from "./customer-service";
 import type { Env } from "./env";
 import { mediaBaseUrl, serveMenuImage, serveStoreImage } from "./media";
+import {
+  ABACATEPAY_SECRET_QUERY_PARAM,
+  ABACATEPAY_SIGNATURE_HEADER,
+  abacatePayFromEnv,
+  createPixService,
+} from "./pix-service";
 import { toPublicMenu } from "./public-menu";
 import { createStorefrontService } from "./storefront-service";
 import { createWhatsMiauSender } from "./whatsapp/whatsmiau";
@@ -38,6 +44,9 @@ export const PHONE_LOOKUP_MAX_BODY_BYTES = 8 * 1024;
 
 /** Teto do corpo das rotas da conta do Consumidor (telefone, código, nome, CPF, Turnstile). */
 export const CUSTOMER_MAX_BODY_BYTES = 8 * 1024;
+
+/** Teto do corpo do webhook da AbacatePay (o envelope tem poucos KiB). */
+export const WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
 
 /** Teto do corpo do evento do funil (`{"event":"checkout_start"}`). */
 export const FUNNEL_EVENT_MAX_BODY_BYTES = 1024;
@@ -77,9 +86,12 @@ export async function storefrontSlugRedirect(
   );
 }
 
-/** Caminho sem o token da página do Pedido (dá acesso a dados pessoais): nunca em log. */
+/**
+ * Caminho sem o token da página do Pedido (dá acesso a dados pessoais) e sem query (o webhook da
+ * AbacatePay leva o segredo em `?webhookSecret=`): nunca em log nem no Sentry.
+ */
 export function redactPath(path: string): string {
-  return path.replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
+  return path.replace(/[?#].*$/su, "").replace(/\/pedidos\/[^/]+/u, "/pedidos/:token");
 }
 
 export function createApp() {
@@ -172,8 +184,11 @@ export function createApp() {
       ipSalt: c.env.PHONE_LOOKUP_IP_SALT,
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
     });
+  const pix = (c: Context<AppEnv>) =>
+    createPixService({ db: c.var.db, provider: abacatePayFromEnv(c.env) });
   const service = (c: Context<AppEnv>) =>
     createStorefrontService({
+      pix: pix(c),
       db: c.var.db,
       turnstile: createTurnstileVerifier(c.env),
       orderTokenSecret: c.env.ORDER_TOKEN_SECRET,
@@ -304,7 +319,27 @@ export function createApp() {
     serveStoreImage(c.env.MEDIA, c.req.param("storeId"), "brand", c.req.param("file"), c.req.raw),
   );
 
-  // `/webhooks/*`: rotas dos provedores (AbacatePay, Efí) entram nos Tickets 26 e 27.
+  // Webhook da AbacatePay (Ticket 26): `?webhookSecret=` (prova a origem) + `X-Webhook-Signature`
+  // (HMAC-SHA256 do corpo CRU), ambos conferidos em tempo constante ANTES do parse. Evento com
+  // identidade única: duplicata/reentrega/fora de ordem sem efeito duplo. Corpo, URL e segredo
+  // nunca vão para log/Sentry (redactPath tira a query). Sem as chaves: 503 (PIX indisponível).
+  // Efí (cartão) entra no Ticket 27.
+  app.post(
+    "/webhooks/abacatepay",
+    bodyLimit({
+      maxSize: WEBHOOK_MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: "invalid_payload" }, 413),
+    }),
+    async (c) => {
+      const reply = await pix(c).handleWebhook({
+        rawBody: await c.req.text(),
+        querySecret: c.req.query(ABACATEPAY_SECRET_QUERY_PARAM) ?? null,
+        signature: c.req.header(ABACATEPAY_SIGNATURE_HEADER) ?? null,
+      });
+      c.header("cache-control", "no-store");
+      return c.json(reply.body, reply.status);
+    },
+  );
   // Qualquer outro caminho (inclusive operações do Painel) responde 404.
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));

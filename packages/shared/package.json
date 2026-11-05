@@ -39,6 +39,14 @@
       "types": "./dist/coupon/index.d.ts",
       "default": "./dist/coupon/index.js"
     },
+    "./payment": {
+      "types": "./dist/payment/index.d.ts",
+      "default": "./dist/payment/index.js"
+    },
+    "./zod": {
+      "types": "./dist/zod.d.ts",
+      "default": "./dist/zod.js"
+    },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {

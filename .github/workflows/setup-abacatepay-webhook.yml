@@ -1,0 +1,36 @@
+name: Setup webhook AbacatePay
+# Ticket 26: cadastra o webhook da AbacatePay (POST /webhooks/create) apontando para
+# https://api.foodedelivery.com.br/webhooks/abacatepay, com o MESMO segredo do Worker
+# (ABACATEPAY_WEBHOOK_SECRET). Rodar só depois de criar a chave (permissões WEBHOOK:CREATE e
+# WEBHOOK:READ), os secrets no GitHub e um deploy com eles. Idempotente: se já existe, só
+# confere. Lógica em scripts/setup-abacatepay-webhook.mjs; nada sensível no log.
+on:
+  workflow_dispatch:
+    inputs:
+      endpoint:
+        description: URL do webhook (sem query)
+        type: string
+        default: https://api.foodedelivery.com.br/webhooks/abacatepay
+
+permissions:
+  contents: read
+
+concurrency:
+  group: setup-abacatepay-webhook
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Webhook na AbacatePay
+        env:
+          ABACATEPAY_API_KEY: ${{ secrets.ABACATEPAY_API_KEY }}
+          ABACATEPAY_WEBHOOK_SECRET: ${{ secrets.ABACATEPAY_WEBHOOK_SECRET }}
+          WEBHOOK_ENDPOINT: ${{ inputs.endpoint }}
+        run: node scripts/setup-abacatepay-webhook.mjs

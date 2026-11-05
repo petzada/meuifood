@@ -1,0 +1,14 @@
+{
+  "id": "log_TESTE000000000000000003",
+  "event": "transparent.refunded",
+  "apiVersion": 2,
+  "devMode": true,
+  "data": {
+    "transparent": {
+      "id": "pix_char_TESTE000000000000000001",
+      "amount": 5990,
+      "status": "REFUNDED",
+      "metadata": { "intentId": "intent_teste_001" }
+    }
+  }
+}

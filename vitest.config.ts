@@ -6,7 +6,7 @@
 // Cobertura (decisão 67): `pnpm test:coverage` (CI, job `qualidade`) exige 80% de linhas em
 // `packages/shared` e `packages/db`. Fora da conta: testes, fixtures, ajudantes de teste e
 // os módulos de acesso ao D1 de `packages/db` (foode-db, menu, ops-db, store-operation-db,
-// storefront-order-db, onboarding-db, customer-db, coupon-db), que só rodam no
+// storefront-order-db, onboarding-db, customer-db, coupon-db, payment-db), que só rodam no
 // workerd dos testes `*.d1.test.ts` — o pool do Cloudflare não emite cobertura V8.
 import { defineConfig } from "vitest/config";
 
@@ -45,6 +45,7 @@ export default defineConfig({
         "packages/db/src/onboarding-db.ts",
         "packages/db/src/customer-db.ts",
         "packages/db/src/coupon-db.ts",
+        "packages/db/src/payment-db.ts",
       ],
       thresholds: {
         "packages/shared/src/**": { lines: COVERAGE_LINES },
