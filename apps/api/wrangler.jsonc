@@ -1,5 +1,5 @@
 // Worker `foode-api` (Hono). Decisão 59 / ADR 0006.
-// - fetch público: /health, /storefront/*, /webhooks/* (src/app.ts);
+// - fetch público: /health, /storefront/*, /media/* (imagens do Cardápio), /webhooks/* (src/app.ts);
 // - entrypoint RPC `PainelApi` (src/painel.ts): só por service binding (admin).
 // Deploy só pelo CI (.github/workflows/deploy.yml). Sem routes/custom domains até a zona
 // foodedelivery.com.br ficar ativa (Ticket 25): publica em workers.dev.
@@ -26,10 +26,9 @@
     "ENVIRONMENT": "production",
     "BETTER_AUTH_URL": "https://foode-admin.marciopetigrosso.workers.dev",
     "EMAIL_FROM": "Foode <no-reply@foodedelivery.com.br>",
-    // Ticket 23: nome do bucket para assinar o PUT na API S3 do R2 (mesmo do binding MEDIA).
-    // R2_ACCOUNT_ID e R2_PUBLIC_BASE_URL chegam do deploy (`--var`) quando existirem;
-    // R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY são secrets. Sem eles o upload responde erro controlado.
-    "R2_BUCKET": "foode-media",
+    // Ticket 23 (decisão 64): base pública das imagens do Cardápio = rota `/media` desta api.
+    // Hoje o workers.dev; vira `https://api.foodedelivery.com.br/media` no Ticket 25.
+    "MEDIA_PUBLIC_BASE_URL": "https://foode-api.marciopetigrosso.workers.dev/media",
   },
   // D1 de produção (GitHub variable D1_PROD_DATABASE_ID). Migrations: packages/db/migrations,
   // aplicadas só pelo workflow db-migrate (confirmar=aplicar).
@@ -41,7 +40,7 @@
       "migrations_dir": "../../packages/db/migrations",
     },
   ],
-  // Imagens do Cardápio (decisão 57/59): leitura pública por R2_PUBLIC_BASE_URL; o binding
-  // confere/apaga objetos sob `stores/{store_id}/menu/`.
+  // Imagens do Cardápio (decisões 57/59/64): sem credenciais S3. O upload chega em bytes pela RPC
+  // e o binding grava/apaga sob `stores/{store_id}/menu/`; leitura pública por `GET /media/*`.
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "foode-media" }],
 }

@@ -1,14 +1,14 @@
-// RPCs do Cardápio no Painel (Ticket 23). CONTRATO: cada método já valida a entrada com o schema
-// de @foode/shared/menu e autoriza só quem tem `store.menu` na Loja ATIVA (Dono, StoreContext
-// emitido por @foode/db); a regra de negócio ainda devolve `not_implemented` — a fatia API do
-// Ticket 23 troca o `notImplemented` de cada método por operação em `db.store(context)` (com
-// auditoria) e, na imagem, pela assinatura do PUT no R2.
+// RPCs do Cardápio no Painel (Ticket 23). Cada método valida a entrada com o schema de
+// @foode/shared/menu, autoriza só quem tem `store.menu` na Loja ATIVA (Dono, StoreContext emitido
+// por @foode/db) e opera por `db.store(context).menu()` (com auditoria). Imagem: bytes pela RPC,
+// gravados no R2 pelo binding `MEDIA` (decisão 64).
 // Ordem: validar entrada → sessão → autorizar (política única) → operar.
-import type { FoodeDb, StoreContext } from "@foode/db";
+import type { FoodeDb, MenuResult, StoreContext, StoreMenu } from "@foode/db";
 import type { PainelCaller } from "@foode/shared";
 import type { RpcResult } from "@foode/shared/auth";
 import {
   type AdminMenu,
+  MAX_FEATURED_ITEMS,
   menuCopyComplementGroupsInputSchema,
   menuCreateAdditionalInputSchema,
   menuCreateCategoryInputSchema,
@@ -18,23 +18,34 @@ import {
   menuDeleteCategoryInputSchema,
   menuDeleteComplementGroupInputSchema,
   menuDeleteItemInputSchema,
-  type MenuImageUploadTicket,
   menuReorderAdditionalsInputSchema,
   menuReorderCategoriesInputSchema,
   menuReorderComplementGroupsInputSchema,
   menuReorderItemsInputSchema,
-  menuRequestImageUploadInputSchema,
   menuUpdateAdditionalInputSchema,
   menuUpdateCategoryInputSchema,
   menuUpdateComplementGroupInputSchema,
   menuUpdateItemInputSchema,
+  type MenuUploadedImage,
+  menuUploadImageInputSchema,
 } from "@foode/shared/menu";
 
 import type { FoodeAuth } from "./auth/auth";
 import { authorizeSession, resolveSessionCtx, rolesWith } from "./auth/guard";
+import { deleteMenuImage, menuImageExists, menuImageUrl, putMenuImage } from "./media";
 import { callerHeaders } from "./painel-service";
 
-export type MenuServiceDeps = { db: FoodeDb; auth: FoodeAuth };
+export type MenuServiceDeps = {
+  db: FoodeDb;
+  auth: FoodeAuth;
+  /** Binding R2 `MEDIA` (bucket `foode-media`). */
+  media: R2Bucket;
+  /** Base pública de leitura (`.../media`); null = sem URL de prévia. */
+  mediaBaseUrl: string | null;
+};
+
+/** Uploads de imagem por usuário: 60 por hora. */
+export const MENU_UPLOAD_RATE_LIMIT = { windowSeconds: 3600, max: 60 } as const;
 
 /** O que a api usa de um schema Zod (a api não depende de `zod` diretamente). */
 type InputSchema<O> = {
@@ -47,8 +58,23 @@ const noInput: InputSchema<undefined> = {
     input === undefined ? { success: true, data: undefined } : { success: false },
 };
 
+/** O resultado do @foode/db já usa os códigos do RpcResult. */
+const asRpc = <T>(result: MenuResult<T>): RpcResult<T> => result;
+
+function toAdminMenu(menu: StoreMenu, baseUrl: string | null): AdminMenu {
+  let featuredCount = 0;
+  const categories = menu.categories.map((category) => ({
+    ...category,
+    items: category.items.map((item) => {
+      if (item.featured) featuredCount += 1;
+      return { ...item, imageUrl: menuImageUrl(baseUrl, item.imageObjectKey) };
+    }),
+  }));
+  return { categories, featuredCount, maxFeatured: MAX_FEATURED_ITEMS };
+}
+
 export function createMenuService(deps: MenuServiceDeps) {
-  const { db, auth } = deps;
+  const { db, auth, media, mediaBaseUrl } = deps;
 
   /**
    * Valida, resolve a sessão e exige StoreContext com `store.menu`; só então chama `operation`.
@@ -70,71 +96,165 @@ export function createMenuService(deps: MenuServiceDeps) {
     return operation(result.authorized.store, parsed.data);
   }
 
-  /** Corpo provisório do contrato: autorizado, mas sem regra de negócio ainda. */
-  async function notImplemented<T>(): Promise<RpcResult<T>> {
-    return { ok: false, error: "not_implemented" };
+  const menuOf = (context: StoreContext) => db.store(context).menu();
+
+  /** Chave de imagem enviada pelo Painel: tem de ser desta Loja e existir no bucket. */
+  async function imageKeyAccepted(context: StoreContext, objectKey: string | null | undefined) {
+    if (objectKey === null || objectKey === undefined) return true;
+    return menuImageExists(media, context.storeId, objectKey);
   }
 
-  type Id<K extends string> = { [P in K]: string };
+  /** Apaga a imagem antiga se nenhum outro item desta Loja ainda a usa. */
+  async function discardImage(context: StoreContext, objectKey: string | null): Promise<void> {
+    if (!objectKey) return;
+    if (await menuOf(context).imageKeyInUse(objectKey)) return;
+    await deleteMenuImage(media, context.storeId, objectKey);
+  }
 
   return {
     menuGet: (caller: PainelCaller) =>
-      asMenuOwner(caller, noInput, undefined, notImplemented<AdminMenu>),
+      asMenuOwner(caller, noInput, undefined, async (context): Promise<RpcResult<AdminMenu>> => {
+        const menu = await menuOf(context).get();
+        return { ok: true, data: toAdminMenu(menu, mediaBaseUrl) };
+      }),
+
     menuCreateCategory: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuCreateCategoryInputSchema, input, notImplemented<Id<"categoryId">>),
+      asMenuOwner(caller, menuCreateCategoryInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).createCategory(data)),
+      ),
+
     menuUpdateCategory: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuUpdateCategoryInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuUpdateCategoryInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).updateCategory(data)),
+      ),
+
     menuDeleteCategory: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuDeleteCategoryInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuDeleteCategoryInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).deleteCategory(data.categoryId)),
+      ),
+
     menuReorderCategories: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuReorderCategoriesInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuReorderCategoriesInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).reorderCategories(data.orderedCategoryIds)),
+      ),
+
     menuCreateItem: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuCreateItemInputSchema, input, notImplemented<Id<"itemId">>),
+      asMenuOwner(caller, menuCreateItemInputSchema, input, async (context, data) => {
+        if (!(await imageKeyAccepted(context, data.imageObjectKey))) {
+          return { ok: false, error: "invalid_input" };
+        }
+        return asRpc(await menuOf(context).createItem(data));
+      }),
+
     menuUpdateItem: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuUpdateItemInputSchema, input, notImplemented<null>),
+      asMenuOwner(
+        caller,
+        menuUpdateItemInputSchema,
+        input,
+        async (context, data): Promise<RpcResult<null>> => {
+          if (!(await imageKeyAccepted(context, data.imageObjectKey))) {
+            return { ok: false, error: "invalid_input" };
+          }
+          const result = await menuOf(context).updateItem(data);
+          if (!result.ok) return result;
+          await discardImage(context, result.data.previousImageObjectKey);
+          return { ok: true, data: null };
+        },
+      ),
+
     menuDeleteItem: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuDeleteItemInputSchema, input, notImplemented<null>),
+      asMenuOwner(
+        caller,
+        menuDeleteItemInputSchema,
+        input,
+        async (context, data): Promise<RpcResult<null>> => {
+          const result = await menuOf(context).deleteItem(data.itemId);
+          if (!result.ok) return result;
+          await discardImage(context, result.data.imageObjectKey);
+          return { ok: true, data: null };
+        },
+      ),
+
     menuReorderItems: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuReorderItemsInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuReorderItemsInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).reorderItems(data.categoryId, data.orderedItemIds)),
+      ),
+
     menuCreateComplementGroup: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(
-        caller,
-        menuCreateComplementGroupInputSchema,
-        input,
-        notImplemented<Id<"groupId">>,
+      asMenuOwner(caller, menuCreateComplementGroupInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).createComplementGroup(data)),
       ),
+
     menuUpdateComplementGroup: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuUpdateComplementGroupInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuUpdateComplementGroupInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).updateComplementGroup(data)),
+      ),
+
     menuDeleteComplementGroup: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuDeleteComplementGroupInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuDeleteComplementGroupInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).deleteComplementGroup(data.groupId)),
+      ),
+
     menuReorderComplementGroups: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuReorderComplementGroupsInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuReorderComplementGroupsInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).reorderComplementGroups(data.itemId, data.orderedGroupIds)),
+      ),
+
     menuCopyComplementGroups: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(
-        caller,
-        menuCopyComplementGroupsInputSchema,
-        input,
-        notImplemented<{ groupIds: string[] }>,
+      asMenuOwner(caller, menuCopyComplementGroupsInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).copyComplementGroups(data)),
       ),
+
     menuCreateAdditional: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(
-        caller,
-        menuCreateAdditionalInputSchema,
-        input,
-        notImplemented<Id<"additionalId">>,
+      asMenuOwner(caller, menuCreateAdditionalInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).createAdditional(data)),
       ),
+
     menuUpdateAdditional: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuUpdateAdditionalInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuUpdateAdditionalInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).updateAdditional(data)),
+      ),
+
     menuDeleteAdditional: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuDeleteAdditionalInputSchema, input, notImplemented<null>),
+      asMenuOwner(caller, menuDeleteAdditionalInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).deleteAdditional(data.additionalId)),
+      ),
+
     menuReorderAdditionals: (caller: PainelCaller, input: unknown) =>
-      asMenuOwner(caller, menuReorderAdditionalsInputSchema, input, notImplemented<null>),
-    menuRequestImageUpload: (caller: PainelCaller, input: unknown) =>
+      asMenuOwner(caller, menuReorderAdditionalsInputSchema, input, async (context, data) =>
+        asRpc(await menuOf(context).reorderAdditionals(data.itemId, data.orderedAdditionalIds)),
+      ),
+
+    /**
+     * Bytes já conferidos pelo schema (tipo pela assinatura, ≤ 5 MiB). Rate limit por usuário;
+     * grava numa chave nova da Loja e audita (sem nome de arquivo nem dado pessoal).
+     */
+    menuUploadImage: (caller: PainelCaller, input: unknown) =>
       asMenuOwner(
         caller,
-        menuRequestImageUploadInputSchema,
+        menuUploadImageInputSchema,
         input,
-        notImplemented<MenuImageUploadTicket>,
+        async (context, data): Promise<RpcResult<MenuUploadedImage>> => {
+          const allowed = await db.rateLimit.consume(
+            `menu_image_upload:${context.userId}`,
+            MENU_UPLOAD_RATE_LIMIT,
+          );
+          if (!allowed) return { ok: false, error: "rate_limited" };
+          const objectKey = await putMenuImage(
+            media,
+            context.storeId,
+            data.contentType,
+            data.bytes,
+          );
+          await menuOf(context).recordAudit("menu.image_uploaded", objectKey, {
+            contentType: data.contentType,
+            bytes: data.bytes.byteLength,
+          });
+          return {
+            ok: true,
+            data: { objectKey, imageUrl: menuImageUrl(mediaBaseUrl, objectKey) },
+          };
+        },
       ),
   };
 }

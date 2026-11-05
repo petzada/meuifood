@@ -25,16 +25,16 @@ import type {
   MenuDeleteCategoryInput,
   MenuDeleteComplementGroupInput,
   MenuDeleteItemInput,
-  MenuImageUploadTicket,
   MenuReorderAdditionalsInput,
   MenuReorderCategoriesInput,
   MenuReorderComplementGroupsInput,
   MenuReorderItemsInput,
-  MenuRequestImageUploadInput,
   MenuUpdateAdditionalInput,
   MenuUpdateCategoryInput,
   MenuUpdateComplementGroupInput,
   MenuUpdateItemInput,
+  MenuUploadedImage,
+  MenuUploadImageInput,
 } from "@foode/shared/menu";
 import * as Sentry from "@sentry/cloudflare";
 import { WorkerEntrypoint } from "cloudflare:workers";
@@ -44,6 +44,7 @@ import { AUTH_BASE_PATH, createAuth, panelUrlOf } from "./auth/auth";
 import { createTurnstileVerifier } from "./auth/turnstile";
 import { createMillionSendSender } from "./email/sender";
 import type { Env } from "./env";
+import { mediaBaseUrl } from "./media";
 import { createMenuService, type MenuService } from "./menu-service";
 import { createPainelService, type PainelService } from "./painel-service";
 
@@ -69,7 +70,12 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
   /** Cardápio (Ticket 23): só Dono da Loja ativa; regras em menu-service.ts. */
   private menu(): MenuService {
     const { auth } = this.deps();
-    return createMenuService({ db: createFoodeDb(this.env.DB), auth });
+    return createMenuService({
+      db: createFoodeDb(this.env.DB),
+      auth,
+      media: this.env.MEDIA,
+      mediaBaseUrl: mediaBaseUrl(this.env.MEDIA_PUBLIC_BASE_URL),
+    });
   }
 
   /** Falha inesperada: registra sem dados da request e propaga (o admin mostra erro genérico). */
@@ -267,12 +273,10 @@ export class PainelApi extends WorkerEntrypoint<Env> implements PainelRpc {
     );
   }
 
-  async menuRequestImageUpload(
+  async menuUploadImage(
     caller: PainelCaller,
-    input: MenuRequestImageUploadInput,
-  ): Promise<RpcResult<MenuImageUploadTicket>> {
-    return this.run("menuRequestImageUpload", () =>
-      this.menu().menuRequestImageUpload(caller, input),
-    );
+    input: MenuUploadImageInput,
+  ): Promise<RpcResult<MenuUploadedImage>> {
+    return this.run("menuUploadImage", () => this.menu().menuUploadImage(caller, input));
   }
 }

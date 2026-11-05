@@ -15,15 +15,8 @@ export type Env = {
   TURNSTILE_SECRET_KEY?: string;
   /** Remetente dos e-mails, ex.: `Foode <nao-responda@foodedelivery.com.br>`. */
   EMAIL_FROM?: string;
-  // Ticket 23 (imagens do Cardápio, decisão 57). `MEDIA` (binding do bucket `foode-media`) lê,
-  // confere (`head`) e apaga objetos; a URL PUT pré-assinada para o navegador precisa da API S3
-  // do R2 (token de API R2 com escrita só nesse bucket). Secrets: R2_ACCESS_KEY_ID,
-  // R2_SECRET_ACCESS_KEY. Vars: R2_ACCOUNT_ID, R2_PUBLIC_BASE_URL (leitura pública, sem assinatura).
-  /** Nome do bucket (`foode-media`) para a assinatura S3; igual ao do binding MEDIA. */
-  R2_BUCKET?: string;
-  R2_ACCOUNT_ID?: string;
-  R2_ACCESS_KEY_ID?: string;
-  R2_SECRET_ACCESS_KEY?: string;
-  /** Base pública de leitura das imagens, ex.: `https://media.foodedelivery.com.br`. */
-  R2_PUBLIC_BASE_URL?: string;
+  // Ticket 23 (imagens do Cardápio, decisões 57/59/64). `MEDIA` (binding do bucket `foode-media`)
+  // grava, lê e apaga objetos `stores/{store_id}/menu/{uuid}.{ext}`; sem credenciais S3.
+  /** Base pública de leitura = rota `/media` da api, ex.: `https://api.foodedelivery.com.br/media`. */
+  MEDIA_PUBLIC_BASE_URL?: string;
 };

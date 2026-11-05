@@ -18,16 +18,16 @@ import type {
   MenuDeleteCategoryInput,
   MenuDeleteComplementGroupInput,
   MenuDeleteItemInput,
-  MenuImageUploadTicket,
   MenuReorderAdditionalsInput,
   MenuReorderCategoriesInput,
   MenuReorderComplementGroupsInput,
   MenuReorderItemsInput,
-  MenuRequestImageUploadInput,
   MenuUpdateAdditionalInput,
   MenuUpdateCategoryInput,
   MenuUpdateComplementGroupInput,
   MenuUpdateItemInput,
+  MenuUploadedImage,
+  MenuUploadImageInput,
 } from "./menu/admin.js";
 
 export type ApiHealth = {
@@ -188,11 +188,13 @@ export interface PainelRpc {
   ): Promise<RpcResult<null>>;
 
   /**
-   * URL PUT pré-assinada do R2 (bucket `foode-media`, decisão 57) para a chave
-   * `stores/{store_id}/menu/{uuid}.{ext}` gerada pelo servidor. Só Dono; rate limit por usuário.
+   * Upload da foto pelos bytes (decisão 64): o servidor do admin repassa o arquivo; a api confere
+   * JPEG/PNG/WebP ≤ 5 MiB pela assinatura dos bytes, grava em `stores/{store_id}/menu/{uuid}.{ext}`
+   * pelo binding `MEDIA` e devolve a chave (para gravar no item) e a URL pública. Bytes que não
+   * batem com `contentType` = `invalid_input`. Só Dono; rate limit por usuário (`rate_limited`).
    */
-  menuRequestImageUpload(
+  menuUploadImage(
     caller: PainelCaller,
-    input: MenuRequestImageUploadInput,
-  ): Promise<RpcResult<MenuImageUploadTicket>>;
+    input: MenuUploadImageInput,
+  ): Promise<RpcResult<MenuUploadedImage>>;
 }

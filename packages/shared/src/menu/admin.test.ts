@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   MENU_IMAGE_MAX_BYTES,
+  detectMenuImageContentType,
   isStoreMenuImageKey,
   menuCopyComplementGroupsInputSchema,
   menuCreateAdditionalInputSchema,
@@ -10,7 +11,7 @@ import {
   menuCreateItemInputSchema,
   menuImageObjectKey,
   menuReorderCategoriesInputSchema,
-  menuRequestImageUploadInputSchema,
+  menuUploadImageInputSchema,
   menuUpdateAdditionalInputSchema,
   menuUpdateCategoryInputSchema,
   menuUpdateComplementGroupInputSchema,
@@ -187,20 +188,55 @@ describe("Adicionais", () => {
 });
 
 describe("imagem no R2", () => {
-  it("aceita JPEG/PNG/WebP até 5 MiB", () => {
+  const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]);
+  const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+  const webp = Uint8Array.from([
+    0x52, 0x49, 0x46, 0x46, 4, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50,
+  ]);
+  const gif = new TextEncoder().encode("GIF89a.....");
+  const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
+
+  it("detecta o tipo pela assinatura dos bytes", () => {
+    expect(detectMenuImageContentType(jpeg)).toBe("image/jpeg");
+    expect(detectMenuImageContentType(png.buffer)).toBe("image/png");
+    expect(detectMenuImageContentType(webp)).toBe("image/webp");
+    expect(detectMenuImageContentType(gif)).toBeNull();
+    expect(detectMenuImageContentType(svg)).toBeNull();
+    expect(detectMenuImageContentType(new Uint8Array(0))).toBeNull();
+    // RIFF sem WEBP (ex.: WAV) não passa.
     expect(
-      menuRequestImageUploadInputSchema.safeParse({
-        contentLength: MENU_IMAGE_MAX_BYTES,
-        contentType: "image/webp",
-      }).success,
+      detectMenuImageContentType(
+        Uint8Array.from([0x52, 0x49, 0x46, 0x46, 4, 0, 0, 0, 0x57, 0x41, 0x56, 0x45]),
+      ),
+    ).toBeNull();
+  });
+
+  it("aceita JPEG/PNG/WebP até 5 MiB quando os bytes batem com o tipo declarado", () => {
+    for (const [contentType, bytes] of [
+      ["image/jpeg", jpeg],
+      ["image/png", png.buffer],
+      ["image/webp", webp],
+    ] as const) {
+      expect(menuUploadImageInputSchema.safeParse({ contentType, bytes }).success).toBe(true);
+    }
+    const max = new Uint8Array(MENU_IMAGE_MAX_BYTES);
+    max.set(png);
+    expect(
+      menuUploadImageInputSchema.safeParse({ contentType: "image/png", bytes: max }).success,
     ).toBe(true);
+    const tooBig = new Uint8Array(MENU_IMAGE_MAX_BYTES + 1);
+    tooBig.set(png);
     for (const input of [
-      { contentLength: MENU_IMAGE_MAX_BYTES + 1, contentType: "image/png" },
-      { contentLength: 0, contentType: "image/png" },
-      { contentLength: 1000, contentType: "image/gif" },
-      { contentLength: 1000, contentType: "image/svg+xml" },
+      { contentType: "image/png", bytes: tooBig },
+      { contentType: "image/png", bytes: new Uint8Array(0) },
+      { contentType: "image/png", bytes: jpeg },
+      { contentType: "image/jpeg", bytes: gif },
+      { contentType: "image/gif", bytes: gif },
+      { contentType: "image/svg+xml", bytes: svg },
+      { contentType: "image/png", bytes: "iVBORw0KGgo=" },
+      { contentType: "image/png" },
     ]) {
-      expect(menuRequestImageUploadInputSchema.safeParse(input).success).toBe(false);
+      expect(menuUploadImageInputSchema.safeParse(input).success).toBe(false);
     }
   });
 
