@@ -64,7 +64,7 @@ export const menuReorderCategoriesInputSchema = z.object({
 // ---- Itens ------------------------------------------------------------------------------
 
 /**
- * Chave de imagem no R2 devolvida por `menuRequestImageUpload`. O servidor confere que é da
+ * Chave de imagem no R2 devolvida por `menuUploadImage`. O servidor confere que é da
  * Loja do contexto (`isStoreMenuImageKey`) e que o objeto existe no bucket antes de gravar.
  */
 export const menuImageObjectKeySchema = z.string().trim().min(1).max(200);
@@ -243,7 +243,7 @@ export const menuReorderAdditionalsInputSchema = z.object({
   orderedAdditionalIds: orderedIdsSchema(MAX_ADDITIONALS_PER_ITEM),
 });
 
-// ---- Imagem (R2, decisão 57) ------------------------------------------------------------
+// ---- Imagem (R2 por binding, decisões 57/59/64) -----------------------------------------
 
 /** JPEG, PNG ou WebP até 5 MiB (decisão 57). */
 export const MENU_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -256,29 +256,67 @@ export const MENU_IMAGE_EXTENSIONS: Readonly<Record<MenuImageContentType, string
   "image/webp": "webp",
 };
 
-/** Validade da URL pré-assinada de upload. */
-export const MENU_IMAGE_UPLOAD_TTL_SECONDS = 300;
+/** Bytes que chegam pela RPC (structured clone do service binding). */
+export type MenuImageBytes = ArrayBuffer | Uint8Array;
+
+function bytesView(bytes: MenuImageBytes): Uint8Array {
+  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+}
+
+function startsWith(view: Uint8Array, signature: readonly number[], offset = 0): boolean {
+  return signature.every((byte, index) => view[offset + index] === byte);
+}
 
 /**
- * Pedido de upload: o admin declara tipo e tamanho; a `api` (só Dono) gera a chave
- * `stores/{store_id}/menu/{uuid}.{ext}` e assina um PUT com esse Content-Type e Content-Length.
- * O cliente nunca escolhe prefixo nem caminho.
+ * Tipo real da imagem pela assinatura dos bytes (magic number), nunca pelo header declarado:
+ * JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`. Outro formato = null.
  */
-export const menuRequestImageUploadInputSchema = z.object({
-  contentType: z.enum(MENU_IMAGE_CONTENT_TYPES),
-  contentLength: z.number().int().min(1).max(MENU_IMAGE_MAX_BYTES),
-});
+export function detectMenuImageContentType(bytes: MenuImageBytes): MenuImageContentType | null {
+  const view = bytesView(bytes);
+  if (startsWith(view, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (startsWith(view, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (
+    view.length >= 12 &&
+    startsWith(view, [0x52, 0x49, 0x46, 0x46]) &&
+    startsWith(view, [0x57, 0x45, 0x42, 0x50], 8)
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+const menuImageBytesSchema = z
+  .custom<MenuImageBytes>((value) => value instanceof ArrayBuffer || value instanceof Uint8Array, {
+    message: "bytes da imagem ausentes",
+  })
+  .refine((bytes) => bytes.byteLength >= 1 && bytes.byteLength <= MENU_IMAGE_MAX_BYTES, {
+    message: "imagem vazia ou maior que 5 MiB",
+  });
 
 /**
- * Resposta do pedido de upload. O navegador faz `PUT uploadUrl` com `headers` exatamente como
- * vieram e o arquivo no corpo; depois grava `objectKey` no item (`menuCreateItem`/`menuUpdateItem`).
+ * Upload pelos bytes (decisão 64: sem URL pré-assinada S3). O servidor do admin repassa o arquivo
+ * pela RPC do service binding; a `api` (só Dono) confere o tipo pela assinatura dos bytes — que
+ * precisa bater com `contentType` —, gera a chave `stores/{store_id}/menu/{uuid}.{ext}` e grava no
+ * R2 pelo binding `MEDIA`. O cliente nunca escolhe prefixo nem caminho.
  */
-export type MenuImageUploadTicket = {
+export const menuUploadImageInputSchema = z
+  .object({
+    contentType: z.enum(MENU_IMAGE_CONTENT_TYPES),
+    bytes: menuImageBytesSchema,
+  })
+  .refine((input) => detectMenuImageContentType(input.bytes) === input.contentType, {
+    message: "o conteúdo não é uma imagem do tipo declarado",
+    path: ["bytes"],
+  });
+
+/**
+ * Resposta do upload: grave `objectKey` no item (`menuCreateItem`/`menuUpdateItem`); `imageUrl` é
+ * a URL pública de leitura (rota `/media/...` da api) para a prévia.
+ */
+export type MenuUploadedImage = {
   objectKey: string;
-  uploadUrl: string;
-  method: "PUT";
-  headers: Record<string, string>;
-  expiresAt: string;
+  /** null só se a api estiver sem `MEDIA_PUBLIC_BASE_URL`. */
+  imageUrl: string | null;
 };
 
 /** Chave do objeto no R2 para a Loja (o servidor gera o `objectId` com crypto.randomUUID). */
@@ -299,7 +337,10 @@ export function isStoreMenuImageKey(storeId: string, objectKey: string): boolean
   return objectKey.startsWith(prefix) && MENU_IMAGE_KEY_TAIL.test(objectKey.slice(prefix.length));
 }
 
-/** URL pública de leitura (bucket público por base URL, sem assinatura). */
+/**
+ * URL pública de leitura, sem assinatura: `publicBaseUrl` aponta para a rota `/media` da api
+ * (`MEDIA_PUBLIC_BASE_URL`), que serve só chaves do padrão acima.
+ */
 export function publicMenuImageUrl(publicBaseUrl: string, objectKey: string): string {
   return `${publicBaseUrl.replace(/\/+$/u, "")}/${objectKey}`;
 }
@@ -375,4 +416,4 @@ export type MenuCreateAdditionalInput = z.input<typeof menuCreateAdditionalInput
 export type MenuUpdateAdditionalInput = z.input<typeof menuUpdateAdditionalInputSchema>;
 export type MenuDeleteAdditionalInput = z.input<typeof menuDeleteAdditionalInputSchema>;
 export type MenuReorderAdditionalsInput = z.input<typeof menuReorderAdditionalsInputSchema>;
-export type MenuRequestImageUploadInput = z.input<typeof menuRequestImageUploadInputSchema>;
+export type MenuUploadImageInput = z.input<typeof menuUploadImageInputSchema>;

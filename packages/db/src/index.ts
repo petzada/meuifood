@@ -18,6 +18,20 @@ export {
   type StoreSummary,
 } from "./foode-db";
 export {
+  MENU_MAX_ADDITIONALS,
+  MENU_MAX_FEATURED,
+  type MenuError,
+  type MenuOps,
+  type MenuResult,
+  type PublicStoreMenu,
+  type StoreMenu,
+  type StoreMenuAdditional,
+  type StoreMenuCategory,
+  type StoreMenuGroup,
+  type StoreMenuItem,
+  type StoreMenuOption,
+} from "./menu";
+export {
   MEMBERSHIP_ROLES,
   MENU_DESCRIPTION_MAX,
   MENU_MAX_CENTS,
