@@ -82,3 +82,10 @@ export {
 } from "./delivery-fee.js";
 
 export type { ApiHealth, PainelCaller, PainelRpc, StoreMemberView } from "./painel-rpc.js";
+
+export {
+  supportWidgetConfig,
+  type SupportWidgetConfig,
+  type SupportWidgetEnv,
+  type SupportWidgetSurface,
+} from "./support-widget.js";

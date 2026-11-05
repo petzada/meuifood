@@ -17,6 +17,7 @@ import { SpinnerGap } from "@phosphor-icons/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Turnstile, type TurnstileHandle } from "../../../../components/turnstile";
+import { storefrontSupportChatActive } from "../../../../lib/support-widget";
 import { formatPhoneBr } from "../finalizar/checkout-state";
 import { createAccountApi, type AccountApi, type AccountResult } from "./account-api";
 import {
@@ -39,7 +40,10 @@ export type LoginFlowProps = {
   onSignedIn: (account: CustomerAccountView) => void;
   /** Site key pública do Turnstile; vazia = login indisponível. */
   siteKey: string;
-  /** Widget de suporte ligado no Storefront (decisão 66): muda a mensagem do conflito. */
+  /**
+   * Widget de suporte ligado no Storefront (decisão 66): muda a mensagem do conflito. Sem a prop,
+   * vale a configuração do widget (`NEXT_PUBLIC_SUPPORT_WIDGET_*`) na página atual.
+   */
   supportChatActive?: boolean;
   /** Telefone verificado aguardando nome + CPF (sessão `signup_required` já aberta). */
   startAtSignup?: boolean;
@@ -52,11 +56,13 @@ const UNAVAILABLE_MESSAGE =
 
 function messageFor(
   result: Exclude<AccountResult<unknown>, { kind: "ok" }>,
-  supportChatActive: boolean,
+  supportChatActive: boolean | undefined,
 ): string {
-  return result.kind === "error"
-    ? customerErrorMessagePt(result.error, { supportChatActive })
-    : UNAVAILABLE_MESSAGE;
+  if (result.kind !== "error") return UNAVAILABLE_MESSAGE;
+  const chat =
+    supportChatActive ??
+    storefrontSupportChatActive(typeof window === "undefined" ? null : window.location.pathname);
+  return customerErrorMessagePt(result.error, { supportChatActive: chat });
 }
 
 export function LoginFlow({
@@ -66,7 +72,7 @@ export function LoginFlow({
   onSignedIn,
   siteKey,
   startAtSignup = false,
-  supportChatActive = false,
+  supportChatActive,
 }: LoginFlowProps) {
   const api = useMemo(() => apiProp ?? createAccountApi(), [apiProp]);
   const [step, setStep] = useState<Step>(startAtSignup ? "signup" : "phone");
