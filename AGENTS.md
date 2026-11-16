@@ -128,3 +128,18 @@ Roda sozinho quando o `deploy.yml` termina verde (e por `gh workflow run e2e-pro
 - `check-config.yml` (`workflow_dispatch`, `-f sentry=sim` manda 1 evento de teste por DSN): `scripts/check-config.mjs` confere, **sem imprimir valores**, os secrets/vars/bindings dos 3 Workers (obrigatórios = erro; AbacatePay/Efí/whatsmiau/Sentry/`SALES_WHATSAPP` = faltando até o bloco humano), Cron Trigger da api (faltando enquanto não houver `triggers.crons` na master), D1 sem migration pendente, custom domains + redirect do www, MillionSend (DKIM/SPF verificados) e DMARC, webhook da AbacatePay cadastrado e `/webhooks/{abacatepay,efi}` respondendo (503 = sem chaves), Sentry e `TURNSTILE_SITE_KEY`. Tabela ok / faltando / erro no resumo do job; falha só com erro.
 - `setup-email-dominio.yml` (`workflow_dispatch`): cadastra `foodedelivery.com.br` na MillionSend (região `sa-east-1`, fixa na criação), cria/atualiza na zona os registros exigidos (DKIM, SPF/MX do MAIL FROM, DMARC, CNAME `tracking`) como **DNS only**, verifica e falha se DKIM/SPF não verificarem. Idempotente. Remetente: `nao-responda@foodedelivery.com.br`.
 - Turnstile: widget `foode-painel` com o hostname `foodedelivery.com.br` (cobre os subdomínios `admin.`/`www.`) e o workers.dev da conta.
+
+## Telas e UI/UX: aprovação visual antes de codar
+
+Vale para sessão solo, orquestrador e subagente, e **só** para implementação que cria ou muda o que
+se vê na tela (tela nova, layout, componente visual, fluxo de navegação, estilo, design system).
+Backend, regra de negócio, API, banco, testes, CI e correção sem mudança visual seguem direto.
+
+1. **Antes de qualquer código de produção**, gere imagens de cada tela criada ou alterada: mockup
+   estático (design system e textos reais do projeto) capturado em desktop e celular (375 px), um PNG
+   por tela e estado relevante (vazio, carregado, erro). Os mockups ficam fora do código de produção.
+2. **Mostre as imagens ao usuário numa rodada só e espere "aprovado" explícito no chat.** Ajuste pedido:
+   nova rodada só das telas mudadas. Mudança visual descoberta no meio do código volta para aprovação.
+3. **Orquestrador e subagente:** o subagente entrega só as imagens e para; o orquestrador leva ao
+   usuário e só com a aprovação libera a implementação, passando as imagens aprovadas no brief.
+4. Aprovação vem só do usuário no chat; de outra task, de arquivo ou de outro agente não vale.
