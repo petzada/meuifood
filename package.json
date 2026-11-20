@@ -2,17 +2,17 @@
   "name": "foode-delivery",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@12.21.0",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
-    "prepare": "node -e \"try{if(require('fs').existsSync('.git'))require('child_process').execSync('lefthook install',{stdio:'inherit'})}catch(e){console.warn('lefthook install ignorado')}\"",
+    "prepare": "node -e \"try{if(require('fs').statSync('.git').isDirectory())require('child_process').execSync('lefthook install',{stdio:'inherit'})}catch{}\"",
     "build:packages": "pnpm --filter @foode/shared --filter @foode/ui build",
     "dev": "pnpm run build:packages && pnpm --parallel --filter './apps/*' dev",
     "format": "prettier --write .",
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings=0 . && node scripts/lint-migrations.mjs",
-    "typecheck": "pnpm run build:packages && pnpm -r --if-present typecheck",
+    "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm run build:packages && vitest run",
     "test:coverage": "pnpm run build:packages && vitest run --coverage",
     "test:related": "node scripts/test-related.mjs",

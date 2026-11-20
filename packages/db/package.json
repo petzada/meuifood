@@ -10,7 +10,7 @@
     "generate": "drizzle-kit generate",
     "migrations:check": "node scripts/check-migrations-drift.mjs",
     "seed:ops-sql": "node scripts/seed-ops-sql.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "vitest run --passWithNoTests",
     "test:workers": "vitest run --config vitest.workers.config.ts"
   },

@@ -1,7 +1,8 @@
 name: CI
-# PR e push na master: lint, typecheck, testes sem banco (com cobertura), testes com D1 (workerd, só
-# aqui), build (OpenNext + bundle da api) e prova das migrations num D1 remoto efêmero
-# (criado, aplicado e apagado nesta run). Nada aqui toca o D1 de produção.
+# PR e push na master: `qualidade` (lint, drift, typecheck, build OpenNext + bundle da api),
+# `testes` (sem banco com cobertura + D1 no workerd, só aqui) e prova das migrations num D1
+# remoto efêmero (criado, aplicado e apagado nesta run). Nada aqui toca o D1 de produção.
+# O deploy (deploy.yml) só roda depois deste workflow verde na master.
 # Repositório público: CI completo sempre (sem modo econômico de draft).
 
 on:
@@ -18,9 +19,10 @@ permissions:
   contents: read
 
 jobs:
+  # Lint, typecheck e build num job (o typecheck lê o src de shared/ui, sem build antes).
   qualidade:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +30,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Lint (eslint + migrations expand/contract e imutáveis)
@@ -37,39 +39,6 @@ jobs:
         run: pnpm --filter @foode/db migrations:check
       - name: Typecheck
         run: pnpm typecheck
-      # Inclui os testes de componente (happy-dom) e exige 80% de linhas em
-      # packages/shared e packages/db (decisão 67; limiar no vitest.config.ts).
-      - name: Testes sem banco + cobertura
-        run: pnpm test:coverage
-
-  testes-d1:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build:packages
-      # Rotas, isolamento entre Lojas (fixture com duas Lojas) e RPC do Painel no workerd
-      # com o D1 do Miniflare (@cloudflare/vitest-plugin).
-      - name: Testes com D1 (workerd)
-        run: pnpm test:workers
-
-  build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         with:
           path: |
@@ -84,6 +53,36 @@ jobs:
       # Bundle dos três Workers (wrangler --dry-run) contra o teto de 10 MiB gzip.
       - name: Tamanho dos Workers
         run: node scripts/worker-size.mjs apps/api apps/web apps/admin
+      - name: Resumo da falha
+        if: failure()
+        run: |
+          echo "### qualidade falhou. Logs: gh run view ${{ github.run_id }} --log-failed" >> "$GITHUB_STEP_SUMMARY"
+
+  # Testes sem banco com cobertura (limiar de 80% de linhas em shared/db: roda também no PR)
+  # e testes com D1 no workerd (@cloudflare/vitest-plugin, só aqui): `pnpm test:ci`.
+  testes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Inclui os testes de componente (happy-dom) e exige 80% de linhas em
+      # packages/shared e packages/db (decisão 67; limiar no vitest.config.ts).
+      - name: Testes sem banco + cobertura
+        run: pnpm test:coverage
+      # Rotas, isolamento entre Lojas (fixture com duas Lojas) e RPC do Painel no workerd
+      # com o D1 do Miniflare.
+      - name: Testes com D1 (workerd)
+        run: pnpm test:workers
+      - name: Resumo da falha
+        if: failure()
+        run: |
+          echo "### testes falharam. Logs: gh run view ${{ github.run_id }} --log-failed" >> "$GITHUB_STEP_SUMMARY"
 
   migrations-d1:
     # PR de fork não recebe os secrets da Cloudflare.
@@ -102,7 +101,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
         working-directory: .
@@ -162,6 +161,10 @@ jobs:
           test "$(q "SELECT count(*) AS n FROM store_memberships m JOIN stores s ON s.id = m.store_id WHERE s.slug = 'loja-piloto'")" = "2" || { echo "::error::memberships"; exit 1; }
           test "$(q "SELECT count(*) AS n FROM users u JOIN accounts a ON a.user_id = u.id AND a.account_id = u.id AND a.provider_id = 'credential' WHERE u.email IN ('lojista@teste.com','operador@teste.com') AND u.email_verified = 1")" = "2" || { echo "::error::contas credential"; exit 1; }
           test "$(q "SELECT count(*) AS n FROM audit_events WHERE action IN ('store.created','membership.test_account_seeded')")" = "3" || { echo "::error::auditoria duplicada ou ausente"; exit 1; }
+      - name: Resumo da falha
+        if: failure()
+        run: |
+          echo "### migrations-d1 falhou. Logs: gh run view ${{ github.run_id }} --log-failed" >> "$GITHUB_STEP_SUMMARY"
       - name: Apagar D1 efêmero
         if: always() && steps.criar.outputs.created == 'true'
         run: pnpm exec wrangler d1 delete "$D1_NAME" -y

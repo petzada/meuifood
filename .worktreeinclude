@@ -1,0 +1,8 @@
+# Arquivos locais fora do git copiados para worktrees novas (Claude Code).
+.env
+.env.local
+apps/api/.dev.vars
+apps/web/.env
+apps/web/.env.local
+apps/admin/.env
+apps/admin/.env.local

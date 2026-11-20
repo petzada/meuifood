@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "vitest run",
     "build": "next build",
     "build:cf": "opennextjs-cloudflare build",
