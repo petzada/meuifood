@@ -1,5 +1,6 @@
 name: Deploy (Cloudflare Workers)
-# Push na master (e workflow_dispatch, que o db-migrate dispara ao terminar): publica os
+# CI verde na master (workflow_run do "CI" disparado por push; e workflow_dispatch, que o
+# db-migrate dispara ao terminar): publica o commit que o CI testou, os
 # três Workers em produção (api → web → admin: web e admin têm service binding para a api)
 # com os secrets sincronizados do GitHub, e roda o smoke.
 #
@@ -13,7 +14,9 @@ name: Deploy (Cloudflare Workers)
 # (SMOKE_*_URL sobrescreve) e, depois, no workers.dev da conta (fallback, ainda ligado).
 # Deploy verde dispara o e2e-producao.yml (Playwright + axe com a Loja sintética, Ticket 30).
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [master]
   workflow_dispatch:
 
@@ -31,6 +34,10 @@ env:
 
 jobs:
   migrations-pendentes:
+    # Só depois do CI verde de um push na master (nunca de PR) ou por disparo manual/db-migrate.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -44,10 +51,12 @@ jobs:
           : "${CLOUDFLARE_API_TOKEN:?secret CLOUDFLARE_API_TOKEN ausente}"
           : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID ausente}"
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Migrations pendentes no D1 de produção
@@ -75,10 +84,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4

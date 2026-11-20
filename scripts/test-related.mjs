@@ -1,10 +1,13 @@
-// Testes ligados ao diff do branch (pre-push do lefthook e `pnpm test:related`).
+// Testes ligados ao diff do branch (`pnpm test:related`, antes de abrir o PR; não roda em hook).
 // Compara com o merge-base do branch padrão do remoto e roda `vitest related --run` só
 // nos arquivos de código alterados. Sem arquivos de código no diff, não roda nada.
 // Testes com D1 (`*.d1.test.ts`) NUNCA rodam aqui: só no CI (`pnpm test:workers`).
 // Argumentos extras vão direto para o vitest (ex.: --testTimeout=60000).
+// O vitest é chamado pela API Node (`vitest/node`), no mesmo processo: a lista de arquivos
+// nunca passa por shell nem por linha de comando (sem o limite de ~8 KB do cmd no Windows).
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { parseCLI, startVitest } from "vitest/node";
 
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 
@@ -34,8 +37,13 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// shared/ui exportam dist: no pre-push o 1_typecheck já gerou; fora dele, gera se faltar.
-if (!existsSync("packages/shared/dist") || !existsSync("packages/ui/dist")) {
+// shared/ui exportam dist para o vitest (o typecheck lê o src e não precisa dele): gera se
+// faltar ou se o diff mexe no src deles, para os testes dos apps não usarem dist velho.
+const stale =
+  !existsSync("packages/shared/dist") ||
+  !existsSync("packages/ui/dist") ||
+  files.some((f) => /^packages\/(shared|ui)\/src\//.test(f));
+if (stale) {
   const build = spawnSync("pnpm", ["run", "build:packages"], {
     stdio: "inherit",
     shell: process.platform === "win32",
@@ -44,24 +52,14 @@ if (!existsSync("packages/shared/dist") || !existsSync("packages/ui/dist")) {
 }
 
 console.log(`test-related: ${files.length} arquivo(s) alterado(s) desde ${from.slice(0, 8)}.`);
-// No Windows (shell do cmd) a linha de comando passa de ~8 mil caracteres com diffs grandes
-// (ex.: depois de um merge de outro branch) e o `related` nem começa ("Linha de comando muito
-// longa"). Nesse caso roda a suíte sem banco inteira: mais lenta, mas cobre o diff.
-const tooLong = process.platform === "win32" && files.join(" ").length > 6000;
-if (tooLong)
-  console.log("test-related: diff grande demais para a linha de comando; suíte inteira.");
-const r = spawnSync(
-  "pnpm",
-  [
-    "exec",
-    "vitest",
-    ...(tooLong ? ["run"] : ["related", "--run"]),
-    "--passWithNoTests",
-    "--exclude",
-    "**/*.d1.test.ts",
-    ...process.argv.slice(2),
-    ...(tooLong ? [] : files),
-  ],
-  { stdio: "inherit", shell: process.platform === "win32" },
-);
-process.exit(r.status ?? 1);
+const { filter, options } = parseCLI(["vitest", ...process.argv.slice(2)]);
+const vitest = await startVitest("test", filter, {
+  ...options,
+  run: true,
+  related: files,
+  passWithNoTests: true,
+  cliExclude: [...(options.cliExclude ?? []), "**/*.d1.test.ts"],
+});
+const failed = !vitest || vitest.state.getCountOfFailedTests() > 0 || process.exitCode;
+await vitest?.close();
+process.exit(failed ? 1 : 0);
