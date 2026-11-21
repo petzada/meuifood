@@ -21,8 +21,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Mesmo grupo do db-migrate/contas-de-teste: nunca escreve no D1 junto com uma migration.
-  group: db-migrate-producao
+  # Grupo próprio: um E2E de até 25 min não trava o db-migrate. Migration pendente faz o E2E
+  # pular (pre-requisitos) e o D1 é single-writer: a escrita do seed só espera a DDL terminar.
+  group: e2e-producao
   cancel-in-progress: false
 
 env:
@@ -68,7 +69,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.checar.outputs.run == 'true'
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
         if: steps.checar.outputs.run == 'true'
@@ -99,7 +100,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Versão do Playwright
@@ -171,7 +172,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
       - name: Verificação de configuração (só aviso)
         env:
           CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}

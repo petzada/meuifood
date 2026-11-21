@@ -4,65 +4,79 @@
   "type": "module",
   "exports": {
     ".": {
+      "@foode/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./auth": {
+      "@foode/source": "./src/auth/index.ts",
       "types": "./dist/auth/index.d.ts",
       "default": "./dist/auth/index.js"
     },
     "./money": {
+      "@foode/source": "./src/money.ts",
       "types": "./dist/money.d.ts",
       "default": "./dist/money.js"
     },
     "./menu": {
+      "@foode/source": "./src/menu/index.ts",
       "types": "./dist/menu/index.d.ts",
       "default": "./dist/menu/index.js"
     },
     "./ops": {
+      "@foode/source": "./src/ops/index.ts",
       "types": "./dist/ops/index.d.ts",
       "default": "./dist/ops/index.js"
     },
     "./order": {
+      "@foode/source": "./src/order/index.ts",
       "types": "./dist/order/index.d.ts",
       "default": "./dist/order/index.js"
     },
     "./onboarding": {
+      "@foode/source": "./src/onboarding/index.ts",
       "types": "./dist/onboarding/index.d.ts",
       "default": "./dist/onboarding/index.js"
     },
     "./customer": {
+      "@foode/source": "./src/customer/index.ts",
       "types": "./dist/customer/index.d.ts",
       "default": "./dist/customer/index.js"
     },
     "./lead": {
+      "@foode/source": "./src/lead/index.ts",
       "types": "./dist/lead/index.d.ts",
       "default": "./dist/lead/index.js"
     },
     "./coupon": {
+      "@foode/source": "./src/coupon/index.ts",
       "types": "./dist/coupon/index.d.ts",
       "default": "./dist/coupon/index.js"
     },
     "./payment": {
+      "@foode/source": "./src/payment/index.ts",
       "types": "./dist/payment/index.d.ts",
       "default": "./dist/payment/index.js"
     },
     "./finance": {
+      "@foode/source": "./src/finance/index.ts",
       "types": "./dist/finance/index.d.ts",
       "default": "./dist/finance/index.js"
     },
     "./sentry": {
+      "@foode/source": "./src/sentry/index.ts",
       "types": "./dist/sentry/index.d.ts",
       "default": "./dist/sentry/index.js"
     },
     "./zod": {
+      "@foode/source": "./src/zod.ts",
       "types": "./dist/zod.d.ts",
       "default": "./dist/zod.js"
     },
     "./brand.css": "./src/brand.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "vitest run --passWithNoTests",
     "build": "tsc -p tsconfig.build.json"
   },

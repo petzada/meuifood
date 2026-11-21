@@ -2,9 +2,9 @@ packages:
   - apps/*
   - packages/*
 
-onlyBuiltDependencies:
-  - "@sentry/cli"
-  - esbuild
-  - lefthook
-  - sharp
-  - workerd
+allowBuilds:
+  "@sentry/cli": true
+  esbuild: true
+  lefthook: true
+  sharp: true
+  workerd: true

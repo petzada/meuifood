@@ -30,10 +30,10 @@ Os mesmos nomes de script de todos os repositórios (rode na raiz):
 | Script | O que faz |
 | --- | --- |
 | `pnpm lint` | ESLint do repositório + lint das migrations |
-| `pnpm typecheck` | build de `shared`/`ui` e `tsc --noEmit` em todos os pacotes |
+| `pnpm typecheck` | `tsc --noEmit` incremental em todos os pacotes (tsbuildinfo em `node_modules/.cache/tsc/` de cada um); lê o `src` de `shared`/`ui` pela condição `@foode/source`, sem build antes |
 | `pnpm test` | testes sem banco (vitest, todos os projetos, inclusive componentes) |
 | `pnpm test:coverage` | `test` com cobertura V8 e limiar de 80% de linhas em `shared`/`db` (o que o CI roda) |
-| `pnpm test:related` | só os testes ligados ao diff contra `origin/master`, **sem testes com D1** |
+| `pnpm test:related` | só os testes ligados ao diff contra `origin/master`, **sem testes com D1** (API do vitest, sem limite de linha de comando); rode antes de abrir o PR |
 | `pnpm test:workers` | testes com D1 no workerd (`*.d1.test.ts`, `@cloudflare/vitest-plugin`) — **só no CI** |
 | `pnpm test:ci` | `test:coverage` + `test:workers` (o que o CI roda) |
 | `pnpm build` | bundle da api (`wrangler --dry-run`) e `next build` de web/admin |
@@ -42,7 +42,7 @@ Os mesmos nomes de script de todos os repositórios (rode na raiz):
 | `node scripts/check-config.mjs` | verificação de configuração de produção (só leitura; precisa do token da Cloudflare: rode pelo `check-config.yml`) |
 | `pnpm db:generate -- --name <nome>` | gera a migration SQL a partir de `packages/db/src/schema/*.ts` |
 
-Gates locais (`lefthook.yml`): pre-commit formata (prettier, `stage_fixed`) e roda ESLint com cache nos arquivos em stage e o lint das migrations; pre-push roda `1_typecheck` e `2_related`. Nunca `--no-verify`.
+Gates locais (`lefthook.yml`): pre-commit formata (prettier, `stage_fixed`) e roda ESLint com cache nos arquivos em stage e o lint das migrations; pre-push roda só o `typecheck` incremental. Testes ficam no `test:related` (antes do PR) e no CI. Nunca `--no-verify`.
 
 ### Testes (decisão 67)
 
@@ -52,20 +52,15 @@ Gates locais (`lefthook.yml`): pre-commit formata (prettier, `stage_fixed`) e ro
 
 **Sem banco local nem Docker.** Testes com D1 e a prova das migrations rodam só no CI. Não rode `wrangler deploy`, `wrangler d1 migrations apply --remote`, `wrangler d1 execute --remote` nem nada que altere produção do notebook.
 
-## Fluxo de git (resumo de `~/.claude/CLAUDE.md`, vale acima de skills e fluxos)
+## Fluxo autônomo
 
-O Dono é dev solo: o trabalho fica sempre salvo; publicar e ir para produção são decisões dele (ou do orquestrador com a autorização abaixo).
-
-1. **Salvar sempre.** Terminou uma implementação (ou um subagente terminou a parte dele): commit na branch da feature (Conventional Commits, PT-BR) e `git push -u origin <branch>`. Nunca na `master`. Push sem PR não roda CI. Subagente em worktree commita e pusha a própria branch; a sessão principal integra com `git merge --no-ff` e pusha.
-2. **Ao terminar, reportar**: o que mudou, o que foi validado, branch e commit salvos, se há migration ou flag, o próximo passo.
-3. **"Abre o PR" / "finaliza"**: PR pronto (não draft, salvo pedido explícito), acompanha o CI (`gh run watch`); falhou, corrige tudo num push só e acompanha de novo; no fim: "tudo verde; se quiser subir para produção, peça o merge".
-4. **"Suba pra produção" / "faça o merge"**: squash merge → `db-migrate` se houver migration (contract só com confirmação explícita) → deploy pelo CI → smoke → reporta.
-
-Falha de CI se investiga com `gh run view <id> --log-failed`. Deploy só pelo CI.
-
-### Autorização de merge por ticket (execução do pivô)
-
-O Dono autorizou em 2026-11-04 ([decisão 59](docs/decisoes/59-pivo-cloudflare-d1-workers.md), "CI/CD e integração") que, **durante a execução dos Tickets 21–30 do pivô**, o orquestrador feche cada ticket sem pedir de novo: PR → CI verde → **squash merge na `master`** → `db-migrate` (se houver migration) → deploy pelo CI → smoke. Exceções que continuam exigindo confirmação explícita do Dono: migration **contract**, qualquer ação fora do ticket e ações irreversíveis em contas/dados. Fora dessa execução, vale o fluxo acima.
+- Branch de feature a partir de `origin/master`; commit (Conventional Commits, PT-BR) e push a cada parte. Nunca push na `master`.
+- Ao terminar: `pnpm test:related`, `pnpm lint` e `pnpm build`; abre o PR pronto (não draft), acompanha o CI (falha: `gh run view <id> --log-failed`) e corrige tudo num push só.
+- CI verde e baixo risco: squash merge sozinho. Risco (auth, pagamento, dados de usuário, infra/CI, deleção): pergunte ao Dono antes do merge.
+- Migrations expand seguem automáticas (`db-migrate` depois do merge). Contract em dois tempos: PR posterior, só depois do deploy sem uso da estrutura antiga e smoke verde, com snapshot (bookmark do Time Travel) antes do drop, e confirmação explícita do Dono.
+- Smoke falhou: corrija para a frente; rollback só do app (redeploy da versão anterior), nunca do banco.
+- Nunca `--no-verify`, deploy do notebook, banco local nem Docker. Deploy só pelo CI.
+- Ao terminar, reporte: o que mudou, o que foi validado, branch e commit, migration/flag, próximo passo.
 
 ## Banco (D1)
 
@@ -96,7 +91,7 @@ gh workflow run db-migrate.yml --ref master -f confirmar=aplicar -f contract=sim
 gh run watch "$(gh run list --workflow db-migrate.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
 
-Ele aplica as migrations pendentes no `foode-prod`, roda o seed idempotente dos usuários `foode_ops` (variable/secret `FOODE_OPS_EMAILS`, sem senha) e dispara o `deploy.yml`. O deploy do push na `master` é **adiado** (job verde, aviso no resumo) enquanto houver migration pendente — o código novo nunca sobe antes do schema.
+Ele aplica as migrations pendentes no `foode-prod`, roda o seed idempotente dos usuários `foode_ops` (variable/secret `FOODE_OPS_EMAILS`, sem senha) e dispara o `deploy.yml`. O deploy depois do CI verde na `master` é **adiado** (job verde, aviso no resumo) enquanto houver migration pendente — o código novo nunca sobe antes do schema.
 
 ### Contas de teste em produção (`contas-de-teste.yml`)
 
@@ -109,7 +104,7 @@ Manual, só da `master`, no mesmo grupo de concorrência do `db-migrate` (recusa
 
 ### Smoke E2E em produção (`e2e-producao.yml`, Ticket 30)
 
-Roda sozinho quando o `deploy.yml` termina verde (e por `gh workflow run e2e-producao.yml --ref master`), no grupo de concorrência do `db-migrate`. Pula com aviso (não falha) sem `CLOUDFLARE_API_TOKEN`/`BETTER_AUTH_SECRET` ou com migration pendente.
+Roda sozinho quando o `deploy.yml` termina verde (e por `gh workflow run e2e-producao.yml --ref master`), no grupo de concorrência próprio `e2e-producao` (nunca no do `db-migrate`: um E2E de 25 min não trava migration). Pula com aviso (não falha) sem `CLOUDFLARE_API_TOKEN`/`BETTER_AUTH_SECRET` ou com migration pendente.
 
 - **Loja sintética fixa** `smoke-foode` ("Loja Smoke (teste automático)", id `00000000-0000-4000-8000-00000000e2e0`): `active`, só retirada, aberta 00:00–23:59 todos os dias, 2 itens, **sem Plano** e sem pagamento online; isolada da Loja Piloto. Seed idempotente em `scripts/e2e/smoke-store.mjs` (`wrangler d1 execute --file`, saída descartada).
 - **Autenticação sem senha e sem tocar no Turnstile**: o seed grava no D1 sessões do Better Auth de 45 min para `smoke-operador@foode.invalid` (Operador só da Loja de smoke) e `smoke-ops@foode.invalid` (`foode_ops` **só durante o smoke**), usuários **sem conta `credential`** (não há senha para vazar nem login por formulário). O cookie `__Secure-better-auth.session_token` é assinado no runner com `BETTER_AUTH_SECRET` (HMAC do better-call, provado no teste contra a lib) e vai ao Playwright num arquivo 0600, com os valores mascarados no log. O Turnstile do login continua ligado em produção; o login por formulário já é coberto pelo smoke HTTP e pelos testes de componente.
@@ -120,8 +115,8 @@ Roda sozinho quando o `deploy.yml` termina verde (e por `gh workflow run e2e-pro
 
 ## CI/CD
 
-- `ci.yml` (PR `opened`/`synchronize`/`reopened`/`ready_for_review` e push na `master`): lint, drift schema↔migrations, typecheck, testes sem banco, testes com D1 (workerd), build OpenNext + bundle da api, prova das migrations no D1 efêmero.
-- `deploy.yml` (push na `master` e disparo pelo `db-migrate`): build, secrets do GitHub → Workers (`--secrets-file`; vazios são omitidos — Sentry ainda sem DSN), publica api → web → admin e roda o smoke só de leitura (`/health`, Storefront, `/privacidade`, login do Painel, guarda do `/ops`, bindings) nos domínios próprios (variables `SMOKE_API_URL`/`SMOKE_WEB_URL`/`SMOKE_ADMIN_URL` sobrescrevem) e depois no workers.dev da conta (fallback).
+- `ci.yml` (PR `opened`/`synchronize`/`reopened`/`ready_for_review` e push na `master`): job `qualidade` (lint, drift schema↔migrations, typecheck, build OpenNext + bundle da api), job `testes` (sem banco com cobertura + D1 no workerd) e `migrations-d1` (prova no D1 efêmero).
+- `deploy.yml` (`workflow_run` do CI verde de um push na `master`, publicando o commit testado, e disparo pelo `db-migrate`): build, secrets do GitHub → Workers (`--secrets-file`; vazios são omitidos — Sentry ainda sem DSN), publica api → web → admin e roda o smoke só de leitura (`/health`, Storefront, `/privacidade`, login do Painel, guarda do `/ops`, bindings) nos domínios próprios (variables `SMOKE_API_URL`/`SMOKE_WEB_URL`/`SMOKE_ADMIN_URL` sobrescrevem) e depois no workers.dev da conta (fallback).
 - Secrets do GitHub: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `MILLIONSEND_API_KEY`, `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`, `ORDER_TOKEN_SECRET` e `PHONE_LOOKUP_IP_SALT` (obrigatórios no deploy da api), `SENTRY_DSN_API`/`SENTRY_DSN_WEB`/`SENTRY_DSN_ADMIN` (opcionais), `SALES_WHATSAPP` (opcional; WhatsApp de vendas, só no Worker do **web**: `/falar` redireciona no servidor para o `wa.me`, nunca no HTML/repo; sem ele, `/falar` leva ao formulário), `EFI_CLIENT_ID`/`EFI_CLIENT_SECRET`/`EFI_NOTIFICATION_SECRET` (opcionais; Cartão Normal, Ticket 27) e `SEED_TEST_PASSWORD` (só o `contas-de-teste.yml`). Variables: `D1_PROD_DATABASE_ID`, `CLOUDFLARE_ZONE_ID`, `FOODE_OPS_EMAILS`, `TURNSTILE_SITE_KEY` (widget do Painel), `BETTER_AUTH_URL` e `EMAIL_FROM` (opcionais: sobrescrevem o padrão do `apps/api/wrangler.jsonc`), `EFI_PAYEE_CODE`, `EFI_ENVIRONMENT` e `ABACATEPAY_PUBLIC_KEY` (opcionais, públicos: tokenizador do Cartão; sem eles o Crédito do modo fica indisponível), `SUPPORT_WIDGET_SRC`/`SUPPORT_WIDGET_ID` (opcionais, públicas: widget de suporte do agentes.chat, repassadas pelo `deploy.yml` como `NEXT_PUBLIC_SUPPORT_WIDGET_SRC`/`_ID` aos builds de web e admin; `SUPPORT_WIDGET_SRC_WEB`/`_ID_WEB` e `SUPPORT_WIDGET_SRC_ADMIN`/`_ID_ADMIN` sobrescrevem por app; sem as duas, widget desligado — ver `docs/integracao-suporte-agentes-chat.md`).
 - Domínios (Ticket 25; zona `foodedelivery.com.br` na Cloudflare): `foodedelivery.com.br` → `foode-web`, `admin.foodedelivery.com.br` → `foode-admin`, `api.foodedelivery.com.br` → `foode-api`, como `routes` com `custom_domain: true` nos `wrangler.jsonc` (o deploy cria DNS e certificado). `www.foodedelivery.com.br` → apex por Redirect Rule da zona (301, mesmo caminho e query; registro `AAAA 100::` proxied). O workers.dev segue ligado como fallback, mas o login do Painel só vale em `admin.` (`BETTER_AUTH_URL`; cookie host-only, sem `crossSubDomainCookies`).
 - `e2e-producao.yml` (`workflow_run` do deploy verde + `workflow_dispatch`): smoke E2E Playwright com a Loja sintética (seção acima) e, no fim, `scripts/check-config.mjs --warn-only` (só avisa).
