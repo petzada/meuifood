@@ -53,7 +53,7 @@ O glossário do domínio está em [`CONTEXT.md`](CONTEXT.md) e as decisões em [
 | Dados | **Cloudflare D1** + **Drizzle** (`packages/db`) |
 | Arquivos | **Cloudflare R2** (binding) |
 | Observabilidade | **Sentry** (opcional), Workers Logs |
-| Qualidade | **Vitest** (+ `@cloudflare/vitest-plugin` no CI), ESLint, Prettier, lefthook, GitHub Actions |
+| Qualidade | **Vitest** (+ `@cloudflare/vitest-plugin` no CI), ESLint, Prettier, GitHub Actions |
 
 ## Pré-requisitos e instalação
 
@@ -71,7 +71,7 @@ cd meuifood
 pnpm install
 ```
 
-O `pnpm install` instala os hooks do lefthook (pre-commit: formatação e lint dos arquivos em stage; pre-push: typecheck e testes ligados ao diff). Nenhum DSN do Sentry é obrigatório.
+Nenhum DSN do Sentry é obrigatório.
 
 ## Como utilizar
 

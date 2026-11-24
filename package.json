@@ -7,7 +7,6 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "prepare": "node -e \"try{if(require('fs').statSync('.git').isDirectory())require('child_process').execSync('lefthook install',{stdio:'inherit'})}catch{}\"",
     "build:packages": "pnpm --filter @foode/shared --filter @foode/ui build",
     "dev": "pnpm run build:packages && pnpm --parallel --filter './apps/*' dev",
     "format": "prettier --write .",
@@ -30,7 +29,6 @@
     "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.2",
     "globals": "^16.5.0",
-    "lefthook": "^2.2.2",
     "prettier": "^3.9.10",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
